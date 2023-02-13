@@ -16,3 +16,7 @@ add_subdirectory(dynamic_ports)
 
 add_subdirectory(lock_nodes_and_connections)
 
+add_subdirectory(plugin_text)
+
+add_subdirectory(plugins_load)
+

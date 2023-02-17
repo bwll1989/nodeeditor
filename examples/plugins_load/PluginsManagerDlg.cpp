@@ -20,8 +20,8 @@ PluginsManagerDlg::PluginsManagerDlg(QWidget *parent)
 {
     setMinimumSize(300, 250);
 
-    _pluginsFolder.setPath(QDir::cleanPath(QCoreApplication::applicationDirPath()
-                                           + QDir::separator() + R"(./plugins)"));
+    _pluginsFolder.setPath(
+        QDir::cleanPath(QCoreApplication::applicationDirPath() + QDir::separator() + "plugins"));
 
     QGridLayout *layout = new QGridLayout();
     setLayout(layout);
@@ -47,7 +47,6 @@ PluginsManagerDlg::PluginsManagerDlg(QWidget *parent)
     QPushButton *addButton = new QPushButton("+");
     layout->addWidget(addButton, 1, 0);
     connect(addButton, &QPushButton::clicked, this, [this]() {
-        // TODO: How to switch different suffixes according to different os
         QString fileName
             = QFileDialog::getOpenFileName(this,
                                            tr("Load Plugin"),
@@ -135,7 +134,9 @@ void PluginsManagerDlg::loadPluginsFromFolder()
 {
     PluginsManager *pluginsManager = PluginsManager::instance();
     std::shared_ptr<NodeDelegateModelRegistry> registry = pluginsManager->registry();
-    pluginsManager->loadPlugins(_pluginsFolder.absolutePath());
+    pluginsManager->loadPlugins(_pluginsFolder.absolutePath(),
+                                QStringList() << "*.node"
+                                              << "*.data");
 
     for (auto l : pluginsManager->loaders()) {
         PluginInterface *plugin = qobject_cast<PluginInterface *>(l.second->instance());

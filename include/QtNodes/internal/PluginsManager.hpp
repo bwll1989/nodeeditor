@@ -23,7 +23,8 @@ public:
 
     std::shared_ptr<NodeDelegateModelRegistry> registry();
 
-    void loadPlugins(const QString &folderPath = "./plugins");
+    void loadPlugins(const QString &folderPath = "./plugins",
+                     const QStringList &nameFilters = QStringList());
 
     void unloadPlugins();
 
@@ -35,7 +36,8 @@ public:
    */
     PluginInterface *loadPluginFromPath(const QString &filePath);
 
-    std::vector<PluginInterface *> loadPluginFromPaths(const QStringList filePaths);
+    std::vector<PluginInterface *> loadPluginFromPaths(const QStringList filePaths,
+                                                       const QStringList &nameFilters);
 
     /**
    * @brief Unload the plugin from the full file path

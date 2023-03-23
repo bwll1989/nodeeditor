@@ -124,8 +124,6 @@ void PluginsManager::unloadPlugins()
 
 PluginInterface *PluginsManager::loadPluginFromPath(const QString &filePath)
 {
-    qInfo() << " >> " << filePath;
-
     QPluginLoader *loader = new QPluginLoader(filePath);
 
     // qDebug() << loader->metaData();

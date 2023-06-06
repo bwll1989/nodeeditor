@@ -1,3 +1,9 @@
+#include <catch2/catch.hpp>
+#include <functional>
+#include <memory>
+#include <utility>
+#include <vector>
+
 #include "ApplicationSetup.hpp"
 #include "Stringify.hpp"
 #include "StubNodeDataModel.hpp"
@@ -5,13 +11,6 @@
 #include <QtNodes/FlowScene>
 #include <QtNodes/Node>
 #include <QtNodes/NodeDataModel>
-
-#include <catch2/catch.hpp>
-
-#include <functional>
-#include <memory>
-#include <utility>
-#include <vector>
 
 using QtNodes::Connection;
 using QtNodes::DataModelRegistry;

@@ -1,14 +1,13 @@
 #pragma once
 
-#include "TextData.hpp"
-
-#include <QtNodes/NodeDelegateModel>
-
-#include <QtCore/QObject>
-#include <QtWidgets/QLabel>
-
 #include <iostream>
 #include <vector>
+
+#include "TextData.hpp"
+
+#include <QtCore/QObject>
+#include <QtNodes/NodeDelegateModel>
+#include <QtWidgets/QLabel>
 
 using QtNodes::ConnectionPolicy;
 using QtNodes::NodeData;

@@ -1,12 +1,11 @@
 #include "DynamicPortsModel.hpp"
 
+#include <iterator>
+
 #include "PortAddRemoveWidget.hpp"
 
-#include <QtNodes/ConnectionIdUtils>
-
 #include <QJsonArray>
-
-#include <iterator>
+#include <QtNodes/ConnectionIdUtils>
 
 DynamicPortsModel::DynamicPortsModel()
     : _nextNodeId{0}
@@ -46,8 +45,8 @@ std::unordered_set<ConnectionId> DynamicPortsModel::connections(NodeId nodeId,
                  _connectivity.end(),
                  std::inserter(result, std::end(result)),
                  [&portType, &portIndex, &nodeId](ConnectionId const &cid) {
-                     return (getNodeId(portType, cid) == nodeId
-                             && getPortIndex(portType, cid) == portIndex);
+                     return (getNodeId(portType, cid) == nodeId &&
+                             getPortIndex(portType, cid) == portIndex);
                  });
 
     return result;

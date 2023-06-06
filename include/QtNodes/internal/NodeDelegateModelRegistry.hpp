@@ -1,12 +1,5 @@
 #pragma once
 
-#include "Export.hpp"
-#include "NodeData.hpp"
-#include "NodeDelegateModel.hpp"
-#include "QStringStdHash.hpp"
-
-#include <QtCore/QString>
-
 #include <functional>
 #include <memory>
 #include <set>
@@ -14,6 +7,13 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include "Export.hpp"
+#include "NodeData.hpp"
+#include "NodeDelegateModel.hpp"
+#include "QStringStdHash.hpp"
+
+#include <QtCore/QString>
 
 namespace QtNodes {
 
@@ -27,7 +27,7 @@ public:
     using RegisteredModelsCategoryMap = std::unordered_map<QString, QString>;
     using CategoriesSet = std::set<QString>;
 
-    //using RegisteredTypeConvertersMap = std::map<TypeConverterId, TypeConverter>;
+    // using RegisteredTypeConvertersMap = std::map<TypeConverterId, TypeConverter>;
 
     NodeDelegateModelRegistry() = default;
     ~NodeDelegateModelRegistry() = default;

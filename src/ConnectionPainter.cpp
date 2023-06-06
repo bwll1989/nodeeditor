@@ -1,13 +1,13 @@
 #include "ConnectionPainter.hpp"
 
-#include <QtGui/QIcon>
-
 #include "AbstractGraphModel.hpp"
 #include "ConnectionGraphicsObject.hpp"
 #include "ConnectionState.hpp"
 #include "Definitions.hpp"
 #include "NodeData.hpp"
 #include "StyleCollection.hpp"
+
+#include <QtGui/QIcon>
 
 namespace QtNodes {
 
@@ -149,16 +149,13 @@ static void drawNormalLine(QPainter *painter, ConnectionGraphicsObject const &cg
 
         auto const cId = cgo.connectionId();
 
-        auto dataTypeOut = graphModel
-                               .portData(cId.outNodeId,
-                                         PortType::Out,
-                                         cId.outPortIndex,
-                                         PortRole::DataType)
-                               .value<NodeDataType>();
+        auto dataTypeOut =
+            graphModel.portData(cId.outNodeId, PortType::Out, cId.outPortIndex, PortRole::DataType)
+                .value<NodeDataType>();
 
-        auto dataTypeIn
-            = graphModel.portData(cId.inNodeId, PortType::In, cId.inPortIndex, PortRole::DataType)
-                  .value<NodeDataType>();
+        auto dataTypeIn =
+            graphModel.portData(cId.inNodeId, PortType::In, cId.inPortIndex, PortRole::DataType)
+                .value<NodeDataType>();
 
         useGradientColor = (dataTypeOut.id != dataTypeIn.id);
 
@@ -209,8 +206,8 @@ static void drawNormalLine(QPainter *painter, ConnectionGraphicsObject const &cg
             QIcon icon(":convert.png");
 
             QPixmap pixmap = icon.pixmap(QSize(22, 22));
-            painter->drawPixmap(cubic.pointAtPercent(0.50)
-                                    - QPoint(pixmap.width() / 2, pixmap.height() / 2),
+            painter->drawPixmap(cubic.pointAtPercent(0.50) -
+                                    QPoint(pixmap.width() / 2, pixmap.height() / 2),
                                 pixmap);
         }
     } else {

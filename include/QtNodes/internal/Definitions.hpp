@@ -1,10 +1,10 @@
 #pragma once
 
+#include <limits>
+
 #include "Export.hpp"
 
 #include <QtCore/QMetaObject>
-
-#include <limits>
 
 /**
  * @file
@@ -19,8 +19,8 @@ Q_NAMESPACE_EXPORT(NODE_EDITOR_PUBLIC)
 #endif
 
     /**
- * Constants used for fetching QVariant data from GraphModel.
- */
+     * Constants used for fetching QVariant data from GraphModel.
+     */
     enum class NodeRole {
         Type = 0,         ///< Type of the current node, usually a string.
         Position,         ///< `QPointF` positon of the node on the scene.
@@ -107,8 +107,8 @@ struct ConnectionId
 
 inline bool operator==(ConnectionId const &a, ConnectionId const &b)
 {
-    return a.outNodeId == b.outNodeId && a.outPortIndex == b.outPortIndex
-           && a.inNodeId == b.inNodeId && a.inPortIndex == b.inPortIndex;
+    return a.outNodeId == b.outNodeId && a.outPortIndex == b.outPortIndex &&
+           a.inNodeId == b.inNodeId && a.inPortIndex == b.inPortIndex;
 }
 
 inline bool operator!=(ConnectionId const &a, ConnectionId const &b)

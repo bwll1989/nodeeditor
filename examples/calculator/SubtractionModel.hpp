@@ -1,13 +1,11 @@
 #pragma once
 
-#include <QtCore/QObject>
-#include <QtWidgets/QLabel>
-
-#include <QtNodes/NodeDelegateModel>
-
+#include "DecimalData.hpp"
 #include "MathOperationDataModel.hpp"
 
-#include "DecimalData.hpp"
+#include <QtCore/QObject>
+#include <QtNodes/NodeDelegateModel>
+#include <QtWidgets/QLabel>
 
 /// The model dictates the number of inputs and outputs for the Node.
 /// In this example it has no logic.

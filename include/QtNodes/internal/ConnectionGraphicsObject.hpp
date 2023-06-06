@@ -2,11 +2,11 @@
 
 #include <utility>
 
-#include <QtCore/QUuid>
-#include <QtWidgets/QGraphicsObject>
-
 #include "ConnectionState.hpp"
 #include "Definitions.hpp"
+
+#include <QtCore/QUuid>
+#include <QtWidgets/QGraphicsObject>
 
 class QGraphicsSceneMouseEvent;
 

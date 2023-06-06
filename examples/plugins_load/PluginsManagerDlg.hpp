@@ -3,7 +3,6 @@
 #include <QDialog>
 #include <QDir>
 #include <QStandardItemModel>
-
 #include <QtNodes/PluginsManager>
 
 using QtNodes::PluginsManager;

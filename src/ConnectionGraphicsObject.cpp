@@ -1,5 +1,7 @@
 #include "ConnectionGraphicsObject.hpp"
 
+#include <stdexcept>
+
 #include "AbstractGraphModel.hpp"
 #include "AbstractNodeGeometry.hpp"
 #include "BasicGraphicsScene.hpp"
@@ -12,15 +14,12 @@
 #include "StyleCollection.hpp"
 #include "locateNode.hpp"
 
+#include <QtCore/QDebug>
 #include <QtWidgets/QGraphicsBlurEffect>
 #include <QtWidgets/QGraphicsDropShadowEffect>
 #include <QtWidgets/QGraphicsSceneMouseEvent>
 #include <QtWidgets/QGraphicsView>
 #include <QtWidgets/QStyleOptionGraphicsItem>
-
-#include <QtCore/QDebug>
-
-#include <stdexcept>
 
 namespace QtNodes {
 
@@ -40,7 +39,7 @@ ConnectionGraphicsObject::ConnectionGraphicsObject(BasicGraphicsScene &scene,
 
     setAcceptHoverEvents(true);
 
-    //addGraphicsEffect();
+    // addGraphicsEffect();
 
     setZValue(-1.0);
 
@@ -122,10 +121,10 @@ QPainterPath ConnectionGraphicsObject::shape() const
 {
 #ifdef DEBUG_DRAWING
 
-    //QPainterPath path;
+    // QPainterPath path;
 
-    //path.addRect(boundingRect());
-    //return path;
+    // path.addRect(boundingRect());
+    // return path;
 
 #else
     return ConnectionPainter::getPainterStroke(*this);
@@ -309,10 +308,10 @@ void ConnectionGraphicsObject::addGraphicsEffect()
     effect->setBlurRadius(5);
     setGraphicsEffect(effect);
 
-    //auto effect = new QGraphicsDropShadowEffect;
-    //auto effect = new ConnectionBlurEffect(this);
-    //effect->setOffset(4, 4);
-    //effect->setColor(QColor(Qt::gray).darker(800));
+    // auto effect = new QGraphicsDropShadowEffect;
+    // auto effect = new ConnectionBlurEffect(this);
+    // effect->setOffset(4, 4);
+    // effect->setColor(QColor(Qt::gray).darker(800));
 }
 
 std::pair<QPointF, QPointF> ConnectionGraphicsObject::pointsC1C2Horizontal() const

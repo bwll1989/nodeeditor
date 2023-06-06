@@ -1,9 +1,10 @@
 #include "DataFlowGraphModel.hpp"
+
+#include <stdexcept>
+
 #include "ConnectionIdHash.hpp"
 
 #include <QJsonArray>
-
-#include <stdexcept>
 
 namespace QtNodes {
 
@@ -44,8 +45,8 @@ std::unordered_set<ConnectionId> DataFlowGraphModel::connections(NodeId nodeId,
                  _connectivity.end(),
                  std::inserter(result, std::end(result)),
                  [&portType, &portIndex, &nodeId](ConnectionId const &cid) {
-                     return (getNodeId(portType, cid) == nodeId
-                             && getPortIndex(portType, cid) == portIndex);
+                     return (getNodeId(portType, cid) == nodeId &&
+                             getPortIndex(portType, cid) == portIndex);
                  });
 
     return result;
@@ -124,8 +125,8 @@ bool DataFlowGraphModel::connectionPossible(ConnectionId const connectionId) con
         return connected.empty() || (policy == ConnectionPolicy::Many);
     };
 
-    return getDataType(PortType::Out).id == getDataType(PortType::In).id
-           && portVacant(PortType::Out) && portVacant(PortType::In);
+    return getDataType(PortType::Out).id == getDataType(PortType::In).id &&
+           portVacant(PortType::Out) && portVacant(PortType::In);
 }
 
 void DataFlowGraphModel::addConnection(ConnectionId const connectionId)
@@ -499,8 +500,8 @@ void DataFlowGraphModel::loadNode(QJsonObject const &nodeJson)
 
         _models[restoredNodeId]->load(internalDataJson);
     } else {
-        throw std::logic_error(std::string("No registered model with name ")
-                               + delegateModelName.toLocal8Bit().data());
+        throw std::logic_error(std::string("No registered model with name ") +
+                               delegateModelName.toLocal8Bit().data());
     }
 }
 

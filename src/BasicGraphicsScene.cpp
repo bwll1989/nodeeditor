@@ -1,5 +1,10 @@
 #include "BasicGraphicsScene.hpp"
 
+#include <iostream>
+#include <stdexcept>
+#include <unordered_set>
+#include <utility>
+
 #include "AbstractNodeGeometry.hpp"
 #include "ConnectionGraphicsObject.hpp"
 #include "ConnectionIdUtils.hpp"
@@ -10,10 +15,6 @@
 #include "NodeGraphicsObject.hpp"
 
 #include <QUndoStack>
-
-#include <QtWidgets/QFileDialog>
-#include <QtWidgets/QGraphicsSceneMoveEvent>
-
 #include <QtCore/QBuffer>
 #include <QtCore/QByteArray>
 #include <QtCore/QDataStream>
@@ -22,11 +23,8 @@
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include <QtCore/QtGlobal>
-
-#include <iostream>
-#include <stdexcept>
-#include <unordered_set>
-#include <utility>
+#include <QtWidgets/QFileDialog>
+#include <QtWidgets/QGraphicsSceneMoveEvent>
 #include <queue>
 
 namespace QtNodes {
@@ -236,8 +234,8 @@ void BasicGraphicsScene::onConnectionDeleted(ConnectionId const connectionId)
 
 void BasicGraphicsScene::onConnectionCreated(ConnectionId const connectionId)
 {
-    _connectionGraphicsObjects[connectionId]
-        = std::make_unique<ConnectionGraphicsObject>(*this, connectionId);
+    _connectionGraphicsObjects[connectionId] =
+        std::make_unique<ConnectionGraphicsObject>(*this, connectionId);
 
     updateAttachedNodes(connectionId, PortType::Out);
     updateAttachedNodes(connectionId, PortType::In);

@@ -1,9 +1,10 @@
 #include "PluginsManager.hpp"
 
-#include "NodeDelegateModelRegistry.hpp"
-
 #include <algorithm>
 #include <utility>
+
+#include "NodeDelegateModelRegistry.hpp"
+
 #include <QDebug>
 #include <QDir>
 #include <QDirIterator>
@@ -47,8 +48,9 @@ std::shared_ptr<NodeDelegateModelRegistry> PluginsManager::registry()
 
 /**
  * @brief Recursively loads all plugins with the specified suffix according to the folder path.
- * If no suffix is specified then the choice is up to the OS. For example, Windows OS selects `*.dll`
- * 
+ * If no suffix is specified then the choice is up to the OS. For example, Windows OS selects
+ * `*.dll`
+ *
  * ```
  * │  plugins_load
  * │  QtNodes.dll
@@ -59,12 +61,13 @@ std::shared_ptr<NodeDelegateModelRegistry> PluginsManager::registry()
  *          plugin_text.node
  *          text_dependent.dll
  * ```
- * @TODO: Currently only tested and passed under windows, is there a solution for Qt for all three platforms?
+ * @TODO: Currently only tested and passed under windows, is there a solution for Qt for all three
+ * platforms?
  * 1. `plugins_Load` can successfully load `plugin_text.node`
  * 2. After changing the folder name `text` it still loads successfully
- * 
- * @param folderPath 
- * @param nameFilters 
+ *
+ * @param folderPath
+ * @param nameFilters
  */
 void PluginsManager::loadPlugins(const QString &folderPath, const QStringList &nameFilters)
 {

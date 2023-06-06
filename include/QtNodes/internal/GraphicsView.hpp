@@ -1,8 +1,8 @@
 #pragma once
 
-#include <QtWidgets/QGraphicsView>
-
 #include "Export.hpp"
+
+#include <QtWidgets/QGraphicsView>
 
 namespace QtNodes {
 

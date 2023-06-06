@@ -1,4 +1,4 @@
-#include <QtWidgets/QApplication>
+#include "models.hpp"
 
 #include <QtNodes/ConnectionStyle>
 #include <QtNodes/DataFlowGraphModel>
@@ -6,8 +6,7 @@
 #include <QtNodes/GraphicsView>
 #include <QtNodes/NodeData>
 #include <QtNodes/NodeDelegateModelRegistry>
-
-#include "models.hpp"
+#include <QtWidgets/QApplication>
 
 using QtNodes::ConnectionStyle;
 using QtNodes::DataFlowGraphicsScene;

@@ -1,3 +1,5 @@
+#include <catch2/catch.hpp>
+
 #include "ApplicationSetup.hpp"
 #include "Stringify.hpp"
 #include "StubNodeDataModel.hpp"
@@ -6,9 +8,6 @@
 #include <QtNodes/FlowScene>
 #include <QtNodes/FlowView>
 #include <QtNodes/Node>
-
-#include <catch2/catch.hpp>
-
 #include <QtTest>
 #include <QtWidgets/QApplication>
 

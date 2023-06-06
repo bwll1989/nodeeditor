@@ -2,8 +2,6 @@
 
 #include <cmath>
 
-#include <QtCore/QMargins>
-
 #include "AbstractGraphModel.hpp"
 #include "AbstractNodeGeometry.hpp"
 #include "BasicGraphicsScene.hpp"
@@ -13,13 +11,15 @@
 #include "NodeState.hpp"
 #include "StyleCollection.hpp"
 
+#include <QtCore/QMargins>
+
 namespace QtNodes {
 
 void DefaultNodePainter::paint(QPainter *painter, NodeGraphicsObject &ngo) const
 {
     // TODO?
-    //AbstractNodeGeometry & geometry = ngo.nodeScene()->nodeGeometry();
-    //geometry.recomputeSizeIfFontChanged(painter->font());
+    // AbstractNodeGeometry & geometry = ngo.nodeScene()->nodeGeometry();
+    // geometry.recomputeSizeIfFontChanged(painter->font());
 
     drawNodeRect(painter, ngo);
 

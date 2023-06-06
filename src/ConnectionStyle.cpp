@@ -1,14 +1,13 @@
 #include "ConnectionStyle.hpp"
 
+#include <random>
+
 #include "StyleCollection.hpp"
 
+#include <QDebug>
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonObject>
 #include <QtCore/QJsonValueRef>
-
-#include <QDebug>
-
-#include <random>
 
 using QtNodes::ConnectionStyle;
 

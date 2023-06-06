@@ -1,5 +1,7 @@
 #include "UndoCommands.hpp"
 
+#include <typeinfo>
+
 #include "BasicGraphicsScene.hpp"
 #include "ConnectionGraphicsObject.hpp"
 #include "ConnectionIdUtils.hpp"
@@ -12,8 +14,6 @@
 #include <QtGui/QClipboard>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QGraphicsObject>
-
-#include <typeinfo>
 
 namespace QtNodes {
 

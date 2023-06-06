@@ -2,13 +2,13 @@
 
 #include <memory>
 
-#include <QtWidgets/QWidget>
-
 #include "Definitions.hpp"
 #include "Export.hpp"
 #include "NodeData.hpp"
 #include "NodeStyle.hpp"
 #include "Serializable.hpp"
+
+#include <QtWidgets/QWidget>
 
 namespace QtNodes {
 
@@ -69,15 +69,15 @@ public:
     virtual std::shared_ptr<NodeData> outData(PortIndex const port) = 0;
 
     /**
-   * It is recommented to preform a lazy initialization for the
-   * embedded widget and create it inside this function, not in the
-   * constructor of the current model.
-   *
-   * Our Model Registry is able to shortly instantiate models in order
-   * to call the non-static `Model::name()`. If the embedded widget is
-   * allocated in the constructor but not actually embedded into some
-   * QGraphicsProxyWidget, we'll gonna have a dangling pointer.
-   */
+     * It is recommented to preform a lazy initialization for the
+     * embedded widget and create it inside this function, not in the
+     * constructor of the current model.
+     *
+     * Our Model Registry is able to shortly instantiate models in order
+     * to call the non-static `Model::name()`. If the embedded widget is
+     * allocated in the constructor but not actually embedded into some
+     * QGraphicsProxyWidget, we'll gonna have a dangling pointer.
+     */
     virtual QWidget *embeddedWidget() = 0;
 
     virtual bool widgetEmbeddable() const { return true; }
@@ -110,9 +110,9 @@ Q_SIGNALS:
 
     /// Call this function before deleting the data associated with ports.
     /**
-   * The function notifies the Graph Model and makes it remove and recompute the
-   * affected connection addresses.
-   */
+     * The function notifies the Graph Model and makes it remove and recompute the
+     * affected connection addresses.
+     */
     void portsAboutToBeDeleted(PortType const portType, PortIndex const first, PortIndex const last);
 
     /// Call this function when data and port moditications are finished.
@@ -120,9 +120,9 @@ Q_SIGNALS:
 
     /// Call this function before inserting the data associated with ports.
     /**
-   * The function notifies the Graph Model and makes it recompute the affected
-   * connection addresses.
-   */
+     * The function notifies the Graph Model and makes it recompute the affected
+     * connection addresses.
+     */
     void portsAboutToBeInserted(PortType const portType,
                                 PortIndex const first,
                                 PortIndex const last);

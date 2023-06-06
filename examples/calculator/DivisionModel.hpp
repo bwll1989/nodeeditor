@@ -3,9 +3,8 @@
 #include "DecimalData.hpp"
 #include "MathOperationDataModel.hpp"
 
-#include <QtNodes/NodeDelegateModel>
-
 #include <QtCore/QObject>
+#include <QtNodes/NodeDelegateModel>
 #include <QtWidgets/QLabel>
 
 /// The model dictates the number of inputs and outputs for the Node.
@@ -56,16 +55,16 @@ private:
         auto n2 = _number2.lock();
 
         if (n2 && (n2->number() == 0.0)) {
-            //modelValidationState = NodeValidationState::Error;
-            //modelValidationError = QStringLiteral("Division by zero error");
+            // modelValidationState = NodeValidationState::Error;
+            // modelValidationError = QStringLiteral("Division by zero error");
             _result.reset();
         } else if (n1 && n2) {
-            //modelValidationState = NodeValidationState::Valid;
-            //modelValidationError = QString();
+            // modelValidationState = NodeValidationState::Valid;
+            // modelValidationError = QString();
             _result = std::make_shared<DecimalData>(n1->number() / n2->number());
         } else {
-            //modelValidationState = NodeValidationState::Warning;
-            //modelValidationError = QStringLiteral("Missing or incorrect inputs");
+            // modelValidationState = NodeValidationState::Warning;
+            // modelValidationError = QStringLiteral("Missing or incorrect inputs");
             _result.reset();
         }
 

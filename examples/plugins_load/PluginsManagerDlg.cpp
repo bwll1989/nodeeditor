@@ -8,7 +8,6 @@
 #include <QHeaderView>
 #include <QPushButton>
 #include <QTableView>
-
 #include <QtNodes/NodeDelegateModelRegistry>
 #include <QtNodes/PluginInterface>
 
@@ -47,11 +46,11 @@ PluginsManagerDlg::PluginsManagerDlg(QWidget *parent)
     QPushButton *addButton = new QPushButton("+");
     layout->addWidget(addButton, 1, 0);
     connect(addButton, &QPushButton::clicked, this, [this]() {
-        QString fileName
-            = QFileDialog::getOpenFileName(this,
-                                           tr("Load Plugin"),
-                                           QCoreApplication::applicationDirPath(),
-                                           tr("Node Files(*.node);;Data Files(*.data)"));
+        QString fileName =
+            QFileDialog::getOpenFileName(this,
+                                         tr("Load Plugin"),
+                                         QCoreApplication::applicationDirPath(),
+                                         tr("Node Files(*.node);;Data Files(*.data)"));
 
         if (!QFileInfo::exists(fileName))
             return;
@@ -101,8 +100,8 @@ PluginsManagerDlg::PluginsManagerDlg(QWidget *parent)
             PluginsManager *pluginsManager = PluginsManager::instance();
 
             // FIXME: Unload plugin successfully, but cannot delete the plugin file in windows
-            if (!pluginsManager->unloadPluginFromName(item->text())
-                || !QFile::remove(item->data().toString())) {
+            if (!pluginsManager->unloadPluginFromName(item->text()) ||
+                !QFile::remove(item->data().toString())) {
                 selectionModel->select(rowIdx, QItemSelectionModel::Deselect);
                 continue;
             }

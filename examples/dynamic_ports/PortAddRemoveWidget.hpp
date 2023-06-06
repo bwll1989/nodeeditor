@@ -1,12 +1,10 @@
 #pragma once
 
-#include <QPushButton>
-#include <QWidget>
-
-#include <QtNodes/Definitions>
-
 #include <QHBoxLayout>
+#include <QPushButton>
 #include <QVBoxLayout>
+#include <QWidget>
+#include <QtNodes/Definitions>
 
 using QtNodes::NodeId;
 using QtNodes::PortIndex;
@@ -51,19 +49,19 @@ public:
     ~PortAddRemoveWidget();
 
     /**
-   * Called from constructor, creates all button groups according to models'port
-   * counts.
-   */
+     * Called from constructor, creates all button groups according to models'port
+     * counts.
+     */
     void populateButtons(PortType portType, unsigned int nPorts);
 
     /**
-   * Adds a single `[+][-]` button group to a given layout.
-   */
+     * Adds a single `[+][-]` button group to a given layout.
+     */
     QHBoxLayout *addButtonGroupToLayout(QVBoxLayout *vbl, unsigned int portIndex);
 
     /**
-   * Removes a single `[+][-]` button group from a given layout.
-   */
+     * Removes a single `[+][-]` button group from a given layout.
+     */
     void removeButtonGroupFromLayout(QVBoxLayout *vbl, unsigned int portIndex);
 
 private Q_SLOTS:
@@ -73,10 +71,10 @@ private Q_SLOTS:
 
 private:
     /**
-   * @param buttonIndex is the index of a button in the layout.
-   * Plus button has the index 0.
-   * Minus button has the index 1.
-   */
+     * @param buttonIndex is the index of a button in the layout.
+     * Plus button has the index 0.
+     * Minus button has the index 1.
+     */
     std::pair<PortType, PortIndex> findWhichPortWasClicked(QObject *sender, int const buttonIndex);
 
 private:

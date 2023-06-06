@@ -1,16 +1,15 @@
+#include "PluginsManagerDlg.hpp"
+
 #include <QApplication>
 #include <QFileDialog>
 #include <QMenuBar>
 #include <QObject>
 #include <QVBoxLayout>
-
 #include <QtNodes/DataFlowGraphModel>
 #include <QtNodes/DataFlowGraphicsScene>
 #include <QtNodes/GraphicsView>
 #include <QtNodes/NodeDelegateModelRegistry>
 #include <QtNodes/PluginsManager>
-
-#include "PluginsManagerDlg.hpp"
 
 using QtNodes::ConnectionStyle;
 using QtNodes::DataFlowGraphicsScene;

@@ -1,16 +1,15 @@
-#include <QtNodes/DataFlowGraphicsScene>
-#include <QtNodes/GraphicsView>
-#include <QtNodes/NodeDelegateModelRegistry>
+#include "DataFlowModel.hpp"
+#include "DelegateNodeModel.hpp"
 
 #include <QAction>
 #include <QScreen>
+#include <QtNodes/DataFlowGraphicsScene>
+#include <QtNodes/GraphicsView>
+#include <QtNodes/NodeDelegateModelRegistry>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
-
-#include "DataFlowModel.hpp"
-#include "DelegateNodeModel.hpp"
 
 using QtNodes::DataFlowGraphicsScene;
 using QtNodes::GraphicsView;

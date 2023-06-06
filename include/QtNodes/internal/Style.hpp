@@ -6,12 +6,13 @@
 #include <QtCore/QJsonObject>
 #include <QtCore/QObject>
 #include <QtCore/QString>
+#include <QtWidgets/QStyledItemDelegate>
 
 namespace QtNodes {
 
 class Style // : public QObject
 {
-    //Q_OBJECT
+    // Q_OBJECT
 
 public:
     virtual ~Style() = default;

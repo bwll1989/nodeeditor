@@ -1,8 +1,8 @@
 #pragma once
 
-#include <QPainter>
-
 #include "Export.hpp"
+
+#include <QPainter>
 
 class QPainter;
 
@@ -18,12 +18,12 @@ public:
     virtual ~AbstractNodePainter() = default;
 
     /**
-   * Reimplement this function in order to have a custom painting.
-   *
-   * Useful functions:
-   * `NodeGraphicsObject::nodeScene()->nodeGeometry()`
-   * `NodeGraphicsObject::graphModel()`
-   */
+     * Reimplement this function in order to have a custom painting.
+     *
+     * Useful functions:
+     * `NodeGraphicsObject::nodeScene()->nodeGeometry()`
+     * `NodeGraphicsObject::graphModel()`
+     */
     virtual void paint(QPainter *painter, NodeGraphicsObject &ngo) const = 0;
 };
 } // namespace QtNodes

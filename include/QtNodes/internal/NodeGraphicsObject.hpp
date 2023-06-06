@@ -1,9 +1,9 @@
 #pragma once
 
+#include "NodeState.hpp"
+
 #include <QtCore/QUuid>
 #include <QtWidgets/QGraphicsObject>
-
-#include "NodeState.hpp"
 
 class QGraphicsProxyWidget;
 

@@ -1,13 +1,11 @@
 #pragma once
 
-#include <QtNodes/NodeDelegateModel>
-
-#include <QtCore/QObject>
-#include <QtWidgets/QLabel>
-
+#include "DecimalData.hpp"
 #include "MathOperationDataModel.hpp"
 
-#include "DecimalData.hpp"
+#include <QtCore/QObject>
+#include <QtNodes/NodeDelegateModel>
+#include <QtWidgets/QLabel>
 
 /// The model dictates the number of inputs and outputs for the Node.
 /// In this example it has no logic.
@@ -30,12 +28,12 @@ private:
         auto n2 = _number2.lock();
 
         if (n1 && n2) {
-            //modelValidationState = NodeValidationState::Valid;
-            //modelValidationError = QString();
+            // modelValidationState = NodeValidationState::Valid;
+            // modelValidationError = QString();
             _result = std::make_shared<DecimalData>(n1->number() * n2->number());
         } else {
-            //modelValidationState = NodeValidationState::Warning;
-            //modelValidationError = QStringLiteral("Missing or incorrect inputs");
+            // modelValidationState = NodeValidationState::Warning;
+            // modelValidationError = QStringLiteral("Missing or incorrect inputs");
             _result.reset();
         }
 

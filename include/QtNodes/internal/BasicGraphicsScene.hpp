@@ -1,9 +1,5 @@
 #pragma once
 
-#include <QtCore/QUuid>
-#include <QtWidgets/QGraphicsScene>
-#include <QtWidgets/QMenu>
-
 #include <functional>
 #include <memory>
 #include <tuple>
@@ -14,8 +10,11 @@
 #include "ConnectionIdHash.hpp"
 #include "Definitions.hpp"
 #include "Export.hpp"
-
 #include "QUuidStdHash.hpp"
+
+#include <QtCore/QUuid>
+#include <QtWidgets/QGraphicsScene>
+#include <QtWidgets/QMenu>
 
 class QUndoStack;
 
@@ -56,21 +55,21 @@ public:
 public:
     /// Creates a "draft" instance of ConnectionGraphicsObject.
     /**
-   * The scene caches a "draft" connection which has one loose end.
-   * After attachment the "draft" instance is deleted and instead a
-   * normal "full" connection is created.
-   * Function @returns the "draft" instance for further geometry
-   * manipulations.
-   */
+     * The scene caches a "draft" connection which has one loose end.
+     * After attachment the "draft" instance is deleted and instead a
+     * normal "full" connection is created.
+     * Function @returns the "draft" instance for further geometry
+     * manipulations.
+     */
     std::unique_ptr<ConnectionGraphicsObject> const &makeDraftConnection(
         ConnectionId const newConnectionId);
 
     /// Deletes "draft" connection.
     /**
-   * The function is called when user releases the mouse button during
-   * the construction of the new connection without attaching it to any
-   * node.
-   */
+     * The function is called when user releases the mouse button during
+     * the construction of the new connection without attaching it to any
+     * node.
+     */
     void resetDraftConnection();
 
     /// Deletes all the nodes. Connections are removed automatically.
@@ -79,14 +78,14 @@ public:
 public:
     /// @returns NodeGraphicsObject associated with the given nodeId.
     /**
-   * @returns nullptr when the object is not found.
-   */
+     * @returns nullptr when the object is not found.
+     */
     NodeGraphicsObject *nodeGraphicsObject(NodeId nodeId);
 
     /// @returns ConnectionGraphicsObject corresponding to `connectionId`.
     /**
-   * @returns `nullptr` when the object is not found.
-   */
+     * @returns `nullptr` when the object is not found.
+     */
     ConnectionGraphicsObject *connectionGraphicsObject(ConnectionId connectionId);
 
     Qt::Orientation orientation() const { return _orientation; }
@@ -96,8 +95,8 @@ public:
 public:
     /// Can @return an instance of the scene context menu in subclass.
     /**
-   * Default implementation returns `nullptr`.
-   */
+     * Default implementation returns `nullptr`.
+     */
     virtual QMenu *createSceneMenu(QPointF const scenePos);
 
 Q_SIGNALS:
@@ -125,10 +124,10 @@ Q_SIGNALS:
 private:
     /// @brief Creates Node and Connection graphics objects.
     /**
-   * Function is used to populate an empty scene in the constructor. We
-   * perform depth-first AbstractGraphModel traversal. The connections are
-   * created by checking non-empty node `Out` ports.
-   */
+     * Function is used to populate an empty scene in the constructor. We
+     * perform depth-first AbstractGraphModel traversal. The connections are
+     * created by checking non-empty node `Out` ports.
+     */
     void traverseGraphAndPopulateGraphicsObjects();
 
     /// Redraws adjacent nodes for given `connectionId`

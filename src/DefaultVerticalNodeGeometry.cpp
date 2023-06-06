@@ -61,8 +61,8 @@ void DefaultVerticalNodeGeometry::recomputeSize(NodeId const nodeId) const
                                          ? inPortWidth * nInPorts + _portSpasing * (nInPorts - 1)
                                          : 0;
 
-    unsigned int totalOutPortsWidth = nOutPorts > 0 ? outPortWidth * nOutPorts
-                                                          + _portSpasing * (nOutPorts - 1)
+    unsigned int totalOutPortsWidth = nOutPorts > 0 ? outPortWidth * nOutPorts +
+                                                          _portSpasing * (nOutPorts - 1)
                                                     : 0;
 
     unsigned int width = std::max(totalInPortsWidth, totalOutPortsWidth);

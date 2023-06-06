@@ -7,9 +7,8 @@
 #include "NodeGraphicsObject.hpp"
 #include "UndoCommands.hpp"
 
-#include <QtCore/QDebug>
-
 #include <QUndoStack>
+#include <QtCore/QDebug>
 
 namespace QtNodes {
 

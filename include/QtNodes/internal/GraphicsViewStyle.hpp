@@ -1,9 +1,9 @@
 #pragma once
 
-#include <QtGui/QColor>
-
 #include "Export.hpp"
 #include "Style.hpp"
+
+#include <QtGui/QColor>
 
 namespace QtNodes {
 

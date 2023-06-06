@@ -1,10 +1,11 @@
 #pragma once
 
+#include <unordered_map>
+#include <vector>
+
 #include "Export.hpp"
 #include "PluginInterface.hpp"
 
-#include <unordered_map>
-#include <vector>
 #include <QObject>
 #include <QPluginLoader>
 
@@ -29,30 +30,30 @@ public:
     void unloadPlugins();
 
     /**
-   * @brief Load the plug-in from the full file path
-   * 
-   * @param filePath "C:/plugin_text.dll"
-   * @return PluginInterface* 
-   */
+     * @brief Load the plug-in from the full file path
+     *
+     * @param filePath "C:/plugin_text.dll"
+     * @return PluginInterface*
+     */
     PluginInterface *loadPluginFromPath(const QString &filePath);
 
     std::vector<PluginInterface *> loadPluginFromPaths(const QStringList filePaths,
                                                        const QStringList &nameFilters);
 
     /**
-   * @brief Unload the plugin from the full file path
-   * 
-   * @param filePath "C:/plugin_text.dll"
-   * @return bool 
-   */
+     * @brief Unload the plugin from the full file path
+     *
+     * @param filePath "C:/plugin_text.dll"
+     * @return bool
+     */
     bool unloadPluginFromPath(const QString &filePath);
 
     /**
-   * @brief Uninstall a plugin by its name, not its file name
-   * 
-   * @param pluginName "pluginText"
-   * @return bool 
-   */
+     * @brief Uninstall a plugin by its name, not its file name
+     *
+     * @param pluginName "pluginText"
+     * @return bool
+     */
     bool unloadPluginFromName(const QString &pluginName);
 
     inline std::unordered_map<QString, QPluginLoader *> loaders() { return _loaders; };

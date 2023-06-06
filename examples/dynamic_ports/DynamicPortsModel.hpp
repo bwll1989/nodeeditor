@@ -3,7 +3,6 @@
 #include <QtCore/QJsonObject>
 #include <QtCore/QPointF>
 #include <QtCore/QSize>
-
 #include <QtNodes/AbstractGraphModel>
 #include <QtNodes/StyleCollection>
 
@@ -52,9 +51,9 @@ public:
     NodeId addNode(QString const nodeType = QString()) override;
 
     /**
-   * Connection is possible when graph contains no connectivity data
-   * in both directions `Out -> In` and `In -> Out`.
-   */
+     * Connection is possible when graph contains no connectivity data
+     * in both directions `Out -> In` and `In -> Out`.
+     */
     bool connectionPossible(ConnectionId const connectionId) const override;
 
     void addConnection(ConnectionId const connectionId) override;
@@ -86,9 +85,9 @@ public:
 
     /// @brief Creates a new node based on the informatoin in `nodeJson`.
     /**
-   * @param nodeJson conains a `NodeId`, node's position, internal node
-   * information.
-   */
+     * @param nodeJson conains a `NodeId`, node's position, internal node
+     * information.
+     */
     void loadNode(QJsonObject const &nodeJson) override;
 
     void load(QJsonObject const &jsonDocument);

@@ -2,13 +2,12 @@
 
 #include <iostream>
 
-#include <QtCore/QObject>
-#include <QtWidgets/QLabel>
+#include "PixmapData.hpp"
 
+#include <QtCore/QObject>
 #include <QtNodes/NodeDelegateModel>
 #include <QtNodes/NodeDelegateModelRegistry>
-
-#include "PixmapData.hpp"
+#include <QtWidgets/QLabel>
 
 using QtNodes::NodeData;
 using QtNodes::NodeDataType;

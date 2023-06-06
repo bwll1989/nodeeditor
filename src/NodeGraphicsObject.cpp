@@ -3,9 +3,6 @@
 #include <cstdlib>
 #include <iostream>
 
-#include <QtWidgets/QGraphicsEffect>
-#include <QtWidgets/QtWidgets>
-
 #include "AbstractGraphModel.hpp"
 #include "AbstractNodeGeometry.hpp"
 #include "AbstractNodePainter.hpp"
@@ -15,6 +12,9 @@
 #include "NodeConnectionInteraction.hpp"
 #include "StyleCollection.hpp"
 #include "UndoCommands.hpp"
+
+#include <QtWidgets/QGraphicsEffect>
+#include <QtWidgets/QtWidgets>
 
 namespace QtNodes {
 
@@ -94,8 +94,8 @@ void NodeGraphicsObject::embedQWidget()
         geometry.recomputeSize(_nodeId);
 
         if (w->sizePolicy().verticalPolicy() & QSizePolicy::ExpandFlag) {
-            unsigned int widgetHeight = geometry.size(_nodeId).height()
-                                        - geometry.captionRect(_nodeId).height();
+            unsigned int widgetHeight = geometry.size(_nodeId).height() -
+                                        geometry.captionRect(_nodeId).height();
 
             // If the widget wants to use as much vertical space as possible, set
             // it to have the geom's equivalentWidgetHeight.
@@ -104,7 +104,7 @@ void NodeGraphicsObject::embedQWidget()
 
         _proxyWidget->setPos(geometry.widgetPosition(_nodeId));
 
-        //update();
+        // update();
 
         _proxyWidget->setOpacity(1.0);
         _proxyWidget->setFlag(QGraphicsItem::ItemIgnoresParentOpacity);
@@ -126,7 +126,7 @@ QRectF NodeGraphicsObject::boundingRect() const
 {
     AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
     return geometry.boundingRect(_nodeId);
-    //return NodeGeometry(_nodeId, _graphModel, nodeScene()).boundingRect();
+    // return NodeGeometry(_nodeId, _graphModel, nodeScene()).boundingRect();
 }
 
 void NodeGraphicsObject::setGeometryChanged()
@@ -171,8 +171,8 @@ QVariant NodeGraphicsObject::itemChange(GraphicsItemChange change, const QVarian
 
 void NodeGraphicsObject::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
-    //if (_nodeState.locked())
-    //return;
+    // if (_nodeState.locked())
+    // return;
 
     AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
 
@@ -248,8 +248,8 @@ void NodeGraphicsObject::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         setSelected(true);
     }
 
-    if (_nodeState.resizing()
-        && _graphModel.nodeData(_nodeId, NodeRole::WidgetEmbeddable).value<bool>()) {
+    if (_nodeState.resizing() &&
+        _graphModel.nodeData(_nodeId, NodeRole::WidgetEmbeddable).value<bool>()) {
         auto diff = event->pos() - event->lastPos();
 
         if (auto w = _graphModel.nodeData<QWidget *>(_nodeId, NodeRole::Widget)) {
@@ -339,11 +339,11 @@ void NodeGraphicsObject::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
 {
     auto pos = event->pos();
 
-    //NodeGeometry geometry(_nodeId, _graphModel, nodeScene());
+    // NodeGeometry geometry(_nodeId, _graphModel, nodeScene());
     AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
 
-    if ((_graphModel.nodeFlags(_nodeId) | NodeFlag::Resizable)
-        && geometry.resizeHandleRect(_nodeId).contains(QPoint(pos.x(), pos.y()))) {
+    if ((_graphModel.nodeFlags(_nodeId) | NodeFlag::Resizable) &&
+        geometry.resizeHandleRect(_nodeId).contains(QPoint(pos.x(), pos.y()))) {
         setCursor(QCursor(Qt::SizeFDiagCursor));
     } else {
         setCursor(QCursor());

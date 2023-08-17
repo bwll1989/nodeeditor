@@ -128,11 +128,11 @@ set(HPP_HEADER_FILES
   include/QtNodes/internal/StyleCollection.hpp
   include/QtNodes/internal/PluginInterface.hpp
   include/QtNodes/internal/PluginsManager.hpp
+  include/QtNodes/internal/UndoCommands.hpp
   src/ConnectionPainter.hpp
   src/DefaultHorizontalNodeGeometry.hpp
   src/DefaultVerticalNodeGeometry.hpp
   src/NodeConnectionInteraction.hpp
-  src/UndoCommands.hpp
 )
 
 # If we want to give the option to build a static library,

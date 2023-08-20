@@ -463,7 +463,7 @@ QJsonObject DataFlowGraphModel::save() const
     return sceneJson;
 }
 
-void DataFlowGraphModel::loadNode(QJsonObject const &nodeJson)
+NodeId DataFlowGraphModel::loadNode(QJsonObject const &nodeJson)
 {
     // Possibility of the id clash when reading it from json and not generating a
     // new value.
@@ -499,10 +499,14 @@ void DataFlowGraphModel::loadNode(QJsonObject const &nodeJson)
         setNodeData(restoredNodeId, NodeRole::Position, pos);
 
         _models[restoredNodeId]->load(internalDataJson);
+
+        return restoredNodeId;
     } else {
         throw std::logic_error(std::string("No registered model with name ") +
                                delegateModelName.toLocal8Bit().data());
     }
+
+    return InvalidNodeId;
 }
 
 void DataFlowGraphModel::load(QJsonObject const &jsonDocument)

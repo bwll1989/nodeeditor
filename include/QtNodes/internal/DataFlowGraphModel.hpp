@@ -75,7 +75,7 @@ public:
 
     QJsonObject save() const override;
 
-    void loadNode(QJsonObject const &nodeJson) override;
+    NodeId loadNode(QJsonObject const &nodeJson) override;
 
     void load(QJsonObject const &json) override;
 

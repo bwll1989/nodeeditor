@@ -62,11 +62,13 @@ static void insertSerializedItems(QJsonObject const &json, BasicGraphicsScene *s
     for (QJsonValue node : nodesJsonArray) {
         QJsonObject obj = node.toObject();
 
-        graphModel.loadNode(obj);
+        auto newId = graphModel.loadNode(obj);
+        if (newId == InvalidNodeId) {
+            continue;
+        }
 
-        auto id = obj["id"].toInt();
-        scene->nodeGraphicsObject(id)->setZValue(1.0);
-        scene->nodeGraphicsObject(id)->setSelected(true);
+        scene->nodeGraphicsObject(newId)->setZValue(1.0);
+        scene->nodeGraphicsObject(newId)->setSelected(true);
     }
 
     QJsonArray const &connJsonArray = json["connections"].toArray();

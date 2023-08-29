@@ -1,5 +1,7 @@
 #include "SimpleGraphModel.hpp"
 
+#include "QtNodes/internal/Definitions.hpp"
+
 SimpleGraphModel::SimpleGraphModel()
     : _nextNodeId{0}
 {}
@@ -279,7 +281,7 @@ QJsonObject SimpleGraphModel::saveNode(NodeId const nodeId) const
     return nodeJson;
 }
 
-void SimpleGraphModel::loadNode(QJsonObject const &nodeJson)
+NodeId SimpleGraphModel::loadNode(QJsonObject const &nodeJson)
 {
     NodeId restoredNodeId = nodeJson["id"].toInt();
 
@@ -296,5 +298,9 @@ void SimpleGraphModel::loadNode(QJsonObject const &nodeJson)
         QPointF const pos(posJson["x"].toDouble(), posJson["y"].toDouble());
 
         setNodeData(restoredNodeId, NodeRole::Position, pos);
+
+        return restoredNodeId;
     }
+
+    return InvalidNodeId;
 }

@@ -3,6 +3,7 @@
 #include <iterator>
 
 #include "PortAddRemoveWidget.hpp"
+#include "QtNodes/internal/Definitions.hpp"
 
 #include <QJsonArray>
 #include <QtNodes/ConnectionIdUtils>
@@ -329,7 +330,7 @@ QJsonObject DynamicPortsModel::save() const
     return sceneJson;
 }
 
-void DynamicPortsModel::loadNode(QJsonObject const &nodeJson)
+NodeId DynamicPortsModel::loadNode(QJsonObject const &nodeJson)
 {
     NodeId restoredNodeId = static_cast<NodeId>(nodeJson["id"].toInt());
 
@@ -352,6 +353,8 @@ void DynamicPortsModel::loadNode(QJsonObject const &nodeJson)
     }
 
     Q_EMIT nodeCreated(restoredNodeId);
+
+    return restoredNodeId;
 }
 
 void DynamicPortsModel::load(QJsonObject const &jsonDocument)

@@ -85,7 +85,7 @@ public:
      * @param nodeJson conains a `NodeId`, node's position, internal node
      * information.
      */
-    void loadNode(QJsonObject const &nodeJson) override;
+    NodeId loadNode(QJsonObject const &nodeJson) override;
 
     NodeId newNodeId() override { return _nextNodeId++; }
 

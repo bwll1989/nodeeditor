@@ -9,7 +9,7 @@
 
 namespace QtNodes {
 
-inline PortIndex getNodeId(PortType portType, ConnectionId connectionId)
+inline NodeId getNodeId(PortType portType, ConnectionId connectionId)
 {
     NodeId id = InvalidNodeId;
 

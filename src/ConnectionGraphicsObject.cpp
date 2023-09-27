@@ -56,22 +56,22 @@ void ConnectionGraphicsObject::initializePosition()
     // we position both connection ends correctly.
 
     if (_connectionState.requiredPort() != PortType::None) {
-        PortType attachedPort = oppositePort(_connectionState.requiredPort());
+        const PortType attachedPort = oppositePort(_connectionState.requiredPort());
 
-        PortIndex portIndex = getPortIndex(attachedPort, _connectionId);
-        NodeId nodeId = getNodeId(attachedPort, _connectionId);
+        const PortIndex portIndex = getPortIndex(attachedPort, _connectionId);
+        const auto nodeId = getNodeId(attachedPort, _connectionId);
 
         NodeGraphicsObject *ngo = nodeScene()->nodeGraphicsObject(nodeId);
 
         if (ngo) {
-            QTransform nodeSceneTransform = ngo->sceneTransform();
+            QTransform const nodeSceneTransform = ngo->sceneTransform();
 
-            AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
+            AbstractNodeGeometry const &geometry = nodeScene()->nodeGeometry();
 
-            QPointF pos = geometry.portScenePosition(nodeId,
-                                                     attachedPort,
-                                                     portIndex,
-                                                     nodeSceneTransform);
+            QPointF const pos = geometry.portScenePosition(nodeId,
+                                                           attachedPort,
+                                                           portIndex,
+                                                           nodeSceneTransform);
 
             this->setPos(pos);
         }
@@ -100,9 +100,9 @@ QRectF ConnectionGraphicsObject::boundingRect() const
     auto points = pointsC1C2();
 
     // `normalized()` fixes inverted rects.
-    QRectF basicRect = QRectF(_out, _in).normalized();
+    QRectF const basicRect = QRectF(_out, _in).normalized();
 
-    QRectF c1c2Rect = QRectF(points.first, points.second).normalized();
+    QRectF const c1c2Rect = QRectF(points.first, points.second).normalized();
 
     QRectF commonRect = basicRect.united(c1c2Rect);
 

@@ -332,7 +332,7 @@ QJsonObject DynamicPortsModel::save() const
 
 NodeId DynamicPortsModel::loadNode(QJsonObject const &nodeJson)
 {
-    NodeId restoredNodeId = static_cast<NodeId>(nodeJson["id"].toInt());
+    auto restoredNodeId = static_cast<NodeId>(nodeJson["id"].toInteger());
 
     _nextNodeId = std::max(_nextNodeId, restoredNodeId + 1);
 

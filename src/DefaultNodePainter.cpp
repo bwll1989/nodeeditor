@@ -192,22 +192,23 @@ void DefaultNodePainter::drawFilledConnectionPoints(QPainter *painter, NodeGraph
 
 void DefaultNodePainter::drawNodeCaption(QPainter *painter, NodeGraphicsObject &ngo) const
 {
-    AbstractGraphModel &model = ngo.graphModel();
+    AbstractGraphModel const &model = ngo.graphModel();
     NodeId const nodeId = ngo.nodeId();
-    AbstractNodeGeometry &geometry = ngo.nodeScene()->nodeGeometry();
+    AbstractNodeGeometry const &geometry = ngo.nodeScene()->nodeGeometry();
 
-    if (!model.nodeData(nodeId, NodeRole::CaptionVisible).toBool())
+    if (!model.nodeData(nodeId, NodeRole::CaptionVisible).toBool()) {
         return;
+    }
 
     QString const name = model.nodeData(nodeId, NodeRole::Caption).toString();
 
     QFont f = painter->font();
     f.setBold(true);
 
-    QPointF position = geometry.captionPosition(nodeId);
+    QPointF const position = geometry.captionPosition(nodeId);
 
-    QJsonDocument json = QJsonDocument::fromVariant(model.nodeData(nodeId, NodeRole::Style));
-    NodeStyle nodeStyle(json.object());
+    QJsonDocument const json = QJsonDocument::fromVariant(model.nodeData(nodeId, NodeRole::Style));
+    NodeStyle const nodeStyle(json.object());
 
     painter->setFont(f);
     painter->setPen(nodeStyle.FontColor);

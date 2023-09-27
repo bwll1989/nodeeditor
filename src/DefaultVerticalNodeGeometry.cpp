@@ -154,17 +154,18 @@ QPointF DefaultVerticalNodeGeometry::portTextPosition(NodeId const nodeId,
 
 QRectF DefaultVerticalNodeGeometry::captionRect(NodeId const nodeId) const
 {
-    if (!_graphModel.nodeData<bool>(nodeId, NodeRole::CaptionVisible))
+    if (!_graphModel.nodeData<bool>(nodeId, NodeRole::CaptionVisible)) {
         return QRect();
+    }
 
-    QString name = _graphModel.nodeData<QString>(nodeId, NodeRole::Caption);
+    auto const name = _graphModel.nodeData<QString>(nodeId, NodeRole::Caption);
 
     return _boldFontMetrics.boundingRect(name);
 }
 
 QPointF DefaultVerticalNodeGeometry::captionPosition(NodeId const nodeId) const
 {
-    QSize size = _graphModel.nodeData<QSize>(nodeId, NodeRole::Size);
+    auto const size = _graphModel.nodeData<QSize>(nodeId, NodeRole::Size);
 
     unsigned int step = portCaptionsHeight(nodeId, PortType::In);
     step += _portSpasing;

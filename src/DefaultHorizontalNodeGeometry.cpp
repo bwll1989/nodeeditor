@@ -132,10 +132,11 @@ QPointF DefaultHorizontalNodeGeometry::portTextPosition(NodeId const nodeId,
 
 QRectF DefaultHorizontalNodeGeometry::captionRect(NodeId const nodeId) const
 {
-    if (!_graphModel.nodeData<bool>(nodeId, NodeRole::CaptionVisible))
+    if (!_graphModel.nodeData<bool>(nodeId, NodeRole::CaptionVisible)) {
         return QRect();
+    }
 
-    QString name = _graphModel.nodeData<QString>(nodeId, NodeRole::Caption);
+    auto const name = _graphModel.nodeData<QString>(nodeId, NodeRole::Caption);
 
     return _boldFontMetrics.boundingRect(name);
 }

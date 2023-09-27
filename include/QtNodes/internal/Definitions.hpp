@@ -89,7 +89,7 @@ using PortIndex = unsigned int;
 static constexpr PortIndex InvalidPortIndex = std::numeric_limits<PortIndex>::max();
 
 /// Unique Id associated with each node in the GraphModel.
-using NodeId = unsigned int;
+using NodeId = uint64_t;
 
 static constexpr NodeId InvalidNodeId = std::numeric_limits<NodeId>::max();
 

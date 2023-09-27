@@ -191,7 +191,7 @@ void BasicGraphicsScene::traverseGraphAndPopulateGraphicsObjects()
 
     // Then for each node check output connections and insert them.
     for (NodeId const nodeId : allNodeIds) {
-        unsigned int nOutPorts = _graphModel.nodeData<PortCount>(nodeId, NodeRole::OutPortCount);
+        auto nOutPorts = _graphModel.nodeData<PortCount>(nodeId, NodeRole::OutPortCount);
 
         for (PortIndex index = 0; index < nOutPorts; ++index) {
             auto const &outConnectionIds = _graphModel.connections(nodeId, PortType::Out, index);
@@ -207,7 +207,7 @@ void BasicGraphicsScene::traverseGraphAndPopulateGraphicsObjects()
 void BasicGraphicsScene::updateAttachedNodes(ConnectionId const connectionId,
                                              PortType const portType)
 {
-    auto node = nodeGraphicsObject(getNodeId(portType, connectionId));
+    auto *node = nodeGraphicsObject(getNodeId(portType, connectionId));
 
     if (node) {
         node->update();
@@ -262,7 +262,7 @@ void BasicGraphicsScene::onNodeCreated(NodeId const nodeId)
 
 void BasicGraphicsScene::onNodePositionUpdated(NodeId const nodeId)
 {
-    auto node = nodeGraphicsObject(nodeId);
+    auto *node = nodeGraphicsObject(nodeId);
     if (node) {
         node->setPos(_graphModel.nodeData(nodeId, NodeRole::Position).value<QPointF>());
         node->update();
@@ -274,7 +274,7 @@ void BasicGraphicsScene::onNodePositionUpdated(NodeId const nodeId)
 
 void BasicGraphicsScene::onNodeUpdated(NodeId const nodeId)
 {
-    auto node = nodeGraphicsObject(nodeId);
+    auto *node = nodeGraphicsObject(nodeId);
 
     if (node) {
         node->setGeometryChanged();

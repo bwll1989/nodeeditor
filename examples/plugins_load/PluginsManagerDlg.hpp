@@ -9,6 +9,8 @@ using QtNodes::PluginsManager;
 
 class PluginsManagerDlg : public QDialog
 {
+    Q_OBJECT
+
 public:
     PluginsManagerDlg(QWidget *parent = nullptr);
 

@@ -13,10 +13,11 @@ namespace QtNodes {
 
 class BasicGraphicsScene;
 
+/// @brief 创建节点命令
 class NODE_EDITOR_PUBLIC CreateCommand : public QUndoCommand
 {
 public:
-    CreateCommand(BasicGraphicsScene *scene, QString const name, QPointF const &mouseScenePos);
+    CreateCommand(BasicGraphicsScene *scene, QString name, QPointF const &mouseScenePos);
 
     void undo() override;
     void redo() override;
@@ -34,7 +35,7 @@ private:
 class NODE_EDITOR_PUBLIC DeleteCommand : public QUndoCommand
 {
 public:
-    DeleteCommand(BasicGraphicsScene *scene);
+    explicit DeleteCommand(BasicGraphicsScene *scene);
 
     void undo() override;
     void redo() override;
@@ -47,7 +48,7 @@ private:
 class NODE_EDITOR_PUBLIC CopyCommand : public QUndoCommand
 {
 public:
-    CopyCommand(BasicGraphicsScene *scene);
+    explicit CopyCommand(BasicGraphicsScene *scene);
 };
 
 class NODE_EDITOR_PUBLIC PasteCommand : public QUndoCommand
@@ -68,10 +69,11 @@ private:
     QJsonObject _newSceneJson;
 };
 
+/// @brief 删除连接命令
 class NODE_EDITOR_PUBLIC DisconnectCommand : public QUndoCommand
 {
 public:
-    DisconnectCommand(BasicGraphicsScene *scene, ConnectionId const);
+    DisconnectCommand(BasicGraphicsScene *scene, ConnectionId);
 
     void undo() override;
     void redo() override;
@@ -82,10 +84,11 @@ private:
     ConnectionId _connId;
 };
 
+/// @brief 连接命令
 class NODE_EDITOR_PUBLIC ConnectCommand : public QUndoCommand
 {
 public:
-    ConnectCommand(BasicGraphicsScene *scene, ConnectionId const);
+    ConnectCommand(BasicGraphicsScene *scene, ConnectionId);
 
     void undo() override;
     void redo() override;

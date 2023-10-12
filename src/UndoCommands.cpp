@@ -199,7 +199,7 @@ void CreateCommand::redo()
         return;
     }
 
-    insertSerializedItems(_sceneJson, _scene);
+    _sceneJson = insertSerializedItems(_sceneJson, _scene);
 }
 
 //-------------------------------------
@@ -246,7 +246,7 @@ DeleteCommand::DeleteCommand(BasicGraphicsScene *scene)
 
 void DeleteCommand::undo()
 {
-    insertSerializedItems(_sceneJson, _scene);
+    _sceneJson = insertSerializedItems(_sceneJson, _scene);
 }
 
 void DeleteCommand::redo()

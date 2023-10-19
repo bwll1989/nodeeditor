@@ -24,7 +24,7 @@ public:
 public:
     NodeGraphicsObject(BasicGraphicsScene &scene, NodeId node);
 
-    ~NodeGraphicsObject() override = default;
+    ~NodeGraphicsObject() override;
 
 public:
     AbstractGraphModel &graphModel() const;
@@ -77,6 +77,9 @@ private:
     void embedQWidget();
 
     void setLockedState();
+
+private Q_SLOTS:
+    void onLockedState(NodeId);
 
 private:
     NodeId _nodeId;

@@ -60,10 +60,18 @@ NodeGraphicsObject::NodeGraphicsObject(BasicGraphicsScene &scene, NodeId nodeId)
 
     setPos(pos);
 
-    connect(&_graphModel, &AbstractGraphModel::nodeFlagsUpdated, [this](NodeId const nodeId) {
-        if (_nodeId == nodeId)
-            setLockedState();
-    });
+    connect(&_graphModel,
+            &AbstractGraphModel::nodeFlagsUpdated,
+            this,
+            &NodeGraphicsObject::onLockedState);
+}
+
+NodeGraphicsObject::~NodeGraphicsObject()
+{
+    disconnect(&_graphModel,
+               &AbstractGraphModel::nodeFlagsUpdated,
+               this,
+               &NodeGraphicsObject::onLockedState);
 }
 
 AbstractGraphModel &NodeGraphicsObject::graphModel() const
@@ -120,6 +128,14 @@ void NodeGraphicsObject::setLockedState()
     setFlag(QGraphicsItem::ItemIsMovable, !locked);
     setFlag(QGraphicsItem::ItemIsSelectable, !locked);
     setFlag(QGraphicsItem::ItemSendsScenePositionChanges, !locked);
+}
+
+void NodeGraphicsObject::onLockedState(NodeId id)
+{
+    if (_nodeId != id) {
+        return;
+    }
+    setLockedState();
 }
 
 QRectF NodeGraphicsObject::boundingRect() const

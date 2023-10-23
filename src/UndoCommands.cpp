@@ -106,12 +106,10 @@ static QJsonObject insertSerializedItems(QJsonObject const &json, BasicGraphicsS
             continue;
         }
 
-        ConnectionId const connId{.outNodeId = newOutNodeId,
-                                  .outPortIndex = static_cast<PortIndex>(
-                                      connJson["outPortIndex"].toInt()),
-                                  .inNodeId = newInNodeId,
-                                  .inPortIndex = static_cast<PortIndex>(
-                                      connJson["inPortIndex"].toInt())};
+        ConnectionId const connId{newOutNodeId,
+                                  static_cast<PortIndex>(connJson["outPortIndex"].toInt()),
+                                  newInNodeId,
+                                  static_cast<PortIndex>(connJson["inPortIndex"].toInt())};
 
         // Restore the connection
         graphModel.addConnection(connId);

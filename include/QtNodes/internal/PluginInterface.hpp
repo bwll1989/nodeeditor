@@ -12,7 +12,8 @@ public:
     virtual ~PluginInterface() = default;
 
     virtual QString name() const = 0;
-
+    virtual QString version() const = 0;
+    virtual QString describe() const = 0;
     virtual void registerDataModels(std::shared_ptr<QtNodes::NodeDelegateModelRegistry> &reg) = 0;
 };
 

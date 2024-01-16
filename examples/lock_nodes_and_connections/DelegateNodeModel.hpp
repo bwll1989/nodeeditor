@@ -25,6 +25,8 @@ class SimpleDataModel : public NodeDelegateModel
     Q_OBJECT
 
 public:
+
+
     QString caption() const override { return QString("Simple Data Model"); }
 
     QString name() const override { return QString("SimpleDataModel"); }

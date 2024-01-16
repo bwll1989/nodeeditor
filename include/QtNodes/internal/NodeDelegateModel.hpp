@@ -27,12 +27,19 @@ class NODE_EDITOR_PUBLIC NodeDelegateModel
     Q_OBJECT
 
 public:
+    bool CaptionVisible=true;
+    QString Caption="Default Node";
+    bool WidgetEmbeddable=true;
+    bool Resizable=false;
+    unsigned int InPortCount=1;
+    unsigned int OutPortCount=1;
+
     NodeDelegateModel();
 
     virtual ~NodeDelegateModel() = default;
 
     /// It is possible to hide caption in GUI
-    virtual bool captionVisible() const { return true; }
+    virtual bool captionVisible() const { return CaptionVisible; }
 
     /// Caption is used in GUI
     virtual QString caption() const = 0;
@@ -80,9 +87,9 @@ public:
      */
     virtual QWidget *embeddedWidget() = 0;
 
-    virtual bool widgetEmbeddable() const { return true; }
+    virtual bool widgetEmbeddable() const { return WidgetEmbeddable; }
 
-    virtual bool resizable() const { return false; }
+    virtual bool resizable() const { return Resizable; }
 
 public Q_SLOTS:
 

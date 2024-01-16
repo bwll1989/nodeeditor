@@ -318,7 +318,7 @@ PasteCommand::PasteCommand(BasicGraphicsScene *scene, QPointF const &mouseSceneP
         return;
     }
 
-    // _newSceneJson = makeNewNodeIdsInScene(_newSceneJson);
+     _newSceneJson = makeNewNodeIdsInScene(_newSceneJson);
 
     QPointF const averagePos = computeAverageNodePosition(_newSceneJson);
 

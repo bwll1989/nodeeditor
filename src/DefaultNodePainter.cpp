@@ -200,6 +200,7 @@ void DefaultNodePainter::drawNodeCaption(QPainter *painter, NodeGraphicsObject &
         return;
     }
 
+
     QString const name = model.nodeData(nodeId, NodeRole::Caption).toString();
 
     QFont f = painter->font();
@@ -210,12 +211,19 @@ void DefaultNodePainter::drawNodeCaption(QPainter *painter, NodeGraphicsObject &
     QJsonDocument const json = QJsonDocument::fromVariant(model.nodeData(nodeId, NodeRole::Style));
     NodeStyle const nodeStyle(json.object());
 
+    QSize size = geometry.size(nodeId);
+    QRectF boundary(0, 0, size.width(), (geometry.captionRect(nodeId).height())*2);
+    double const radius = 3.0;
+    painter->drawRoundedRect(boundary, radius, radius);
+
     painter->setFont(f);
     painter->setPen(nodeStyle.FontColor);
     painter->drawText(position, name);
 
     f.setBold(false);
     painter->setFont(f);
+
+
 }
 
 void DefaultNodePainter::drawEntryLabels(QPainter *painter, NodeGraphicsObject &ngo) const

@@ -152,7 +152,7 @@ QPointF DefaultHorizontalNodeGeometry::widgetPosition(NodeId const nodeId) const
 {
     QSize size = _graphModel.nodeData<QSize>(nodeId, NodeRole::Size);
 
-    unsigned int captionHeight = captionRect(nodeId).height();
+    unsigned int captionHeight = captionRect(nodeId).height()*2;
 
     bool isEmbeded = _graphModel.nodeData(nodeId, NodeRole::WidgetEmbeddable).value<bool>();
     auto w = _graphModel.nodeData<QWidget *>(nodeId, NodeRole::Widget);

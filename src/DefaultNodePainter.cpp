@@ -1,6 +1,9 @@
 #include "DefaultNodePainter.hpp"
+#include "DefaultNodePainter.hpp"
 
 #include <cmath>
+
+#include <QtCore/QMargins>
 
 #include "AbstractGraphModel.hpp"
 #include "AbstractNodeGeometry.hpp"
@@ -11,15 +14,13 @@
 #include "NodeState.hpp"
 #include "StyleCollection.hpp"
 
-#include <QtCore/QMargins>
-
 namespace QtNodes {
 
 void DefaultNodePainter::paint(QPainter *painter, NodeGraphicsObject &ngo) const
 {
     // TODO?
-    // AbstractNodeGeometry & geometry = ngo.nodeScene()->nodeGeometry();
-    // geometry.recomputeSizeIfFontChanged(painter->font());
+    //AbstractNodeGeometry & geometry = ngo.nodeScene()->nodeGeometry();
+    //geometry.recomputeSizeIfFontChanged(painter->font());
 
     drawNodeRect(painter, ngo);
 
@@ -69,7 +70,7 @@ void DefaultNodePainter::drawNodeRect(QPainter *painter, NodeGraphicsObject &ngo
 
     QRectF boundary(0, 0, size.width(), size.height());
 
-    double const radius = 3.0;
+    double const radius = 1.0;
 
     painter->drawRoundedRect(boundary, radius, radius);
 }
@@ -122,10 +123,10 @@ void DefaultNodePainter::drawConnectionPoints(QPainter *painter, NodeGraphicsObj
                     double dist = std::sqrt(QPointF::dotProduct(diff, diff));
 
                     if (possible) {
-                        double const thres = 40.0;
+                        double const thres = 20.0;
                         r = (dist < thres) ? (2.0 - dist / thres) : 1.0;
                     } else {
-                        double const thres = 80.0;
+                        double const thres = 40.0;
                         r = (dist < thres) ? (dist / thres) : 1.0;
                     }
                 }
@@ -192,38 +193,35 @@ void DefaultNodePainter::drawFilledConnectionPoints(QPainter *painter, NodeGraph
 
 void DefaultNodePainter::drawNodeCaption(QPainter *painter, NodeGraphicsObject &ngo) const
 {
-    AbstractGraphModel const &model = ngo.graphModel();
+    AbstractGraphModel &model = ngo.graphModel();
     NodeId const nodeId = ngo.nodeId();
-    AbstractNodeGeometry const &geometry = ngo.nodeScene()->nodeGeometry();
+    AbstractNodeGeometry &geometry = ngo.nodeScene()->nodeGeometry();
 
-    if (!model.nodeData(nodeId, NodeRole::CaptionVisible).toBool()) {
+    if (!model.nodeData(nodeId, NodeRole::CaptionVisible).toBool())
         return;
-    }
-
 
     QString const name = model.nodeData(nodeId, NodeRole::Caption).toString();
 
     QFont f = painter->font();
     f.setBold(true);
 
-    QPointF const position = geometry.captionPosition(nodeId);
+    QPointF position = geometry.captionPosition(nodeId);
 
-    QJsonDocument const json = QJsonDocument::fromVariant(model.nodeData(nodeId, NodeRole::Style));
-    NodeStyle const nodeStyle(json.object());
-
-    QSize size = geometry.size(nodeId);
-    QRectF boundary(0, 0, size.width(), (geometry.captionRect(nodeId).height())*2);
-    double const radius = 3.0;
-    painter->drawRoundedRect(boundary, radius, radius);
-
+    QJsonDocument json = QJsonDocument::fromVariant(model.nodeData(nodeId, NodeRole::Style));
+    NodeStyle nodeStyle(json.object());
+    // draw caption color
+    painter->drawRoundedRect(0,
+        0,
+        geometry.size(nodeId).width(),
+        geometry.captionPosition(nodeId).y()*2-geometry.captionRect(nodeId).height(),
+        1.0,
+        1.0);
     painter->setFont(f);
     painter->setPen(nodeStyle.FontColor);
     painter->drawText(position, name);
 
     f.setBold(false);
     painter->setFont(f);
-
-
 }
 
 void DefaultNodePainter::drawEntryLabels(QPainter *painter, NodeGraphicsObject &ngo) const

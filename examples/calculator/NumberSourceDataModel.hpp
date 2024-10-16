@@ -1,9 +1,10 @@
 #pragma once
 
-#include <iostream>
+#include <QtNodes/NodeDelegateModel>
 
 #include <QtCore/QObject>
-#include <QtNodes/NodeDelegateModel>
+
+#include <iostream>
 
 class DecimalData;
 

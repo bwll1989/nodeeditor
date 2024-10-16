@@ -2,6 +2,7 @@
 
 #include <QtCore/QDir>
 #include <QtCore/QEvent>
+
 #include <QtWidgets/QFileDialog>
 
 ImageLoaderModel::ImageLoaderModel()

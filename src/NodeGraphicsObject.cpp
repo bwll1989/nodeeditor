@@ -3,6 +3,9 @@
 #include <cstdlib>
 #include <iostream>
 
+#include <QtWidgets/QGraphicsEffect>
+#include <QtWidgets/QtWidgets>
+
 #include "AbstractGraphModel.hpp"
 #include "AbstractNodeGeometry.hpp"
 #include "AbstractNodePainter.hpp"
@@ -12,9 +15,6 @@
 #include "NodeConnectionInteraction.hpp"
 #include "StyleCollection.hpp"
 #include "UndoCommands.hpp"
-
-#include <QtWidgets/QGraphicsEffect>
-#include <QtWidgets/QtWidgets>
 
 namespace QtNodes {
 
@@ -82,6 +82,14 @@ AbstractGraphModel &NodeGraphicsObject::graphModel() const
 BasicGraphicsScene *NodeGraphicsObject::nodeScene() const
 {
     return dynamic_cast<BasicGraphicsScene *>(scene());
+}
+
+void NodeGraphicsObject::updateQWidgetEmbedPos()
+{
+  if (_proxyWidget) {
+    AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
+    _proxyWidget->setPos(geometry.widgetPosition(_nodeId));
+  }
 }
 
 void NodeGraphicsObject::embedQWidget()
@@ -360,11 +368,11 @@ void NodeGraphicsObject::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
 {
     auto pos = event->pos();
 
-    // NodeGeometry geometry(_nodeId, _graphModel, nodeScene());
+    //NodeGeometry geometry(_nodeId, _graphModel, nodeScene());
     AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
 
-    if ((_graphModel.nodeFlags(_nodeId) | NodeFlag::Resizable) &&
-        geometry.resizeHandleRect(_nodeId).contains(QPoint(pos.x(), pos.y()))) {
+    if ((_graphModel.nodeFlags(_nodeId) | NodeFlag::Resizable)
+        && geometry.resizeHandleRect(_nodeId).contains(QPoint(pos.x(), pos.y()))) {
         setCursor(QCursor(Qt::SizeFDiagCursor));
     } else {
         setCursor(QCursor());

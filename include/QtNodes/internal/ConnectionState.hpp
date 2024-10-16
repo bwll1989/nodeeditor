@@ -1,9 +1,10 @@
 #pragma once
 
-#include "Definitions.hpp"
+#include <QtCore/QUuid>
+
 #include "Export.hpp"
 
-#include <QtCore/QUuid>
+#include "Definitions.hpp"
 
 class QPointF;
 

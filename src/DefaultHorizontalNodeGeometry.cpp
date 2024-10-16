@@ -11,7 +11,7 @@ namespace QtNodes {
 
 DefaultHorizontalNodeGeometry::DefaultHorizontalNodeGeometry(AbstractGraphModel &graphModel)
     : AbstractNodeGeometry(graphModel)
-    , _portSize(20)
+    , _portSize(10)
     , _portSpasing(10)
     , _fontMetrics(QFont())
     , _boldFontMetrics(QFont())
@@ -132,11 +132,10 @@ QPointF DefaultHorizontalNodeGeometry::portTextPosition(NodeId const nodeId,
 
 QRectF DefaultHorizontalNodeGeometry::captionRect(NodeId const nodeId) const
 {
-    if (!_graphModel.nodeData<bool>(nodeId, NodeRole::CaptionVisible)) {
+    if (!_graphModel.nodeData<bool>(nodeId, NodeRole::CaptionVisible))
         return QRect();
-    }
 
-    auto const name = _graphModel.nodeData<QString>(nodeId, NodeRole::Caption);
+    QString name = _graphModel.nodeData<QString>(nodeId, NodeRole::Caption);
 
     return _boldFontMetrics.boundingRect(name);
 }

@@ -1,10 +1,9 @@
 #include "DataFlowGraphModel.hpp"
-
-#include <stdexcept>
-
 #include "ConnectionIdHash.hpp"
 
 #include <QJsonArray>
+
+#include <stdexcept>
 
 namespace QtNodes {
 
@@ -45,8 +44,8 @@ std::unordered_set<ConnectionId> DataFlowGraphModel::connections(NodeId nodeId,
                  _connectivity.end(),
                  std::inserter(result, std::end(result)),
                  [&portType, &portIndex, &nodeId](ConnectionId const &cid) {
-                     return (getNodeId(portType, cid) == nodeId &&
-                             getPortIndex(portType, cid) == portIndex);
+                     return (getNodeId(portType, cid) == nodeId
+                             && getPortIndex(portType, cid) == portIndex);
                  });
 
     return result;
@@ -125,8 +124,8 @@ bool DataFlowGraphModel::connectionPossible(ConnectionId const connectionId) con
         return connected.empty() || (policy == ConnectionPolicy::Many);
     };
 
-    return getDataType(PortType::Out).id == getDataType(PortType::In).id &&
-           portVacant(PortType::Out) && portVacant(PortType::In);
+    return getDataType(PortType::Out).id == getDataType(PortType::In).id
+           && portVacant(PortType::Out) && portVacant(PortType::In);
 }
 
 void DataFlowGraphModel::addConnection(ConnectionId const connectionId)
@@ -347,6 +346,7 @@ QVariant DataFlowGraphModel::portData(NodeId nodeId,
 
     case PortRole::Caption:
         result = model->portCaption(portType, portIndex);
+
         break;
 
     default:
@@ -463,7 +463,7 @@ QJsonObject DataFlowGraphModel::save() const
     return sceneJson;
 }
 
-NodeId DataFlowGraphModel::loadNode(QJsonObject const &nodeJson)
+void DataFlowGraphModel::loadNode(QJsonObject const &nodeJson)
 {
     // Possibility of the id clash when reading it from json and not generating a
     // new value.
@@ -499,14 +499,10 @@ NodeId DataFlowGraphModel::loadNode(QJsonObject const &nodeJson)
         setNodeData(restoredNodeId, NodeRole::Position, pos);
 
         _models[restoredNodeId]->load(internalDataJson);
-
-        return restoredNodeId;
     } else {
-        throw std::logic_error(std::string("No registered model with name ") +
-                               delegateModelName.toLocal8Bit().data());
+        throw std::logic_error(std::string("No registered model with name ")
+                               + delegateModelName.toLocal8Bit().data());
     }
-
-    return InvalidNodeId;
 }
 
 void DataFlowGraphModel::load(QJsonObject const &jsonDocument)

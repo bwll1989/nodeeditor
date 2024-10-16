@@ -3,6 +3,7 @@
 #include <QtCore/QJsonObject>
 #include <QtCore/QPointF>
 #include <QtCore/QSize>
+
 #include <QtNodes/AbstractGraphModel>
 #include <QtNodes/ConnectionIdUtils>
 #include <QtNodes/StyleCollection>
@@ -82,10 +83,10 @@ public:
 
     /// @brief Creates a new node based on the informatoin in `nodeJson`.
     /**
-     * @param nodeJson conains a `NodeId`, node's position, internal node
-     * information.
-     */
-    NodeId loadNode(QJsonObject const &nodeJson) override;
+   * @param nodeJson conains a `NodeId`, node's position, internal node
+   * information.
+   */
+    void loadNode(QJsonObject const &nodeJson) override;
 
     NodeId newNodeId() override { return _nextNodeId++; }
 

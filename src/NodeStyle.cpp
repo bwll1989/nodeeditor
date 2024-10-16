@@ -2,12 +2,13 @@
 
 #include <iostream>
 
-#include "StyleCollection.hpp"
-
-#include <QtCore/QDebug>
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonObject>
 #include <QtCore/QJsonValueRef>
+
+#include <QtCore/QDebug>
+
+#include "StyleCollection.hpp"
 
 using QtNodes::NodeStyle;
 

@@ -281,9 +281,9 @@ QJsonObject SimpleGraphModel::saveNode(NodeId const nodeId) const
     return nodeJson;
 }
 
-NodeId SimpleGraphModel::loadNode(QJsonObject const &nodeJson)
+void SimpleGraphModel::loadNode(QJsonObject const &nodeJson)
 {
-    auto restoredNodeId = (NodeId) nodeJson["id"].toInteger();
+    NodeId restoredNodeId = nodeJson["id"].toInt();
 
     // Next NodeId must be larger that any id existing in the graph
     _nextNodeId = std::max(restoredNodeId + 1, _nextNodeId);
@@ -298,9 +298,5 @@ NodeId SimpleGraphModel::loadNode(QJsonObject const &nodeJson)
         QPointF const pos(posJson["x"].toDouble(), posJson["y"].toDouble());
 
         setNodeData(restoredNodeId, NodeRole::Position, pos);
-
-        return restoredNodeId;
     }
-
-    return InvalidNodeId;
 }

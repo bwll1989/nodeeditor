@@ -1,9 +1,9 @@
 #pragma once
 
-#include "NodeState.hpp"
-
 #include <QtCore/QUuid>
 #include <QtWidgets/QGraphicsObject>
+
+#include "NodeState.hpp"
 
 class QGraphicsProxyWidget;
 
@@ -12,7 +12,7 @@ namespace QtNodes {
 class BasicGraphicsScene;
 class AbstractGraphModel;
 
-class NODE_EDITOR_PUBLIC NodeGraphicsObject : public QGraphicsObject
+class NodeGraphicsObject : public QGraphicsObject
 {
     Q_OBJECT
 public:
@@ -49,6 +49,8 @@ public:
 
     /// Repaints the node once with reacting ports.
     void reactToConnection(ConnectionGraphicsObject const *cgo);
+
+    void updateQWidgetEmbedPos();
 
 protected:
     void paint(QPainter *painter,

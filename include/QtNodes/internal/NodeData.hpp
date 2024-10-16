@@ -2,10 +2,10 @@
 
 #include <memory>
 
-#include "Export.hpp"
-
 #include <QtCore/QObject>
 #include <QtCore/QString>
+
+#include "Export.hpp"
 
 namespace QtNodes {
 

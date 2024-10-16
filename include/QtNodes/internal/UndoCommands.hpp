@@ -1,13 +1,12 @@
 #pragma once
 
-#include <unordered_set>
-
 #include "Definitions.hpp"
-#include "Export.hpp"
 
 #include <QUndoCommand>
 #include <QtCore/QJsonObject>
 #include <QtCore/QPointF>
+
+#include <unordered_set>
 
 namespace QtNodes {
 
@@ -105,14 +104,14 @@ public:
     void redo() override;
 
     /**
-     * A command ID is used in command compression. It must be an integer unique to
-     * this command's class, or -1 if the command doesn't support compression.
-     */
+   * A command ID is used in command compression. It must be an integer unique to
+   * this command's class, or -1 if the command doesn't support compression.
+   */
     int id() const override;
 
     /**
-     * Several sequential movements could be merged into one command.
-     */
+   * Several sequential movements could be merged into one command.
+   */
     bool mergeWith(QUndoCommand const *c) override;
 
 private:

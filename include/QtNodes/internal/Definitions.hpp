@@ -1,10 +1,10 @@
 #pragma once
 
-#include <limits>
-
 #include "Export.hpp"
 
 #include <QtCore/QMetaObject>
+
+#include <limits>
 
 /**
  * @file
@@ -19,20 +19,22 @@ Q_NAMESPACE_EXPORT(NODE_EDITOR_PUBLIC)
 #endif
 
     /**
-     * Constants used for fetching QVariant data from GraphModel.
-     */
+ * Constants used for fetching QVariant data from GraphModel.
+ */
     enum class NodeRole {
         Type = 0,         ///< Type of the current node, usually a string.
-        Position,         ///< `QPointF` positon of the node on the scene.
-        Size,             ///< `QSize` for resizable nodes.
-        CaptionVisible,   ///< `bool` for caption visibility.
-        Caption,          ///< `QString` for node caption.
-        Style,            ///< Custom NodeStyle as QJsonDocument
-        InternalData,     ///< Node-stecific user data as QJsonObject
-        InPortCount,      ///< `unsigned int`
-        OutPortCount,     ///< `unsigned int`
+        Position=1,         ///< `QPointF` positon of the node on the scene.
+        Size=2,             ///< `QSize` for resizable nodes.
+        CaptionVisible=3,   ///< `bool` for caption visibility.
+        Caption=4,          ///< `QString` for node caption.
+        Style=5,            ///< Custom NodeStyle as QJsonDocument
+        InternalData=6,     ///< Node-stecific user data as QJsonObject
+        InPortCount=7,      ///< `unsigned int`
+        OutPortCount=9,     ///< `unsigned int`
+        Widget=10,           ///< Optional `QWidget*` or `nullptr`
         WidgetEmbeddable, ///< `bool` for widget embeddability
-        Widget,           ///< Optional `QWidget*` or `nullptr`
+        PortEditableWidget,
+        PortEditable,
     };
 Q_ENUM_NS(NodeRole)
 
@@ -89,7 +91,7 @@ using PortIndex = unsigned int;
 static constexpr PortIndex InvalidPortIndex = std::numeric_limits<PortIndex>::max();
 
 /// Unique Id associated with each node in the GraphModel.
-using NodeId = uint64_t;
+using NodeId = unsigned int;
 
 static constexpr NodeId InvalidNodeId = std::numeric_limits<NodeId>::max();
 
@@ -107,8 +109,8 @@ struct ConnectionId
 
 inline bool operator==(ConnectionId const &a, ConnectionId const &b)
 {
-    return a.outNodeId == b.outNodeId && a.outPortIndex == b.outPortIndex &&
-           a.inNodeId == b.inNodeId && a.inPortIndex == b.inPortIndex;
+    return a.outNodeId == b.outNodeId && a.outPortIndex == b.outPortIndex
+           && a.inNodeId == b.inNodeId && a.inPortIndex == b.inPortIndex;
 }
 
 inline bool operator!=(ConnectionId const &a, ConnectionId const &b)

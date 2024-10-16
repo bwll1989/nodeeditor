@@ -1,13 +1,17 @@
 #include "DataFlowGraphicsScene.hpp"
 
-#include <stdexcept>
-#include <utility>
-
 #include "ConnectionGraphicsObject.hpp"
 #include "GraphicsView.hpp"
 #include "NodeDelegateModelRegistry.hpp"
 #include "NodeGraphicsObject.hpp"
 #include "UndoCommands.hpp"
+
+#include <QtWidgets/QFileDialog>
+#include <QtWidgets/QGraphicsSceneMoveEvent>
+#include <QtWidgets/QHeaderView>
+#include <QtWidgets/QLineEdit>
+#include <QtWidgets/QTreeWidget>
+#include <QtWidgets/QWidgetAction>
 
 #include <QtCore/QBuffer>
 #include <QtCore/QByteArray>
@@ -18,12 +22,9 @@
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include <QtCore/QtGlobal>
-#include <QtWidgets/QFileDialog>
-#include <QtWidgets/QGraphicsSceneMoveEvent>
-#include <QtWidgets/QHeaderView>
-#include <QtWidgets/QLineEdit>
-#include <QtWidgets/QTreeWidget>
-#include <QtWidgets/QWidgetAction>
+
+#include <stdexcept>
+#include <utility>
 
 namespace QtNodes {
 
@@ -113,7 +114,7 @@ QMenu *DataFlowGraphicsScene::createSceneMenu(QPointF const scenePos)
                 modelMenu->close();
             });
 
-    // Setup filtering
+    //Setup filtering
     connect(txtBox, &QLineEdit::textChanged, [treeView](const QString &text) {
         QTreeWidgetItemIterator categoryIt(treeView, QTreeWidgetItemIterator::HasChildren);
         while (*categoryIt)

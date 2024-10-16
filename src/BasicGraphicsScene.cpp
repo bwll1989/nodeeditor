@@ -1,13 +1,9 @@
 #include "BasicGraphicsScene.hpp"
 
-#include <iostream>
-#include <stdexcept>
-#include <unordered_set>
-#include <utility>
-
 #include "AbstractNodeGeometry.hpp"
 #include "ConnectionGraphicsObject.hpp"
 #include "ConnectionIdUtils.hpp"
+#include "DefaultConnectionPainter.hpp"
 #include "DefaultHorizontalNodeGeometry.hpp"
 #include "DefaultNodePainter.hpp"
 #include "DefaultVerticalNodeGeometry.hpp"
@@ -15,6 +11,10 @@
 #include "NodeGraphicsObject.hpp"
 
 #include <QUndoStack>
+
+#include <QtWidgets/QFileDialog>
+#include <QtWidgets/QGraphicsSceneMoveEvent>
+
 #include <QtCore/QBuffer>
 #include <QtCore/QByteArray>
 #include <QtCore/QDataStream>
@@ -23,8 +23,11 @@
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include <QtCore/QtGlobal>
-#include <QtWidgets/QFileDialog>
-#include <QtWidgets/QGraphicsSceneMoveEvent>
+
+#include <iostream>
+#include <stdexcept>
+#include <unordered_set>
+#include <utility>
 #include <queue>
 
 namespace QtNodes {
@@ -34,6 +37,7 @@ BasicGraphicsScene::BasicGraphicsScene(AbstractGraphModel &graphModel, QObject *
     , _graphModel(graphModel)
     , _nodeGeometry(std::make_unique<DefaultHorizontalNodeGeometry>(_graphModel))
     , _nodePainter(std::make_unique<DefaultNodePainter>())
+    , _connectionPainter(std::make_unique<DefaultConnectionPainter>())
     , _nodeDrag(false)
     , _undoStack(new QUndoStack(this))
     , _orientation(Qt::Horizontal)
@@ -99,9 +103,19 @@ AbstractNodePainter &BasicGraphicsScene::nodePainter()
     return *_nodePainter;
 }
 
+AbstractConnectionPainter &BasicGraphicsScene::connectionPainter()
+{
+    return *_connectionPainter;
+}
+
 void BasicGraphicsScene::setNodePainter(std::unique_ptr<AbstractNodePainter> newPainter)
 {
     _nodePainter = std::move(newPainter);
+}
+
+void BasicGraphicsScene::setConnectionPainter(std::unique_ptr<AbstractConnectionPainter> newPainter)
+{
+    _connectionPainter = std::move(newPainter);
 }
 
 QUndoStack &BasicGraphicsScene::undoStack()
@@ -207,7 +221,7 @@ void BasicGraphicsScene::traverseGraphAndPopulateGraphicsObjects()
 void BasicGraphicsScene::updateAttachedNodes(ConnectionId const connectionId,
                                              PortType const portType)
 {
-    auto *node = nodeGraphicsObject(getNodeId(portType, connectionId));
+    auto node = nodeGraphicsObject(getNodeId(portType, connectionId));
 
     if (node) {
         node->update();
@@ -234,8 +248,8 @@ void BasicGraphicsScene::onConnectionDeleted(ConnectionId const connectionId)
 
 void BasicGraphicsScene::onConnectionCreated(ConnectionId const connectionId)
 {
-    _connectionGraphicsObjects[connectionId] =
-        std::make_unique<ConnectionGraphicsObject>(*this, connectionId);
+    _connectionGraphicsObjects[connectionId]
+        = std::make_unique<ConnectionGraphicsObject>(*this, connectionId);
 
     updateAttachedNodes(connectionId, PortType::Out);
     updateAttachedNodes(connectionId, PortType::In);
@@ -262,25 +276,24 @@ void BasicGraphicsScene::onNodeCreated(NodeId const nodeId)
 
 void BasicGraphicsScene::onNodePositionUpdated(NodeId const nodeId)
 {
-    auto *node = nodeGraphicsObject(nodeId);
+    auto node = nodeGraphicsObject(nodeId);
     if (node) {
         node->setPos(_graphModel.nodeData(nodeId, NodeRole::Position).value<QPointF>());
         node->update();
-
-        Q_EMIT modified(this);
         _nodeDrag = true;
     }
 }
 
 void BasicGraphicsScene::onNodeUpdated(NodeId const nodeId)
 {
-    auto *node = nodeGraphicsObject(nodeId);
+    auto node = nodeGraphicsObject(nodeId);
 
     if (node) {
         node->setGeometryChanged();
 
         _nodeGeometry->recomputeSize(nodeId);
 
+        node->updateQWidgetEmbedPos();
         node->update();
         node->moveConnections();
     }

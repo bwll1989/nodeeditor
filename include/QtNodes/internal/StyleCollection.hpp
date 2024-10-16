@@ -1,7 +1,8 @@
 #pragma once
 
-#include "ConnectionStyle.hpp"
 #include "Export.hpp"
+
+#include "ConnectionStyle.hpp"
 #include "GraphicsViewStyle.hpp"
 #include "NodeStyle.hpp"
 

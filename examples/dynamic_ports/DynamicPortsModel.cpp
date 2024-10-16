@@ -1,12 +1,12 @@
 #include "DynamicPortsModel.hpp"
 
-#include <iterator>
-
 #include "PortAddRemoveWidget.hpp"
-#include "QtNodes/internal/Definitions.hpp"
+
+#include <QtNodes/ConnectionIdUtils>
 
 #include <QJsonArray>
-#include <QtNodes/ConnectionIdUtils>
+
+#include <iterator>
 
 DynamicPortsModel::DynamicPortsModel()
     : _nextNodeId{0}
@@ -46,8 +46,8 @@ std::unordered_set<ConnectionId> DynamicPortsModel::connections(NodeId nodeId,
                  _connectivity.end(),
                  std::inserter(result, std::end(result)),
                  [&portType, &portIndex, &nodeId](ConnectionId const &cid) {
-                     return (getNodeId(portType, cid) == nodeId &&
-                             getPortIndex(portType, cid) == portIndex);
+                     return (getNodeId(portType, cid) == nodeId
+                             && getPortIndex(portType, cid) == portIndex);
                  });
 
     return result;
@@ -330,9 +330,9 @@ QJsonObject DynamicPortsModel::save() const
     return sceneJson;
 }
 
-NodeId DynamicPortsModel::loadNode(QJsonObject const &nodeJson)
+void DynamicPortsModel::loadNode(QJsonObject const &nodeJson)
 {
-    auto restoredNodeId = static_cast<NodeId>(nodeJson["id"].toInteger());
+    NodeId restoredNodeId = static_cast<NodeId>(nodeJson["id"].toInt());
 
     _nextNodeId = std::max(_nextNodeId, restoredNodeId + 1);
 
@@ -353,8 +353,6 @@ NodeId DynamicPortsModel::loadNode(QJsonObject const &nodeJson)
     }
 
     Q_EMIT nodeCreated(restoredNodeId);
-
-    return restoredNodeId;
 }
 
 void DynamicPortsModel::load(QJsonObject const &jsonDocument)

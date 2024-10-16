@@ -1,15 +1,16 @@
-#include "DynamicPortsModel.hpp"
-
-#include <QAction>
-#include <QFileDialog>
-#include <QScreen>
 #include <QtNodes/BasicGraphicsScene>
 #include <QtNodes/ConnectionStyle>
 #include <QtNodes/GraphicsView>
 #include <QtNodes/StyleCollection>
+
+#include <QAction>
+#include <QFileDialog>
+#include <QScreen>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QVBoxLayout>
+
+#include "DynamicPortsModel.hpp"
 
 using QtNodes::BasicGraphicsScene;
 using QtNodes::ConnectionStyle;

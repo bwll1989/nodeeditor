@@ -1,5 +1,3 @@
-#include "SimpleGraphModel.hpp"
-
 #include <QAction>
 #include <QScreen>
 #include <QtNodes/BasicGraphicsScene>
@@ -8,6 +6,8 @@
 #include <QtWidgets/QGroupBox>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QRadioButton>
+
+#include "SimpleGraphModel.hpp"
 
 using QtNodes::BasicGraphicsScene;
 using QtNodes::GraphicsView;

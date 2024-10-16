@@ -1,13 +1,14 @@
-#include "ImageLoaderModel.hpp"
-#include "ImageShowModel.hpp"
-
-#include <QtGui/QScreen>
 #include <QtNodes/DataFlowGraphModel>
 #include <QtNodes/DataFlowGraphicsScene>
 #include <QtNodes/GraphicsView>
 #include <QtNodes/NodeData>
 #include <QtNodes/NodeDelegateModelRegistry>
+
+#include <QtGui/QScreen>
 #include <QtWidgets/QApplication>
+
+#include "ImageLoaderModel.hpp"
+#include "ImageShowModel.hpp"
 
 using QtNodes::ConnectionStyle;
 using QtNodes::DataFlowGraphicsScene;

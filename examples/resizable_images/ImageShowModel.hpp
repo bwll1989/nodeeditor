@@ -3,6 +3,8 @@
 #include <iostream>
 
 #include <QtCore/QObject>
+#include <QtWidgets/QLabel>
+
 #include <QtNodes/NodeDelegateModel>
 #include <QtNodes/NodeDelegateModelRegistry>
 #include <QtWidgets/QLabel>

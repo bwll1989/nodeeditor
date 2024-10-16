@@ -2,6 +2,8 @@
 
 #include "PixmapData.hpp"
 
+#include <QtNodes/NodeDelegateModelRegistry>
+
 #include <QtCore/QDir>
 #include <QtCore/QEvent>
 #include <QtNodes/NodeDelegateModelRegistry>

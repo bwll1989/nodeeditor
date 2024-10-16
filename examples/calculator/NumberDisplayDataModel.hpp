@@ -1,11 +1,12 @@
 #pragma once
 
+#include <QtNodes/NodeDelegateModel>
+
+#include <QtCore/QObject>
+
 #include <iostream>
 
 #include "DecimalData.hpp"
-
-#include <QtCore/QObject>
-#include <QtNodes/NodeDelegateModel>
 
 using QtNodes::NodeData;
 using QtNodes::NodeDataType;

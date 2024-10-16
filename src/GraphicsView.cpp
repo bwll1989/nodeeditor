@@ -1,23 +1,27 @@
 #include "GraphicsView.hpp"
 
-#include <cmath>
-#include <iostream>
-
 #include "BasicGraphicsScene.hpp"
 #include "ConnectionGraphicsObject.hpp"
 #include "NodeGraphicsObject.hpp"
 #include "StyleCollection.hpp"
 #include "UndoCommands.hpp"
 
+#include <QtWidgets/QGraphicsScene>
+
+#include <QtGui/QBrush>
+#include <QtGui/QPen>
+
+#include <QtWidgets/QMenu>
+
 #include <QtCore/QDebug>
 #include <QtCore/QPointF>
 #include <QtCore/QRectF>
-#include <QtGui/QBrush>
-#include <QtGui/QPen>
+
 #include <QtOpenGL>
-#include <QtWidgets/QGraphicsScene>
-#include <QtWidgets/QMenu>
 #include <QtWidgets>
+
+#include <cmath>
+#include <iostream>
 
 using QtNodes::BasicGraphicsScene;
 using QtNodes::GraphicsView;
@@ -76,7 +80,7 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
     {
         // setup actions
         delete _clearSelectionAction;
-        _clearSelectionAction = new QAction(tr("Clear Selection"), this);
+        _clearSelectionAction = new QAction(QStringLiteral("Clear Selection"), this);
         _clearSelectionAction->setShortcut(Qt::Key_Escape);
 
         connect(_clearSelectionAction, &QAction::triggered, scene, &QGraphicsScene::clearSelection);
@@ -86,7 +90,7 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
 
     {
         delete _deleteSelectionAction;
-        _deleteSelectionAction = new QAction(tr("Delete Selection"), this);
+        _deleteSelectionAction = new QAction(QStringLiteral("Delete Selection"), this);
         _deleteSelectionAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _deleteSelectionAction->setShortcut(QKeySequence(QKeySequence::Delete));
         connect(_deleteSelectionAction,
@@ -99,7 +103,7 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
 
     {
         delete _duplicateSelectionAction;
-        _duplicateSelectionAction = new QAction(tr("Duplicate Selection"), this);
+        _duplicateSelectionAction = new QAction(QStringLiteral("Duplicate Selection"), this);
         _duplicateSelectionAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _duplicateSelectionAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_D));
         connect(_duplicateSelectionAction,
@@ -112,7 +116,7 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
 
     {
         delete _copySelectionAction;
-        _copySelectionAction = new QAction(tr("Copy Selection"), this);
+        _copySelectionAction = new QAction(QStringLiteral("Copy Selection"), this);
         _copySelectionAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _copySelectionAction->setShortcut(QKeySequence(QKeySequence::Copy));
         connect(_copySelectionAction,
@@ -125,7 +129,7 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
 
     {
         delete _pasteAction;
-        _pasteAction = new QAction(tr("Paste Selection"), this);
+        _pasteAction = new QAction(QStringLiteral("Copy Selection"), this);
         _pasteAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _pasteAction->setShortcut(QKeySequence(QKeySequence::Paste));
         connect(_pasteAction, &QAction::triggered, this, &GraphicsView::onPasteObjects);

@@ -1,12 +1,10 @@
 #include "ConnectionGraphicsObject.hpp"
 
-#include <stdexcept>
-
+#include "AbstractConnectionPainter.hpp"
 #include "AbstractGraphModel.hpp"
 #include "AbstractNodeGeometry.hpp"
 #include "BasicGraphicsScene.hpp"
 #include "ConnectionIdUtils.hpp"
-#include "ConnectionPainter.hpp"
 #include "ConnectionState.hpp"
 #include "ConnectionStyle.hpp"
 #include "NodeConnectionInteraction.hpp"
@@ -14,12 +12,15 @@
 #include "StyleCollection.hpp"
 #include "locateNode.hpp"
 
-#include <QtCore/QDebug>
 #include <QtWidgets/QGraphicsBlurEffect>
 #include <QtWidgets/QGraphicsDropShadowEffect>
 #include <QtWidgets/QGraphicsSceneMouseEvent>
 #include <QtWidgets/QGraphicsView>
 #include <QtWidgets/QStyleOptionGraphicsItem>
+
+#include <QtCore/QDebug>
+
+#include <stdexcept>
 
 namespace QtNodes {
 
@@ -39,7 +40,7 @@ ConnectionGraphicsObject::ConnectionGraphicsObject(BasicGraphicsScene &scene,
 
     setAcceptHoverEvents(true);
 
-    // addGraphicsEffect();
+    //addGraphicsEffect();
 
     setZValue(-1.0);
 
@@ -56,22 +57,22 @@ void ConnectionGraphicsObject::initializePosition()
     // we position both connection ends correctly.
 
     if (_connectionState.requiredPort() != PortType::None) {
-        const PortType attachedPort = oppositePort(_connectionState.requiredPort());
+        PortType attachedPort = oppositePort(_connectionState.requiredPort());
 
-        const PortIndex portIndex = getPortIndex(attachedPort, _connectionId);
-        const auto nodeId = getNodeId(attachedPort, _connectionId);
+        PortIndex portIndex = getPortIndex(attachedPort, _connectionId);
+        NodeId nodeId = getNodeId(attachedPort, _connectionId);
 
         NodeGraphicsObject *ngo = nodeScene()->nodeGraphicsObject(nodeId);
 
         if (ngo) {
-            QTransform const nodeSceneTransform = ngo->sceneTransform();
+            QTransform nodeSceneTransform = ngo->sceneTransform();
 
-            AbstractNodeGeometry const &geometry = nodeScene()->nodeGeometry();
+            AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
 
-            QPointF const pos = geometry.portScenePosition(nodeId,
-                                                           attachedPort,
-                                                           portIndex,
-                                                           nodeSceneTransform);
+            QPointF pos = geometry.portScenePosition(nodeId,
+                                                     attachedPort,
+                                                     portIndex,
+                                                     nodeSceneTransform);
 
             this->setPos(pos);
         }
@@ -100,9 +101,9 @@ QRectF ConnectionGraphicsObject::boundingRect() const
     auto points = pointsC1C2();
 
     // `normalized()` fixes inverted rects.
-    QRectF const basicRect = QRectF(_out, _in).normalized();
+    QRectF basicRect = QRectF(_out, _in).normalized();
 
-    QRectF const c1c2Rect = QRectF(points.first, points.second).normalized();
+    QRectF c1c2Rect = QRectF(points.first, points.second).normalized();
 
     QRectF commonRect = basicRect.united(c1c2Rect);
 
@@ -121,13 +122,13 @@ QPainterPath ConnectionGraphicsObject::shape() const
 {
 #ifdef DEBUG_DRAWING
 
-    // QPainterPath path;
+    //QPainterPath path;
 
-    // path.addRect(boundingRect());
-    // return path;
+    //path.addRect(boundingRect());
+    //return path;
 
 #else
-    return ConnectionPainter::getPainterStroke(*this);
+    return nodeScene()->connectionPainter().getPainterStroke(*this);
 #endif
 }
 
@@ -197,7 +198,7 @@ void ConnectionGraphicsObject::paint(QPainter *painter,
 
     painter->setClipRect(option->exposedRect);
 
-    ConnectionPainter::paint(painter, *this);
+    nodeScene()->connectionPainter().paint(painter, *this);
 }
 
 void ConnectionGraphicsObject::mousePressEvent(QGraphicsSceneMouseEvent *event)
@@ -308,10 +309,10 @@ void ConnectionGraphicsObject::addGraphicsEffect()
     effect->setBlurRadius(5);
     setGraphicsEffect(effect);
 
-    // auto effect = new QGraphicsDropShadowEffect;
-    // auto effect = new ConnectionBlurEffect(this);
-    // effect->setOffset(4, 4);
-    // effect->setColor(QColor(Qt::gray).darker(800));
+    //auto effect = new QGraphicsDropShadowEffect;
+    //auto effect = new ConnectionBlurEffect(this);
+    //effect->setOffset(4, 4);
+    //effect->setColor(QColor(Qt::gray).darker(800));
 }
 
 std::pair<QPointF, QPointF> ConnectionGraphicsObject::pointsC1C2Horizontal() const

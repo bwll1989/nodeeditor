@@ -6,7 +6,6 @@
 #include <QtCore/QJsonObject>
 #include <QtCore/QObject>
 #include <QtCore/QString>
-#include <QtWidgets/QStyledItemDelegate>
 
 namespace QtNodes {
 

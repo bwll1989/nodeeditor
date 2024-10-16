@@ -1,20 +1,23 @@
-#include "AdditionModel.hpp"
-#include "DivisionModel.hpp"
-#include "MultiplicationModel.hpp"
-#include "NumberDisplayDataModel.hpp"
-#include "NumberSourceDataModel.hpp"
-#include "SubtractionModel.hpp"
-
-#include <QtGui/QScreen>
 #include <QtNodes/ConnectionStyle>
 #include <QtNodes/DataFlowGraphModel>
 #include <QtNodes/DataFlowGraphicsScene>
 #include <QtNodes/GraphicsView>
 #include <QtNodes/NodeData>
 #include <QtNodes/NodeDelegateModelRegistry>
+
+#include <QtGui/QScreen>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QMenuBar>
 #include <QtWidgets/QVBoxLayout>
+
+#include <QtGui/QScreen>
+
+#include "AdditionModel.hpp"
+#include "DivisionModel.hpp"
+#include "MultiplicationModel.hpp"
+#include "NumberDisplayDataModel.hpp"
+#include "NumberSourceDataModel.hpp"
+#include "SubtractionModel.hpp"
 
 using QtNodes::ConnectionStyle;
 using QtNodes::DataFlowGraphicsScene;
@@ -109,8 +112,8 @@ int main(int argc, char *argv[])
     mainWidget.setWindowTitle("[*]Data Flow: simplest calculator");
     mainWidget.resize(800, 600);
     // Center window.
-    mainWidget.move(QApplication::primaryScreen()->availableGeometry().center() -
-                    mainWidget.rect().center());
+    mainWidget.move(QApplication::primaryScreen()->availableGeometry().center()
+                    - mainWidget.rect().center());
     mainWidget.showNormal();
 
     return app.exec();

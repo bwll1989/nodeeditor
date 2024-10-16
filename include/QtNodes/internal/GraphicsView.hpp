@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Export.hpp"
-
 #include <QtWidgets/QGraphicsView>
+
+#include "Export.hpp"
 
 namespace QtNodes {
 
@@ -22,8 +22,8 @@ public:
     };
 
 public:
-    explicit GraphicsView(QWidget *parent = Q_NULLPTR);
-    explicit GraphicsView(BasicGraphicsScene *scene, QWidget *parent = Q_NULLPTR);
+    GraphicsView(QWidget *parent = Q_NULLPTR);
+    GraphicsView(BasicGraphicsScene *scene, QWidget *parent = Q_NULLPTR);
 
     GraphicsView(const GraphicsView &) = delete;
     GraphicsView operator=(const GraphicsView &) = delete;

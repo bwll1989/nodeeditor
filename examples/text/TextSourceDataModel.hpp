@@ -1,11 +1,12 @@
 #pragma once
 
-#include <iostream>
+#include <QtCore/QObject>
 
 #include "TextData.hpp"
 
-#include <QtCore/QObject>
 #include <QtNodes/NodeDelegateModel>
+
+#include <iostream>
 
 using QtNodes::NodeData;
 using QtNodes::NodeDelegateModel;

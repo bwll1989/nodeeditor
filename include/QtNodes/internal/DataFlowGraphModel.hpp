@@ -1,21 +1,20 @@
 #pragma once
 
-#include <memory>
-
 #include "AbstractGraphModel.hpp"
 #include "ConnectionIdUtils.hpp"
-#include "Export.hpp"
 #include "NodeDelegateModelRegistry.hpp"
 #include "Serializable.hpp"
 #include "StyleCollection.hpp"
 
+#include "Export.hpp"
+
 #include <QJsonObject>
+
+#include <memory>
 
 namespace QtNodes {
 
-class NODE_EDITOR_PUBLIC DataFlowGraphModel
-    : public AbstractGraphModel
-    , public Serializable
+class NODE_EDITOR_PUBLIC DataFlowGraphModel : public AbstractGraphModel, public Serializable
 {
     Q_OBJECT
 
@@ -75,14 +74,14 @@ public:
 
     QJsonObject save() const override;
 
-    NodeId loadNode(QJsonObject const &nodeJson) override;
+    void loadNode(QJsonObject const &nodeJson) override;
 
     void load(QJsonObject const &json) override;
 
     /**
-     * Fetches the NodeDelegateModel for the given `nodeId` and tries to cast the
-     * stored pointer to the given type
-     */
+   * Fetches the NodeDelegateModel for the given `nodeId` and tries to cast the
+   * stored pointer to the given type
+   */
     template<typename NodeDelegateModelType>
     NodeDelegateModelType *delegateModel(NodeId const nodeId)
     {
@@ -107,15 +106,15 @@ private:
 
 private Q_SLOTS:
     /**
-     * Fuction is called in three cases:
-     *
-     * - By underlying NodeDelegateModel when a node has new data to propagate.
-     *   @see DataFlowGraphModel::addNode
-     * - When a new connection is created.
-     *   @see DataFlowGraphModel::addConnection
-     * - When a node restored from JSON an needs to send data downstream.
-     *   @see DataFlowGraphModel::loadNode
-     */
+   * Fuction is called in three cases:
+   *
+   * - By underlying NodeDelegateModel when a node has new data to propagate.
+   *   @see DataFlowGraphModel::addNode
+   * - When a new connection is created.
+   *   @see DataFlowGraphModel::addConnection
+   * - When a node restored from JSON an needs to send data downstream.
+   *   @see DataFlowGraphModel::loadNode
+   */
     void onOutPortDataUpdated(NodeId const nodeId, PortIndex const portIndex);
 
     /// Function is called after detaching a connection.

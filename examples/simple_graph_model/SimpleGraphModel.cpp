@@ -282,7 +282,7 @@ QJsonObject SimpleGraphModel::saveNode(NodeId const nodeId) const
     return nodeJson;
 }
 
-NodeId SimpleGraphModel::loadNode(QJsonObject const &nodeJson)
+void SimpleGraphModel::loadNode(QJsonObject const &nodeJson)
 {
     NodeId restoredNodeId = static_cast<NodeId>(nodeJson["id"].toInt());
 
@@ -299,9 +299,5 @@ NodeId SimpleGraphModel::loadNode(QJsonObject const &nodeJson)
         QPointF const pos(posJson["x"].toDouble(), posJson["y"].toDouble());
 
         setNodeData(restoredNodeId, NodeRole::Position, pos);
-
-        return restoredNodeId;
     }
-
-    return InvalidNodeId;
 }

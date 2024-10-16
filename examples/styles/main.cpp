@@ -8,6 +8,7 @@
 #include <QtNodes/NodeData>
 #include <QtNodes/NodeDelegateModelRegistry>
 #include <QtNodes/NodeStyle>
+
 #include <QtWidgets/QApplication>
 
 using QtNodes::ConnectionStyle;

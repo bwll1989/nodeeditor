@@ -70,7 +70,7 @@ void DefaultNodePainter::drawNodeRect(QPainter *painter, NodeGraphicsObject &ngo
 
     QRectF boundary(0, 0, size.width(), size.height());
 
-    double const radius = 1.0;
+    double const radius = 2.0;
 
     painter->drawRoundedRect(boundary, radius, radius);
 }
@@ -214,8 +214,8 @@ void DefaultNodePainter::drawNodeCaption(QPainter *painter, NodeGraphicsObject &
         0,
         geometry.size(nodeId).width(),
         geometry.captionPosition(nodeId).y()*2-geometry.captionRect(nodeId).height(),
-        1.0,
-        1.0);
+        2.0,
+        2.0);
     painter->setFont(f);
     painter->setPen(nodeStyle.FontColor);
     painter->drawText(position, name);

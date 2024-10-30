@@ -37,13 +37,16 @@ public:
     float pointDiameter() const;
 
     bool useDataDefinedColors() const;
-
+    bool inArrow() const;
+    bool outArrow() const;
 private:
     QColor ConstructionColor;
     QColor NormalColor;
     QColor SelectedColor;
     QColor SelectedHaloColor;
     QColor HoveredColor;
+    bool InArrow;
+    bool OutArrow;
 
     float LineWidth;
     float ConstructionLineWidth;

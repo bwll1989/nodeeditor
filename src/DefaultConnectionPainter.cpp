@@ -26,7 +26,7 @@ QPainterPath DefaultConnectionPainter::cubicPath(ConnectionGraphicsObject const 
     return cubic;
 }
 
-void DefaultConnectionPainter::drawSketchLine(QPainter *painter, ConnectionGraphicsObject const &cgo) const
+void DefaultConnectionPainter::drawSketchLine(QPainter *painter, ConnectionGraphicsObject const &cgo, QPainterPath const &cubic) const
 {
     ConnectionState const &state = cgo.connectionState();
 
@@ -40,15 +40,15 @@ void DefaultConnectionPainter::drawSketchLine(QPainter *painter, ConnectionGraph
 
         painter->setPen(pen);
         painter->setBrush(Qt::NoBrush);
-
-        auto cubic = cubicPath(cgo);
+//
+//        auto cubic = cubicPath(cgo);
 
         // cubic spline
         painter->drawPath(cubic);
     }
 }
 
-void DefaultConnectionPainter::drawHoveredOrSelected(QPainter *painter, ConnectionGraphicsObject const &cgo) const
+void DefaultConnectionPainter::drawHoveredOrSelected(QPainter *painter, ConnectionGraphicsObject const &cgo, QPainterPath const &cubic) const
 {
     bool const hovered = cgo.connectionState().hovered();
     bool const selected = cgo.isSelected();
@@ -68,12 +68,12 @@ void DefaultConnectionPainter::drawHoveredOrSelected(QPainter *painter, Connecti
         painter->setBrush(Qt::NoBrush);
 
         // cubic spline
-        auto const cubic = cubicPath(cgo);
+//        auto const cubic = cubicPath(cgo);
         painter->drawPath(cubic);
     }
 }
 
-void DefaultConnectionPainter::drawNormalLine(QPainter *painter, ConnectionGraphicsObject const &cgo) const
+void DefaultConnectionPainter::drawNormalLine(QPainter *painter, ConnectionGraphicsObject const &cgo, QPainterPath const &cubic) const
 {
     ConnectionState const &state = cgo.connectionState();
 
@@ -126,7 +126,7 @@ void DefaultConnectionPainter::drawNormalLine(QPainter *painter, ConnectionGraph
 
     bool const selected = cgo.isSelected();
 
-    auto cubic = cubicPath(cgo);
+//    auto cubic = cubicPath(cgo);
     if (useGradientColor) {
         painter->setBrush(Qt::NoBrush);
 
@@ -191,14 +191,15 @@ void DefaultConnectionPainter::drawNormalLine(QPainter *painter, ConnectionGraph
 
 void DefaultConnectionPainter::paint(QPainter *painter, ConnectionGraphicsObject const &cgo) const
 {
-    drawHoveredOrSelected(painter, cgo);
+    auto cubic = cubicPath(cgo);
+    drawHoveredOrSelected(painter, cgo,cubic);
 
-    drawSketchLine(painter, cgo);
+    drawSketchLine(painter, cgo,cubic);
 
-    drawNormalLine(painter, cgo);
+    drawNormalLine(painter, cgo,cubic);
 
 #ifdef NODE_DEBUG_DRAWING
-    debugDrawing(painter, cgo);
+    debugDrawing(painter, cgo,cubic);
 #endif
 
     // draw end points
@@ -209,8 +210,18 @@ void DefaultConnectionPainter::paint(QPainter *painter, ConnectionGraphicsObject
     painter->setPen(connectionStyle.constructionColor());
     painter->setBrush(connectionStyle.constructionColor());
     double const pointRadius = pointDiameter / 2.0;
-    painter->drawEllipse(cgo.out(), pointRadius, pointRadius);
-    painter->drawEllipse(cgo.in(), pointRadius, pointRadius);
+    if(connectionStyle.outArrow()) {
+        auto out = createArrowPoly(cubic,pointRadius,pointDiameter * 1.5,false);
+        painter->drawPolygon(out);
+    } else {
+        painter->drawEllipse(cgo.out(), pointRadius, pointRadius);
+    }
+    if(connectionStyle.inArrow()) {
+        auto in = createArrowPoly(cubic,pointRadius,pointDiameter * 1.5,true);
+        painter->drawPolygon(in);
+    } else {
+        painter->drawEllipse(cgo.in(), pointRadius, pointRadius);
+    }
 }
 
 QPainterPath DefaultConnectionPainter::getPainterStroke(ConnectionGraphicsObject const &connection) const
@@ -234,7 +245,7 @@ QPainterPath DefaultConnectionPainter::getPainterStroke(ConnectionGraphicsObject
 }
 
 #ifdef NODE_DEBUG_DRAWING
-void DefaultConnectionPainter::debugDrawing(QPainter *painter, ConnectionGraphicsObject const &cgo)
+void DefaultConnectionPainter::debugDrawing(QPainter *painter, ConnectionGraphicsObject const &cgo,QPainterPath const & cubic)
 {
     Q_UNUSED(painter);
 
@@ -254,7 +265,8 @@ void DefaultConnectionPainter::debugDrawing(QPainter *painter, ConnectionGraphic
         painter->drawEllipse(points.second, 3, 3);
 
         painter->setBrush(Qt::NoBrush);
-        painter->drawPath(cubicPath(cgo));
+        painter->drawPath(debugDrawing);
+
     }
 
     {
@@ -263,5 +275,27 @@ void DefaultConnectionPainter::debugDrawing(QPainter *painter, ConnectionGraphic
     }
 }
 #endif
+    QPolygonF DefaultConnectionPainter::createArrowPoly(const QPainterPath& p, double mRadius,double arrowSize,bool drawIn) {
+    float arrowStartPercentage;
+    float arrowEndPercentage;
 
+    if (drawIn) {
+        arrowStartPercentage = p.percentAtLength(p.length() - mRadius - arrowSize);
+        arrowEndPercentage = p.percentAtLength(p.length() - mRadius);
+    }
+    else {
+        arrowStartPercentage = p.percentAtLength(mRadius + arrowSize);
+        arrowEndPercentage = p.percentAtLength(mRadius);
+    }
+    QPointF headStartP = p.pointAtPercent(arrowStartPercentage);
+    QPointF headEndP = p.pointAtPercent(arrowEndPercentage);
+    QLineF arrowMiddleLine(headStartP, headEndP);
+    QPointF normHead(arrowMiddleLine.dy(), -arrowMiddleLine.dx());
+    QPointF arrowP1 = headStartP + normHead * 0.4;
+    QPointF arrowP2 = headStartP - normHead * 0.4;
+
+    QPolygonF arrowHeadEnd;
+    arrowHeadEnd << headEndP << arrowP1 << arrowP2 /*<< headEndP*/;
+    return arrowHeadEnd;
+}
 } // namespace QtNodes

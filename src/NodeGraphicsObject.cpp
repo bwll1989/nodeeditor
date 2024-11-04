@@ -87,9 +87,25 @@ BasicGraphicsScene *NodeGraphicsObject::nodeScene() const
 void NodeGraphicsObject::updateQWidgetEmbedPos()
 {
   if (_proxyWidget) {
-    AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
-    _proxyWidget->setPos(geometry.widgetPosition(_nodeId));
+      if(_graphModel.nodeData(_nodeId, NodeRole::WidgetEmbeddable).value<bool>()) {
+          AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
+          _proxyWidget->setPos(geometry.widgetPosition(_nodeId));
+      }else {
+
+          scene()->removeItem(_proxyWidget);
+           _proxyWidget->setWidget(nullptr);
+          _proxyWidget->setParentItem(nullptr);
+          _proxyWidget->deleteLater();  // 删除小部件
+          _proxyWidget=nullptr;
+
+      }
+  }else {
+      if(_graphModel.nodeData(_nodeId, NodeRole::WidgetEmbeddable).value<bool>()) {
+          embedQWidget();
+
+      }
   }
+
 }
 
 void NodeGraphicsObject::embedQWidget()
@@ -101,6 +117,7 @@ void NodeGraphicsObject::embedQWidget()
         return;
 
     if (auto w = _graphModel.nodeData(_nodeId, NodeRole::Widget).value<QWidget *>()) {
+
         _proxyWidget = new QGraphicsProxyWidget(this);
 
         _proxyWidget->setWidget(w);
@@ -385,7 +402,10 @@ void NodeGraphicsObject::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 {
     QGraphicsItem::mouseDoubleClickEvent(event);
 
+    _graphModel.setNodeData(_nodeId,NodeRole::WidgetEmbeddable,!_graphModel.nodeData(_nodeId, NodeRole::WidgetEmbeddable).toBool());
+
     Q_EMIT nodeScene()->nodeDoubleClicked(_nodeId);
+
 }
 
 void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)

@@ -51,4 +51,17 @@ void NodeDelegateModel::setNodeStyle(NodeStyle const &style)
     _nodeStyle = style;
 }
 
+
+unsigned int NodeDelegateModel::nPorts(PortType portType) const
+{
+    switch (portType) {
+        case PortType::In:
+            return InPortCount;
+        case PortType::Out:
+            return OutPortCount;
+        default:
+            return 0;
+        break;
+    }
+}
 } // namespace QtNodes

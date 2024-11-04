@@ -28,19 +28,11 @@ public:
     virtual ~NumberSourceDataModel() {}
 
 public:
-    QString caption() const override { return QStringLiteral("Number Source"); }
-
-    bool captionVisible() const override { return false; }
-
-    QString name() const override { return QStringLiteral("NumberSource"); }
-
-public:
     QJsonObject save() const override;
 
     void load(QJsonObject const &p) override;
 
 public:
-    unsigned int nPorts(PortType portType) const override;
 
     NodeDataType dataType(PortType portType, PortIndex portIndex) const override;
 

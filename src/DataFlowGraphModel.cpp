@@ -300,9 +300,15 @@ bool DataFlowGraphModel::setNodeData(NodeId nodeId, NodeRole role, QVariant valu
     case NodeRole::OutPortCount:
         break;
 
-    case NodeRole::WidgetEmbeddable:
+    case NodeRole::WidgetEmbeddable: {
+        auto it = _models.find(nodeId);
+        auto &model = it->second;
+        model->WidgetEmbeddable=value.toBool();
+        model->embeddedWidgetSizeUpdated();
+        Q_EMIT nodeUpdated(nodeId);
+        return true;
+    }
         break;
-
     case NodeRole::Widget:
         break;
 

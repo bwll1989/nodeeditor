@@ -8,8 +8,15 @@
 
 NumberSourceDataModel::NumberSourceDataModel()
     : _lineEdit{nullptr}
-    , _number(std::make_shared<DecimalData>(0.0))
-{}
+    , _number(std::make_shared<DecimalData>(0.0)) {
+    InPortCount =0;
+    OutPortCount=1;
+    CaptionVisible=true;
+    Caption="Number Source";
+    WidgetEmbeddable= true;
+    Resizable=false;
+    PortEditable= false;
+}
 
 QJsonObject NumberSourceDataModel::save() const
 {
@@ -38,24 +45,7 @@ void NumberSourceDataModel::load(QJsonObject const &p)
     }
 }
 
-unsigned int NumberSourceDataModel::nPorts(PortType portType) const
-{
-    unsigned int result = 1;
 
-    switch (portType) {
-    case PortType::In:
-        result = 0;
-        break;
-
-    case PortType::Out:
-        result = 1;
-
-    default:
-        break;
-    }
-
-    return result;
-}
 
 void NumberSourceDataModel::onTextEdited(QString const &str)
 {

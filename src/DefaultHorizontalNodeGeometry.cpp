@@ -186,13 +186,15 @@ QRectF DefaultHorizontalNodeGeometry::portTextRect(NodeId const nodeId,
     QString s;
     if (_graphModel.portData<bool>(nodeId, portType, portIndex, PortRole::CaptionVisible)) {
         s = _graphModel.portData<QString>(nodeId, portType, portIndex, PortRole::Caption);
-    } else {
-        auto portData = _graphModel.portData(nodeId, portType, portIndex, PortRole::DataType);
-
-        s = portData.value<NodeDataType>().name;
     }
-
+    // else {
+    //     auto portData = _graphModel.portData(nodeId, portType, portIndex, PortRole::DataType);
+    //
+    //     s = portData.value<NodeDataType>().name;
+    // }
+    // PortRole::CaptionVisible 为false时不计算文本框宽度
     return _fontMetrics.boundingRect(s);
+
 }
 
 unsigned int DefaultHorizontalNodeGeometry::maxVerticalPortsExtent(NodeId const nodeId) const
@@ -223,14 +225,16 @@ unsigned int DefaultHorizontalNodeGeometry::maxPortsTextAdvance(NodeId const nod
 
         if (_graphModel.portData<bool>(nodeId, portType, portIndex, PortRole::CaptionVisible)) {
             name = _graphModel.portData<QString>(nodeId, portType, portIndex, PortRole::Caption);
-        } else {
-            NodeDataType portData = _graphModel.portData<NodeDataType>(nodeId,
-                                                                       portType,
-                                                                       portIndex,
-                                                                       PortRole::DataType);
-
-            name = portData.name;
         }
+        // else {
+        //     NodeDataType portData = _graphModel.portData<NodeDataType>(nodeId,
+        //                                                                portType,
+        //                                                                portIndex,
+        //                                                                PortRole::DataType);
+        //
+        //     name = portData.name;
+        // }
+        // PortRole::CaptionVisible 为false时不计算宽度
 
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
         width = std::max(unsigned(_fontMetrics.horizontalAdvance(name)), width);

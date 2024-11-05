@@ -306,7 +306,7 @@ bool DataFlowGraphModel::setNodeData(NodeId nodeId, NodeRole role, QVariant valu
         model->WidgetEmbeddable=value.toBool();
         model->embeddedWidgetSizeUpdated();
         Q_EMIT nodeUpdated(nodeId);
-        return true;
+        result = true;
     }
         break;
     case NodeRole::Widget:

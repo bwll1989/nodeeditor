@@ -30,11 +30,12 @@ Q_NAMESPACE_EXPORT(NODE_EDITOR_PUBLIC)
         Style=5,            ///< Custom NodeStyle as QJsonDocument
         InternalData=6,     ///< Node-stecific user data as QJsonObject
         InPortCount=7,      ///< `unsigned int`
-        OutPortCount=9,     ///< `unsigned int`
-        Widget=10,           ///< Optional `QWidget*` or `nullptr`
-        WidgetEmbeddable, ///< `bool` for widget embeddability
-        PortEditableWidget,
-        PortEditable,
+        OutPortCount=8,     ///< `unsigned int`
+        Widget=9,           ///< Optional `QWidget*` or `nullptr`
+        WidgetEmbeddable=10, ///< `bool` for widget embeddability
+        PortEditableWidget=11,
+        PortEditable=12,
+        OSCAddress=13,
     };
 Q_ENUM_NS(NodeRole)
 

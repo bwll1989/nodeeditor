@@ -62,7 +62,7 @@ NodeId DataFlowGraphModel::addNode(QString const nodeType)
 
     if (model) {
         NodeId newId = newNodeId();
-
+  
         connect(model.get(),
                 &NodeDelegateModel::dataUpdated,
                 [newId, this](PortIndex const portIndex) {

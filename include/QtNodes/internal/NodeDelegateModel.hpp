@@ -53,7 +53,6 @@ public:
 
     virtual bool portEditable() const { return PortEditable; }
 
-
 public:
     QJsonObject save() const override;
 
@@ -91,7 +90,21 @@ public:
     virtual bool widgetEmbeddable() const { return WidgetEmbeddable; }
 
     virtual bool resizable() const { return Resizable; }
-
+    /**
+     * 注册控件OSC地址和Widget指针
+     */
+    virtual void registerOSCControl(const QString& oscAddress, QWidget* control);
+    /**
+     * 注销控件OSC地址和Widget指针
+     */
+    virtual void unregisterOSCControl(const QString& oscAddress);
+    /**
+     * 获取控件OSC地址和Widget指针
+     */
+    virtual QWidget* getWidgetFromOSCAddress(const QString& oscAddress) const;
+    
+    virtual std::unordered_map<QString, QWidget*> getOscMapping() const;
+    
 public Q_SLOTS:
 
     virtual void inputConnectionCreated(ConnectionId const &) {}
@@ -140,6 +153,10 @@ Q_SIGNALS:
 
 private:
     NodeStyle _nodeStyle;
+    /**
+     * 存储OSC地址和控件的映射
+     */
+    std::unordered_map<QString, QWidget*> _OscMapping;
 };
 
 } // namespace QtNodes

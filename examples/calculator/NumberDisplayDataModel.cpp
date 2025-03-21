@@ -4,7 +4,8 @@
 
 NumberDisplayDataModel::NumberDisplayDataModel()
     : _label{nullptr}
-{}
+{
+}
 
 unsigned int NumberDisplayDataModel::nPorts(PortType portType) const
 {
@@ -57,6 +58,8 @@ QWidget *NumberDisplayDataModel::embeddedWidget()
     if (!_label) {
         _label = new QLabel();
         _label->setMargin(3);
+        _label->setFixedSize(200, 200);
+        registerOSCControl("/number",_label);
     }
 
     return _label;

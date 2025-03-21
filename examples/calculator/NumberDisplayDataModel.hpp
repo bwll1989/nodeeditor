@@ -30,7 +30,7 @@ public:
 public:
     QString caption() const override { return QStringLiteral("Result"); }
 
-    bool captionVisible() const override { return false; }
+    bool captionVisible() const override { return true; }
 
     QString name() const override { return QStringLiteral("Result"); }
 

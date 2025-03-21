@@ -62,7 +62,7 @@ NodeId DataFlowGraphModel::addNode(QString const nodeType)
 
     if (model) {
         NodeId newId = newNodeId();
-  
+        model->setNodeID(newId);
         connect(model.get(),
                 &NodeDelegateModel::dataUpdated,
                 [newId, this](PortIndex const portIndex) {
@@ -240,7 +240,9 @@ QVariant DataFlowGraphModel::nodeData(NodeId nodeId, NodeRole role) const
         auto w = model->embeddedWidget();
         result = QVariant::fromValue(w);
     } break;
-
+    case NodeRole::NodeID:
+        result = model->getNodeID();
+        break;
     default:
         break;
     }
@@ -311,7 +313,11 @@ bool DataFlowGraphModel::setNodeData(NodeId nodeId, NodeRole role, QVariant valu
         break;
     case NodeRole::Widget:
         break;
-
+    case NodeRole::NodeID:
+        auto it = _models.find(nodeId);
+        auto &model = it->second;
+        model->setNodeID(value.toInt());
+        break;
     default:
         break;
     }
@@ -494,7 +500,7 @@ void DataFlowGraphModel::loadNode(QJsonObject const &nodeJson)
                 [restoredNodeId, this](PortIndex const portIndex) {
                     onOutPortDataUpdated(restoredNodeId, portIndex);
                 });
-
+        model->setNodeID(restoredNodeId);
         _models[restoredNodeId] = std::move(model);
 
         Q_EMIT nodeCreated(restoredNodeId);

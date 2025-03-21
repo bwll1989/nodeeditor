@@ -9,7 +9,18 @@
 #include "NodeData.hpp"
 #include "NodeStyle.hpp"
 #include "Serializable.hpp"
-
+#include <QDrag>
+#include <QMimeData>
+#include <QPixmap>
+#include <QPainter>
+#include <QApplication>
+#include <QMouseEvent>
+#include <QEvent>
+#include <QPushButton>
+#include <QSlider>
+#include <QSpinBox>
+#include <QLineEdit>
+#include <QLabel>
 namespace QtNodes {
 
 class StyleCollection;
@@ -91,6 +102,14 @@ public:
 
     virtual bool resizable() const { return Resizable; }
     /**
+     * 设置节点ID
+     */
+    void setNodeID(NodeId nodeId);
+    /**
+     * 获取节点ID
+     */
+    NodeId getNodeID() const;
+    /**
      * 注册控件OSC地址和Widget指针
      */
     virtual void registerOSCControl(const QString& oscAddress, QWidget* control);
@@ -151,12 +170,27 @@ Q_SIGNALS:
     /// Call this function when data and port moditications are finished.
     void portsInserted();
 
+protected:
+    virtual bool eventFilter(QObject* watched, QEvent* event) override;
 private:
+    void startDrag(QWidget* widget);
     NodeStyle _nodeStyle;
     /**
      * 存储OSC地址和控件的映射
      */
     std::unordered_map<QString, QWidget*> _OscMapping;
+    /**
+     * 节点ID
+     */
+    NodeId _nodeId;
+    /**
+     * 拖拽起始位置
+     */
+    QPoint dragStartPosition;
+    /**
+     * 是否正在拖拽
+     */
+    bool isDragging = false;
 };
 
 } // namespace QtNodes

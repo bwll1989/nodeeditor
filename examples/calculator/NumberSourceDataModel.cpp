@@ -16,6 +16,7 @@ NumberSourceDataModel::NumberSourceDataModel()
     WidgetEmbeddable= true;
     Resizable=false;
     PortEditable= false;
+    registerOSCControl("/number",_lineEdit);
 }
 
 QJsonObject NumberSourceDataModel::save() const

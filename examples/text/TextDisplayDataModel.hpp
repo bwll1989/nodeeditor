@@ -34,7 +34,7 @@ public:
 
     static QString Name() { return QString("TextDisplayDataModel"); }
 
-    QString name() const override { return TextDisplayDataModel::Name(); }
+    QString type() const override { return TextDisplayDataModel::Name(); }
 
 public:
     unsigned int nPorts(PortType portType) const override;

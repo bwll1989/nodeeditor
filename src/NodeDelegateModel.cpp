@@ -23,8 +23,6 @@ QJsonObject NodeDelegateModel::save() const
 {
     QJsonObject modelJson;
 
-    modelJson["model-name"] = name();
-
     return modelJson;
 }
 
@@ -169,16 +167,28 @@ void NodeDelegateModel::startDrag(QWidget* widget){
 
     QDrag* drag = new QDrag(widget);
     drag->setMimeData(mimeData);
-
-    // 创建预览图像
-    QPixmap pixmap(200, 20);
+    QPixmap pixmap(200, 30);
     pixmap.fill(Qt::transparent);
-    QPainter painter(&pixmap);
-    painter.setPen(Qt::white);
-    painter.drawText(pixmap.rect(), Qt::AlignLeft | Qt::AlignVCenter, message.address);
     
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    
+    // 绘制背景
+    QColor bgColor(40, 40, 40, 200);  // 半透明深灰色
+    painter.setBrush(bgColor);
+    painter.setPen(Qt::NoPen);
+    painter.drawRoundedRect(pixmap.rect(), 5, 5);  // 圆角矩形
+    // 绘制文本
+    painter.setPen(Qt::white);
+    QFont font = painter.font();
+    font.setPointSize(9);
+    painter.setFont(font);
+    QRect textRect = pixmap.rect().adjusted(30, 0, -8, 0);  // 图标右侧的文本区域
+    painter.drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, message.address);
+
+    // 设置拖拽预览
     drag->setPixmap(pixmap);
-    drag->setHotSpot(QPoint(0, pixmap.height()/2));
+    drag->setHotSpot(QPoint(pixmap.width()/2, pixmap.height()/2));  // 热点在中心
 
     drag->exec(Qt::CopyAction);
 }

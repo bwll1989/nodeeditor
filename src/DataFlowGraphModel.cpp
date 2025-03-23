@@ -191,7 +191,7 @@ QVariant DataFlowGraphModel::nodeData(NodeId nodeId, NodeRole role) const
 
     switch (role) {
     case NodeRole::Type:
-        result = model->name();
+        result = model->type();
         break;
 
     case NodeRole::Position:
@@ -242,6 +242,9 @@ QVariant DataFlowGraphModel::nodeData(NodeId nodeId, NodeRole role) const
     } break;
     case NodeRole::NodeID:
         result = model->getNodeID();
+        break;
+    case NodeRole::Remarks:
+        result = model->getRemarks();
         break;
     default:
         break;
@@ -313,10 +316,20 @@ bool DataFlowGraphModel::setNodeData(NodeId nodeId, NodeRole role, QVariant valu
         break;
     case NodeRole::Widget:
         break;
-    case NodeRole::NodeID:
+    case NodeRole::NodeID:{ 
         auto it = _models.find(nodeId);
         auto &model = it->second;
         model->setNodeID(value.toInt());
+        result = true;
+        }
+        break;
+    case NodeRole::Remarks:{ 
+        auto it = _models.find(nodeId);
+        auto &model = it->second;
+        model->setRemarks(value.toString());
+        Q_EMIT nodeUpdated(nodeId);
+        result = true;
+    }
         break;
     default:
         break;
@@ -444,6 +457,14 @@ QJsonObject DataFlowGraphModel::saveNode(NodeId const nodeId) const
 
     nodeJson["internal-data"] = _models.at(nodeId)->save();
 
+    nodeJson["type"] = _models.at(nodeId)->type();
+    // 保存备注
+    nodeJson["remarks"] = _models.at(nodeId)->getRemarks();
+
+    nodeJson["input-count"] = nodeData(nodeId, NodeRole::InPortCount).toInt();
+    nodeJson["output-count"] = nodeData(nodeId, NodeRole::OutPortCount).toInt();
+    nodeJson["port-editable"] = nodeData(nodeId, NodeRole::PortEditable).toBool();
+    
     {
         QPointF const pos = nodeData(nodeId, NodeRole::Position).value<QPointF>();
 
@@ -490,8 +511,8 @@ void DataFlowGraphModel::loadNode(QJsonObject const &nodeJson)
 
     QJsonObject const internalDataJson = nodeJson["internal-data"].toObject();
 
-    QString delegateModelName = internalDataJson["model-name"].toString();
-
+    QString delegateModelName =nodeJson["type"].toString();
+    // 加载备注
     std::unique_ptr<NodeDelegateModel> model = _registry->create(delegateModelName);
 
     if (model) {
@@ -509,8 +530,14 @@ void DataFlowGraphModel::loadNode(QJsonObject const &nodeJson)
         QPointF const pos(posJson["x"].toDouble(), posJson["y"].toDouble());
 
         setNodeData(restoredNodeId, NodeRole::Position, pos);
-
+        setNodeData(restoredNodeId, NodeRole::Remarks, nodeJson["remarks"].toString());
+        setNodeData(restoredNodeId, NodeRole::PortEditable, nodeJson["port-editable"].toBool());
+        setNodeData(restoredNodeId, NodeRole::InPortCount, nodeJson["input-count"].toInt());
+        setNodeData(restoredNodeId, NodeRole::OutPortCount, nodeJson["output-count"].toInt());
         _models[restoredNodeId]->load(internalDataJson);
+        // 加载备注
+       
+
     } else {
         throw std::logic_error(std::string("No registered model with name ")
                                + delegateModelName.toLocal8Bit().data());

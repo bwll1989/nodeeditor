@@ -401,7 +401,6 @@ void NodeGraphicsObject::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
 void NodeGraphicsObject::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 {
     QGraphicsItem::mouseDoubleClickEvent(event);
-
     _graphModel.setNodeData(_nodeId,NodeRole::WidgetEmbeddable,!_graphModel.nodeData(_nodeId, NodeRole::WidgetEmbeddable).toBool());
 
     Q_EMIT nodeScene()->nodeDoubleClicked(_nodeId);
@@ -411,6 +410,99 @@ void NodeGraphicsObject::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 {
     Q_EMIT nodeScene()->nodeContextMenu(_nodeId, mapToScene(event->pos()));
+}
+
+void NodeGraphicsObject::keyPressEvent(QKeyEvent* event)
+{
+    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
+        startEditingRemarks();
+        event->accept();
+    } else {
+        QGraphicsObject::keyPressEvent(event);
+    }
+}
+
+void NodeGraphicsObject::initRemarksEditor()
+{
+    if (!_remarksEditor) {
+        _remarksEditor = new QLineEdit();
+        _remarksEditor->setStyleSheet(
+            "QLineEdit {"
+            "  background-color: #2D2D2D;"
+            "  border: 1px solid #4D4D4D;"
+            "  border-radius: 3px;"
+            "  color: white;"
+            "  padding: 2px 6px;"
+            "}"
+            "QLineEdit:focus {"
+            "  border: 1px solid #6D6D6D;"
+            "}"
+        );
+        
+        connect(_remarksEditor, &QLineEdit::editingFinished,
+                this, &NodeGraphicsObject::finishEditingRemarks);
+                
+        // 按ESC取消编辑
+        _remarksEditor->installEventFilter(this);
+    }
+}
+
+void NodeGraphicsObject::startEditingRemarks()
+{
+    initRemarksEditor();
+    
+    // 获取当前remarks
+    auto currentRemarks = _graphModel.nodeData(_nodeId, NodeRole::Remarks).toString();
+    
+    // 设置编辑器位置和大小
+    auto* scene = static_cast<BasicGraphicsScene*>(this->scene());
+    auto& geometry = scene->nodeGeometry();
+  
+    QRectF captionRect = QRectF(0,0,geometry.size(_nodeId).width()-1, geometry.captionPosition(_nodeId).y()*2-geometry.captionRect(_nodeId).height());
+    QRectF sceneRect = mapToScene(captionRect).boundingRect();
+    
+    _remarksEditor->setText(currentRemarks);
+    _remarksEditor->setGeometry(
+        scene->views().first()->mapFromScene(sceneRect).boundingRect()
+    );
+    
+    // 显示编辑器
+    _remarksEditor->setParent(scene->views().first()->viewport());
+    _remarksEditor->show();
+    _remarksEditor->setFocus();
+    _remarksEditor->selectAll();
+}
+
+void NodeGraphicsObject::finishEditingRemarks()
+{
+    if (!_remarksEditor) return;
+    
+    // 保存新的remarks
+    QString newRemarks = _remarksEditor->text();
+    _graphModel.setNodeData(_nodeId, NodeRole::Remarks, newRemarks);
+    
+    // 隐藏编辑器
+    _remarksEditor->hide();
+    _remarksEditor->setParent(nullptr);
+    this->setFocus();
+    
+    update();
+}
+
+bool NodeGraphicsObject::eventFilter(QObject* watched, QEvent* event)
+{
+    if (watched == _remarksEditor) {
+        if (event->type() == QEvent::KeyPress) {
+            QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+            if (keyEvent->key() == Qt::Key_Escape) {
+                _remarksEditor->hide();
+                _remarksEditor->setParent(nullptr);
+                this->setFocus();
+                return true;
+            }
+        }
+    }
+    return QGraphicsObject::eventFilter(watched, event);
 }
 
 } // namespace QtNodes

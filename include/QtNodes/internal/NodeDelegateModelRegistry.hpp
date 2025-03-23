@@ -143,7 +143,7 @@ private:
     template<typename ModelType>
     static QString computeName(std::false_type, RegistryItemCreator const &creator)
     {
-        return creator()->name();
+        return creator()->type();
     }
 
     template<typename T>

@@ -31,7 +31,7 @@ public:
 
     static QString Name() { return QString("TextSourceDataModel"); }
 
-    QString name() const override { return TextSourceDataModel::Name(); }
+    QString type() const override { return TextSourceDataModel::Name(); }
 
 public:
     unsigned int nPorts(PortType portType) const override;

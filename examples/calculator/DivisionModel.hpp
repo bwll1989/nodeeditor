@@ -45,7 +45,7 @@ public:
         return QString();
     }
 
-    QString name() const override { return QStringLiteral("Division"); }
+    QString type() const override { return QStringLiteral("Division"); }
 
 private:
     void compute() override

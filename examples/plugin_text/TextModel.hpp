@@ -30,7 +30,7 @@ public:
 
     static QString Name() { return QString("Text"); }
 
-    QString name() const override { return TextModel::Name(); }
+    QString type() const override { return TextModel::Name(); }
 
 public:
     unsigned int nPorts(PortType portType) const override;

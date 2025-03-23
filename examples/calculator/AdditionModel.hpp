@@ -18,7 +18,7 @@ public:
 public:
     QString caption() const override { return QStringLiteral("Addition"); }
 
-    QString name() const override { return QStringLiteral("Addition"); }
+    QString type() const override { return QStringLiteral("Addition"); }
 
 private:
     void compute() override

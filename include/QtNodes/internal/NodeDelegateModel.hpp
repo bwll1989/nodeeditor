@@ -60,7 +60,7 @@ public:
     virtual QString portCaption(PortType portType, PortIndex portIndex) const { return dataType(portType, portIndex).name; }
 
     /// Name makes this model unique
-    virtual QString name() const { return Caption; };
+    virtual QString type() const { return Caption; };
 
     virtual bool portEditable() const { return PortEditable; }
 
@@ -121,9 +121,27 @@ public:
      * 获取控件OSC地址和Widget指针
      */
     virtual QWidget* getWidgetFromOSCAddress(const QString& oscAddress) const;
-    
+    /**
+     * 获取OSC地址和控件的映射
+     */
     virtual std::unordered_map<QString, QWidget*> getOscMapping() const;
-    
+    /**
+     * 设置备注
+     */
+    virtual void setRemarks(const QString& remarks){
+        _remarks = remarks;
+    };
+    /**
+     * 获取备注
+     */
+    virtual QString getRemarks() const{
+        if (_remarks.isEmpty())
+        {
+            return type();
+        }
+        
+        return _remarks;
+    };
 public Q_SLOTS:
 
     virtual void inputConnectionCreated(ConnectionId const &) {}
@@ -191,6 +209,8 @@ private:
      * 是否正在拖拽
      */
     bool isDragging = false;
+
+    QString _remarks;
 };
 
 } // namespace QtNodes

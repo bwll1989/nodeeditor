@@ -19,7 +19,7 @@ public:
 public:
     QString caption() const override { return QStringLiteral("Multiplication"); }
 
-    QString name() const override { return QStringLiteral("Multiplication"); }
+    QString type() const override { return QStringLiteral("Multiplication"); }
 
 private:
     void compute() override

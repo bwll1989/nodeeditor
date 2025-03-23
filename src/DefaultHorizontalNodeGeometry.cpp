@@ -135,9 +135,19 @@ QRectF DefaultHorizontalNodeGeometry::captionRect(NodeId const nodeId) const
     if (!_graphModel.nodeData<bool>(nodeId, NodeRole::CaptionVisible))
         return QRect();
 
-    QString name = _graphModel.nodeData<QString>(nodeId, NodeRole::Caption);
+    QString name = _graphModel.nodeData<QString>(nodeId, NodeRole::Remarks);
+    QRectF captionRect = _boldFontMetrics.boundingRect(name);
 
-    return _boldFontMetrics.boundingRect(name);
+    QSize size = _graphModel.nodeData<QSize>(nodeId, NodeRole::Size);
+    if (captionRect.width() > size.width()) {
+        size.setWidth(captionRect.width());
+        _graphModel.setNodeData(nodeId, NodeRole::Size, size);
+        // Passes the new size to the model.
+        recomputeSize(nodeId);
+        // Q_EMIT _graphModel.nodeUpdated(nodeId);
+    }
+
+    return captionRect;
 }
 
 QPointF DefaultHorizontalNodeGeometry::captionPosition(NodeId const nodeId) const

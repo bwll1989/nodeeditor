@@ -2,7 +2,7 @@
 
 #include <QtCore/QUuid>
 #include <QtWidgets/QGraphicsObject>
-
+#include <QtWidgets/QLineEdit>
 #include "NodeState.hpp"
 
 class QGraphicsProxyWidget;
@@ -75,10 +75,19 @@ protected:
 
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
 
+    void keyPressEvent(QKeyEvent *event) override;
+
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
+
 private:
     void embedQWidget();
 
     void setLockedState();
+
+    void initRemarksEditor();
+    void startEditingRemarks();
+    void finishEditingRemarks();
 
 private Q_SLOTS:
     void onLockedState(NodeId);
@@ -92,5 +101,7 @@ private:
 
     // either nullptr or owned by parent QGraphicsItem
     QGraphicsProxyWidget *_proxyWidget;
+
+    QLineEdit* _remarksEditor = nullptr;
 };
 } // namespace QtNodes

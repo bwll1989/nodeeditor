@@ -30,9 +30,9 @@ public:
 public:
     QString caption() const override { return QStringLiteral("Result"); }
 
-    bool captionVisible() const override { return true; }
+    bool captionVisible() const override { return false; }
 
-    QString name() const override { return QStringLiteral("Result"); }
+    QString type() const override { return QStringLiteral("Result"); }
 
 public:
     unsigned int nPorts(PortType portType) const override;

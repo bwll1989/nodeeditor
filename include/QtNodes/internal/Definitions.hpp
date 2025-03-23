@@ -37,6 +37,7 @@ Q_NAMESPACE_EXPORT(NODE_EDITOR_PUBLIC)
         PortEditable=12,
         OSCAddress=13,
         NodeID=14,
+        Remarks=15,
     };
 Q_ENUM_NS(NodeRole)
 

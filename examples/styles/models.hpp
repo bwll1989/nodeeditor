@@ -34,14 +34,14 @@ public:
 public:
     QString caption() const override { return QString("My Data Model"); }
 
-    QString name() const override { return QString("MyDataModel"); }
+    QString type() const override { return QString("MyDataModel"); }
 
 public:
     QJsonObject save() const override
     {
         QJsonObject modelJson;
 
-        modelJson["name"] = name();
+        modelJson["type"] = type();
 
         return modelJson;
     }

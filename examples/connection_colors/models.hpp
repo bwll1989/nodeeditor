@@ -41,7 +41,7 @@ public:
 public:
     QString caption() const override { return QString("Naive Data Model"); }
 
-    QString name() const override { return QString("NaiveDataModel"); }
+    QString type() const override { return QString("NaiveDataModel"); }
 
 public:
     unsigned int nPorts(PortType const portType) const override

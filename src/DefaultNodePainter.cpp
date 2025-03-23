@@ -13,7 +13,7 @@
 #include "NodeGraphicsObject.hpp"
 #include "NodeState.hpp"
 #include "StyleCollection.hpp"
-
+#include <QLineEdit>
 namespace QtNodes {
 
 void DefaultNodePainter::paint(QPainter *painter, NodeGraphicsObject &ngo) const
@@ -200,8 +200,8 @@ void DefaultNodePainter::drawNodeCaption(QPainter *painter, NodeGraphicsObject &
     if (!model.nodeData(nodeId, NodeRole::CaptionVisible).toBool())
         return;
 
-    QString const name = model.nodeData(nodeId, NodeRole::Caption).toString();
-
+    // QString const name = model.nodeData(nodeId, NodeRole::Caption).toString();
+    QString const name = model.nodeData(nodeId, NodeRole::Remarks).toString();
     QFont f = painter->font();
     f.setBold(true);
 

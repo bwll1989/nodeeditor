@@ -12,6 +12,7 @@ using ConnectionId = QtNodes::ConnectionId;
 using ConnectionPolicy = QtNodes::ConnectionPolicy;
 using NodeFlag = QtNodes::NodeFlag;
 using NodeId = QtNodes::NodeId;
+using GroupId = QtNodes::GroupId;
 using NodeRole = QtNodes::NodeRole;
 using PortIndex = QtNodes::PortIndex;
 using PortRole = QtNodes::PortRole;
@@ -42,6 +43,8 @@ public:
 
     std::unordered_set<ConnectionId> allConnectionIds(NodeId const nodeId) const override;
 
+    std::unordered_set<GroupId> allGroupIds() const override;
+
     std::unordered_set<ConnectionId> connections(NodeId nodeId,
                                                  PortType portType,
                                                  PortIndex portIndex) const override;
@@ -57,6 +60,8 @@ public:
     bool connectionPossible(ConnectionId const connectionId) const override;
 
     void addConnection(ConnectionId const connectionId) override;
+
+    void addGroup(GroupId const groupId) override;
 
     bool nodeExists(NodeId const nodeId) const override;
 
@@ -79,6 +84,10 @@ public:
 
     bool deleteNode(NodeId const nodeId) override;
 
+    bool deleteGroup(GroupId const groupId) override;
+
+    void updateGroup(GroupId const oldGroupId, GroupId const newGroupId) override;
+
     QJsonObject saveNode(NodeId const) const override;
 
     /// @brief Creates a new node based on the informatoin in `nodeJson`.
@@ -87,7 +96,6 @@ public:
    * information.
    */
     void loadNode(QJsonObject const &nodeJson) override;
-
 private:
     NodeId newNodeId() override { return _nextNodeId++; }
 
@@ -102,7 +110,7 @@ private:
     /// This data structure contains the graph connectivity information in both
     /// directions, i.e. from Node1 to Node2 and from Node2 to Node1.
     std::unordered_set<ConnectionId> _connectivity;
-
+    std::unordered_set<GroupId> _groups;
     mutable std::unordered_map<NodeId, NodeGeometryData> _nodeGeometryData;
 
     /// A convenience variable needed for generating unique node ids.

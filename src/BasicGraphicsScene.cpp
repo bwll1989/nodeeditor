@@ -1,20 +1,23 @@
 #include "BasicGraphicsScene.hpp"
 
+#include <iostream>
+#include <stdexcept>
+#include <unordered_set>
+#include <utility>
+
 #include "AbstractNodeGeometry.hpp"
 #include "ConnectionGraphicsObject.hpp"
 #include "ConnectionIdUtils.hpp"
+#include "GroupIdUtils.hpp"
 #include "DefaultConnectionPainter.hpp"
+#include "DefaultGroupPainter.hpp"
 #include "DefaultHorizontalNodeGeometry.hpp"
 #include "DefaultNodePainter.hpp"
 #include "DefaultVerticalNodeGeometry.hpp"
 #include "GraphicsView.hpp"
 #include "NodeGraphicsObject.hpp"
-
+#include "GroupGraphicsObject.hpp"
 #include <QUndoStack>
-
-#include <QtWidgets/QFileDialog>
-#include <QtWidgets/QGraphicsSceneMoveEvent>
-
 #include <QtCore/QBuffer>
 #include <QtCore/QByteArray>
 #include <QtCore/QDataStream>
@@ -23,11 +26,8 @@
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include <QtCore/QtGlobal>
-
-#include <iostream>
-#include <stdexcept>
-#include <unordered_set>
-#include <utility>
+#include <QtWidgets/QFileDialog>
+#include <QtWidgets/QGraphicsSceneMoveEvent>
 #include <queue>
 
 namespace QtNodes {
@@ -37,6 +37,7 @@ BasicGraphicsScene::BasicGraphicsScene(AbstractGraphModel &graphModel, QObject *
     , _graphModel(graphModel)
     , _nodeGeometry(std::make_unique<DefaultHorizontalNodeGeometry>(_graphModel))
     , _nodePainter(std::make_unique<DefaultNodePainter>())
+    , _groupPainter(std::make_unique<DefaultGroupPainter>())
     , _connectionPainter(std::make_unique<DefaultConnectionPainter>())
     , _nodeDrag(false)
     , _undoStack(new QUndoStack(this))
@@ -78,6 +79,10 @@ BasicGraphicsScene::BasicGraphicsScene(AbstractGraphModel &graphModel, QObject *
 
     connect(&_graphModel, &AbstractGraphModel::modelReset, this, &BasicGraphicsScene::onModelReset);
 
+    connect(&_graphModel,&AbstractGraphModel::groupCreated, this, &BasicGraphicsScene::onGroupCreated);
+
+    connect(&_graphModel,&AbstractGraphModel::groupDeleted, this, &BasicGraphicsScene::onGroupDeleted);
+
     traverseGraphAndPopulateGraphicsObjects();
 }
 
@@ -107,7 +112,10 @@ AbstractConnectionPainter &BasicGraphicsScene::connectionPainter()
 {
     return *_connectionPainter;
 }
-
+AbstractGroupPainter &BasicGraphicsScene::groupPainter()
+{
+    return *_groupPainter;
+}
 void BasicGraphicsScene::setNodePainter(std::unique_ptr<AbstractNodePainter> newPainter)
 {
     _nodePainter = std::move(newPainter);
@@ -116,6 +124,11 @@ void BasicGraphicsScene::setNodePainter(std::unique_ptr<AbstractNodePainter> new
 void BasicGraphicsScene::setConnectionPainter(std::unique_ptr<AbstractConnectionPainter> newPainter)
 {
     _connectionPainter = std::move(newPainter);
+}
+
+void BasicGraphicsScene::setGroupPainter(std::unique_ptr<AbstractGroupPainter> newPainter)
+{
+    _groupPainter = std::move(newPainter);
 }
 
 QUndoStack &BasicGraphicsScene::undoStack()
@@ -167,6 +180,17 @@ ConnectionGraphicsObject *BasicGraphicsScene::connectionGraphicsObject(Connectio
     }
 
     return cgo;
+}
+
+GroupGraphicsObject *BasicGraphicsScene::groupGraphicsObject(GroupId groupId)
+{
+    GroupGraphicsObject *ggo = nullptr;
+    auto it = _groupGraphicsObjects.find(groupId);
+    if (it != _groupGraphicsObjects.end()) {
+        ggo = it->second.get();
+    }
+
+    return ggo;
 }
 
 void BasicGraphicsScene::setOrientation(Qt::Orientation const orientation)
@@ -257,6 +281,22 @@ void BasicGraphicsScene::onConnectionCreated(ConnectionId const connectionId)
     Q_EMIT modified(this);
 }
 
+void BasicGraphicsScene::onGroupCreated(const QtNodes::GroupId groupId)
+{
+    _groupGraphicsObjects[groupId] = std::make_unique<GroupGraphicsObject>(*this, groupId);
+    Q_EMIT modified(this);
+}
+
+void BasicGraphicsScene::onGroupDeleted(const QtNodes::GroupId groupId)
+{
+
+    auto it = _groupGraphicsObjects.find(groupId);
+    if (it!= _groupGraphicsObjects.end()) {
+        _groupGraphicsObjects.erase(it);
+    }
+    Q_EMIT modified(this);
+}
+
 void BasicGraphicsScene::onNodeDeleted(NodeId const nodeId)
 {
     auto it = _nodeGraphicsObjects.find(nodeId);
@@ -312,7 +352,7 @@ void BasicGraphicsScene::onModelReset()
 {
     _connectionGraphicsObjects.clear();
     _nodeGraphicsObjects.clear();
-
+    _groupGraphicsObjects.clear();
     clear();
 
     traverseGraphAndPopulateGraphicsObjects();

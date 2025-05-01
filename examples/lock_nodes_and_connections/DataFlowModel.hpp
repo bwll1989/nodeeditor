@@ -1,3 +1,5 @@
+#include "../dynamic_ports/DynamicPortsModel.hpp"
+
 #include <QtNodes/DataFlowGraphModel>
 
 using QtNodes::ConnectionId;
@@ -35,10 +37,13 @@ public:
     void setNodesLocked(bool b = true)
     {
         _nodesLocked = b;
-
         for (NodeId nodeId : allNodeIds()) {
             Q_EMIT nodeFlagsUpdated(nodeId);
         }
+        for(GroupId groupId : allGroupIds()){
+            Q_EMIT groupFlagsUpdated(groupId);
+        }
+
     }
 
 private:

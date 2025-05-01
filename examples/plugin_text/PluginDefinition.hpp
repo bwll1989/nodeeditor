@@ -21,12 +21,11 @@ class DLL_EXPORT Plugin
 {
     Q_OBJECT
     Q_INTERFACES(QtNodes::PluginInterface)
-    Q_PLUGIN_METADATA(IID PLUGIN_NAME)
-
+    
 public:
     Plugin();
     ~Plugin();
-
+    Q_PLUGIN_METADATA(IID PLUGIN_NAME)
     QString name() const override { return PLUGIN_NAME; };
     QString version() const override {return PLUGIN_VERSION;};
     QString describe() const override {return PLUGIN_DESCRIBE;};

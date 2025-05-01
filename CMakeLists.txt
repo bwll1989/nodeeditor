@@ -75,11 +75,14 @@ set(CPP_SOURCE_FILES
   src/AbstractNodeGeometry.cpp
   src/BasicGraphicsScene.cpp
   src/ConnectionGraphicsObject.cpp
+  src/GroupGraphicsObject.cpp
   src/ConnectionState.cpp
   src/ConnectionStyle.cpp
+  src/GroupStyle.cpp
   src/DataFlowGraphModel.cpp
   src/DataFlowGraphicsScene.cpp
   src/DefaultConnectionPainter.cpp
+  src/DefaultGroupPainter.cpp
   src/DefaultHorizontalNodeGeometry.cpp
   src/DefaultNodePainter.cpp
   src/DefaultVerticalNodeGeometry.cpp
@@ -100,16 +103,21 @@ set(CPP_SOURCE_FILES
 
 set(HPP_HEADER_FILES
   include/QtNodes/internal/AbstractConnectionPainter.hpp
+  include/QtNodes/internal/AbstractGroupPainter.hpp
   include/QtNodes/internal/AbstractGraphModel.hpp
   include/QtNodes/internal/AbstractNodeGeometry.hpp
   include/QtNodes/internal/AbstractNodePainter.hpp
   include/QtNodes/internal/BasicGraphicsScene.hpp
   include/QtNodes/internal/Compiler.hpp
   include/QtNodes/internal/ConnectionGraphicsObject.hpp
+  include/QtNodes/internal/GroupGraphicsObject.hpp
   include/QtNodes/internal/ConnectionIdHash.hpp
+  include/QtNodes/internal/GroupIdHash.hpp
   include/QtNodes/internal/ConnectionIdUtils.hpp
+  include/QtNodes/internal/GroupIdUtils.hpp
   include/QtNodes/internal/ConnectionState.hpp
   include/QtNodes/internal/ConnectionStyle.hpp
+  include/QtNodes/internal/GroupStyle.hpp
   include/QtNodes/internal/DataFlowGraphicsScene.hpp
   include/QtNodes/internal/DataFlowGraphModel.hpp
   include/QtNodes/internal/Definitions.hpp
@@ -130,6 +138,7 @@ set(HPP_HEADER_FILES
   include/QtNodes/internal/Style.hpp
   include/QtNodes/internal/StyleCollection.hpp
   include/QtNodes/internal/DefaultConnectionPainter.hpp
+  include/QtNodes/internal/DefaultGroupPainter.hpp
   include/QtNodes/internal/DefaultHorizontalNodeGeometry.hpp
   include/QtNodes/internal/DefaultNodePainter.hpp
   include/QtNodes/internal/DefaultVerticalNodeGeometry.hpp
@@ -137,6 +146,8 @@ set(HPP_HEADER_FILES
   include/QtNodes/internal/UndoCommands.hpp
   include/QtNodes/internal/PluginsManager.hpp
   include/QtNodes/internal/PluginInterface.hpp
+
+  
 )
 
 # If we want to give the option to build a static library,

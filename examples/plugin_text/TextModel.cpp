@@ -5,6 +5,7 @@
 TextModel::TextModel()
 {
     //
+    qDebug() << "TextModel constructor";
 }
 
 unsigned int TextModel::nPorts(PortType portType) const

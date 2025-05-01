@@ -18,7 +18,7 @@ using PortRole = QtNodes::PortRole;
 using PortType = QtNodes::PortType;
 using StyleCollection = QtNodes::StyleCollection;
 using QtNodes::InvalidNodeId;
-
+using QtNodes::GroupId;
 /**
  * The class implements a bare minimum required to demonstrate a model-based
  * graph.
@@ -42,6 +42,8 @@ public:
 
     std::unordered_set<ConnectionId> allConnectionIds(NodeId const nodeId) const override;
 
+    std::unordered_set<GroupId> allGroupIds() const override;
+
     std::unordered_set<ConnectionId> connections(NodeId nodeId,
                                                  PortType portType,
                                                  PortIndex portIndex) const override;
@@ -57,6 +59,10 @@ public:
     bool connectionPossible(ConnectionId const connectionId) const override;
 
     void addConnection(ConnectionId const connectionId) override;
+
+    void addGroup(GroupId const groupId) override;
+
+    void updateGroup(const GroupId oldGroupId, const GroupId newGroupId) override;
 
     bool nodeExists(NodeId const nodeId) const override;
 
@@ -78,6 +84,8 @@ public:
     bool deleteConnection(ConnectionId const connectionId) override;
 
     bool deleteNode(NodeId const nodeId) override;
+
+    bool deleteGroup(GroupId const groupId) override;
 
     QJsonObject saveNode(NodeId const) const override;
 
@@ -101,6 +109,8 @@ private:
     /// This data structure contains the graph connectivity information in both
     /// directions, i.e. from Node1 to Node2 and from Node2 to Node1.
     std::unordered_set<ConnectionId> _connectivity;
+
+    std::unordered_set<GroupId> _groups;
 
     mutable std::unordered_map<NodeId, NodeGeometryData> _nodeGeometryData;
 

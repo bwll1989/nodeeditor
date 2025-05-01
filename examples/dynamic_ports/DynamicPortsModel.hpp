@@ -11,6 +11,7 @@ using ConnectionId = QtNodes::ConnectionId;
 using ConnectionPolicy = QtNodes::ConnectionPolicy;
 using NodeFlag = QtNodes::NodeFlag;
 using NodeId = QtNodes::NodeId;
+using GroupId = QtNodes::GroupId;
 using NodeRole = QtNodes::NodeRole;
 using PortIndex = QtNodes::PortIndex;
 using PortRole = QtNodes::PortRole;
@@ -42,6 +43,8 @@ public:
     std::unordered_set<NodeId> allNodeIds() const override;
 
     std::unordered_set<ConnectionId> allConnectionIds(NodeId const nodeId) const override;
+
+    std::unordered_set<GroupId> allGroupIds() const override;
 
     std::unordered_set<ConnectionId> connections(NodeId nodeId,
                                                  PortType portType,
@@ -80,6 +83,8 @@ public:
 
     bool deleteNode(NodeId const nodeId) override;
 
+    bool deleteGroup(GroupId const groupId) override;
+
     QJsonObject saveNode(NodeId const) const override;
 
     QJsonObject save() const;
@@ -99,6 +104,9 @@ public:
 
     NodeId newNodeId() override { return _nextNodeId++; }
 
+    void addGroup(GroupId const groupId) override;
+
+    void updateGroup(const GroupId oldGroupId, const GroupId newGroupId) override;
 private:
     std::unordered_set<NodeId> _nodeIds;
 
@@ -107,7 +115,7 @@ private:
     /// table. Or a collection of structs with pointers to each other. Or an
     /// abstract syntax tree, you name it.
     std::unordered_set<ConnectionId> _connectivity;
-
+    std::unordered_set<GroupId> _groups;
     mutable std::unordered_map<NodeId, NodeGeometryData> _nodeGeometryData;
 
     struct NodePortCount

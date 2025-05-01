@@ -142,6 +142,16 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
         addAction(_pasteAction);
     }
 
+    {
+        delete _createGroupAction;
+        _createGroupAction = new QAction(QStringLiteral("Create Group"), this);
+        _createGroupAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
+        _createGroupAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_G));
+        _createGroupAction->setAutoRepeat(false);
+
+        connect(_createGroupAction, &QAction::triggered, this, &GraphicsView::onCreateGroup);
+        addAction(_createGroupAction);
+    }
     auto undoAction = scene->undoStack().createUndoAction(this, tr("&Undo"));
     undoAction->setShortcuts(QKeySequence::Undo);
     addAction(undoAction);
@@ -149,6 +159,7 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
     auto redoAction = scene->undoStack().createRedoAction(this, tr("&Redo"));
     redoAction->setShortcuts(QKeySequence::Redo);
     addAction(redoAction);
+
 }
 
 void GraphicsView::centerScene()
@@ -296,6 +307,13 @@ void GraphicsView::onPasteObjects()
 {
     QPointF const pastePosition = scenePastePosition();
     nodeScene()->undoStack().push(new PasteCommand(nodeScene(), pastePosition));
+}
+
+void GraphicsView::onCreateGroup()
+{
+
+    nodeScene()->undoStack().push(new CreateGroupCommand(nodeScene()));
+
 }
 
 void GraphicsView::keyPressEvent(QKeyEvent *event)

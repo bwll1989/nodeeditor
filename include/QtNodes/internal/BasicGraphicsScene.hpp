@@ -14,9 +14,10 @@
 #include "ConnectionIdHash.hpp"
 #include "Definitions.hpp"
 #include "Export.hpp"
-
+#include "GroupIdHash.hpp"
 #include "QUuidStdHash.hpp"
-
+#include "GroupGraphicsObject.hpp"
+#include "AbstractGroupPainter.hpp"
 class QUndoStack;
 
 namespace QtNodes {
@@ -24,7 +25,9 @@ namespace QtNodes {
 class AbstractConnectionPainter;
 class AbstractGraphModel;
 class AbstractNodePainter;
+class AbstractGroupPainter;
 class ConnectionGraphicsObject;
+class GroupGraphicsObject;
 class NodeGraphicsObject;
 class NodeStyle;
 
@@ -52,9 +55,13 @@ public:
 
     AbstractConnectionPainter &connectionPainter();
 
+    AbstractGroupPainter &groupPainter();
+
     void setNodePainter(std::unique_ptr<AbstractNodePainter> newPainter);
 
     void setConnectionPainter(std::unique_ptr<AbstractConnectionPainter> newPainter);
+
+    void setGroupPainter(std::unique_ptr<AbstractGroupPainter> newPainter);
 
     QUndoStack &undoStack();
 
@@ -93,6 +100,8 @@ public:
    * @returns `nullptr` when the object is not found.
    */
     ConnectionGraphicsObject *connectionGraphicsObject(ConnectionId connectionId);
+
+    GroupGraphicsObject *groupGraphicsObject(GroupId groupId);
 
     Qt::Orientation orientation() const { return _orientation; }
 
@@ -156,6 +165,10 @@ public Q_SLOTS:
 
     void onNodeClicked(NodeId const nodeId);
 
+    void onGroupCreated(GroupId const groupId);
+
+    void onGroupDeleted(GroupId const groupId);
+
     void onModelReset();
 
 private:
@@ -165,15 +178,23 @@ private:
 
     using UniqueConnectionGraphicsObject = std::unique_ptr<ConnectionGraphicsObject>;
 
+    using UniqueGroupGraphicsObject = std::unique_ptr<GroupGraphicsObject>;
+
     std::unordered_map<NodeId, UniqueNodeGraphicsObject> _nodeGraphicsObjects;
 
     std::unordered_map<ConnectionId, UniqueConnectionGraphicsObject> _connectionGraphicsObjects;
 
+    std::unordered_map<GroupId, UniqueGroupGraphicsObject> _groupGraphicsObjects;
+
     std::unique_ptr<ConnectionGraphicsObject> _draftConnection;
+
+    std::unique_ptr<GroupGraphicsObject> _draftGroup;
 
     std::unique_ptr<AbstractNodeGeometry> _nodeGeometry;
 
     std::unique_ptr<AbstractNodePainter> _nodePainter;
+
+    std::unique_ptr<AbstractGroupPainter> _groupPainter;
 
     std::unique_ptr<AbstractConnectionPainter> _connectionPainter;
 

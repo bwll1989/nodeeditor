@@ -2,6 +2,7 @@
 
 #include "AbstractGraphModel.hpp"
 #include "ConnectionIdUtils.hpp"
+#include "GroupIdUtils.hpp"
 #include "NodeDelegateModelRegistry.hpp"
 #include "Serializable.hpp"
 #include "StyleCollection.hpp"
@@ -35,6 +36,8 @@ public:
 
     std::unordered_set<ConnectionId> allConnectionIds(NodeId const nodeId) const override;
 
+    std::unordered_set<GroupId> allGroupIds() const override;
+
     std::unordered_set<ConnectionId> connections(NodeId nodeId,
                                                  PortType portType,
                                                  PortIndex portIndex) const override;
@@ -46,6 +49,8 @@ public:
     bool connectionPossible(ConnectionId const connectionId) const override;
 
     void addConnection(ConnectionId const connectionId) override;
+
+    void addGroup(GroupId const groupId) override;
 
     bool nodeExists(NodeId const nodeId) const override;
 
@@ -69,6 +74,10 @@ public:
     bool deleteConnection(ConnectionId const connectionId) override;
 
     bool deleteNode(NodeId const nodeId) override;
+
+    bool deleteGroup(GroupId const groupId) override;
+
+    void updateGroup(GroupId const oldGroupId,GroupId const newGroupId) override;
 
     QJsonObject saveNode(NodeId const) const override;
 
@@ -128,6 +137,8 @@ private:
     std::unordered_map<NodeId, std::unique_ptr<NodeDelegateModel>> _models;
 
     std::unordered_set<ConnectionId> _connectivity;
+
+    std::unordered_set<GroupId> _groups;
 
     mutable std::unordered_map<NodeId, NodeGeometryData> _nodeGeometryData;
 };

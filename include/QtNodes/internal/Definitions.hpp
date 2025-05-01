@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Export.hpp"
-
+#include <qvector>
 #include <QtCore/QMetaObject>
-
+#include <unordered_set>
 #include <limits>
 
 /**
@@ -96,6 +96,8 @@ static constexpr PortIndex InvalidPortIndex = std::numeric_limits<PortIndex>::ma
 /// Unique Id associated with each node in the GraphModel.
 using NodeId = unsigned int;
 
+/// Unique Id associated with each node in the GraphModel.
+
 static constexpr NodeId InvalidNodeId = std::numeric_limits<NodeId>::max();
 
 /**
@@ -110,6 +112,8 @@ struct ConnectionId
     PortIndex inPortIndex;
 };
 
+
+
 inline bool operator==(ConnectionId const &a, ConnectionId const &b)
 {
     return a.outNodeId == b.outNodeId && a.outPortIndex == b.outPortIndex
@@ -120,11 +124,22 @@ inline bool operator!=(ConnectionId const &a, ConnectionId const &b)
 {
     return !(a == b);
 }
-
 inline void invertConnection(ConnectionId &id)
 {
     std::swap(id.outNodeId, id.inNodeId);
     std::swap(id.outPortIndex, id.inPortIndex);
 }
+struct GroupId
+{
+    std::vector<NodeId> nodeIds;
+    QString groupRemarks;
+//    std::vector<ConnectionId> connectionIds;
+};
 
+// 修改相等运算符
+inline bool operator==(GroupId const &a, GroupId const &b)
+{
+//    return a.connectionIds == b.connectionIds && a.nodeIds == b.nodeIds;
+    return a.nodeIds == b.nodeIds;
+};
 } // namespace QtNodes

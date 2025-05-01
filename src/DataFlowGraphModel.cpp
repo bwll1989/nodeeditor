@@ -1,6 +1,6 @@
 #include "DataFlowGraphModel.hpp"
 #include "ConnectionIdHash.hpp"
-
+#include "GroupIdHash.hpp"
 #include <QJsonArray>
 
 #include <stdexcept>
@@ -32,6 +32,11 @@ std::unordered_set<ConnectionId> DataFlowGraphModel::allConnectionIds(NodeId con
                  });
 
     return result;
+}
+
+std::unordered_set<GroupId> DataFlowGraphModel::allGroupIds() const
+{
+    return _groups;
 }
 
 std::unordered_set<ConnectionId> DataFlowGraphModel::connections(NodeId nodeId,
@@ -144,6 +149,54 @@ void DataFlowGraphModel::addConnection(ConnectionId const connectionId)
                 connectionId.inPortIndex,
                 portDataToPropagate,
                 PortRole::Data);
+}
+
+void DataFlowGraphModel::addGroup(GroupId const groupId)
+{
+//    // 如果组节点数量小于2，不创建组
+//    if (groupId.nodeIds.size() ==0) {
+        //qDebug() << "Group not added: Less than 2 nodes";
+//        return;
+//    }
+    
+    // 检查是否已经存在完全相同的组
+    for (const auto& existingGroup : _groups) {
+        // 首先比较节点数量是否相同
+        if (existingGroup.nodeIds.size() == groupId.nodeIds.size()) {
+            // 检查是否包含完全相同的节点（忽略顺序）
+            std::vector<NodeId> sortedNewNodes = groupId.nodeIds;
+            std::vector<NodeId> sortedExistingNodes = existingGroup.nodeIds;
+            std::sort(sortedNewNodes.begin(), sortedNewNodes.end());
+            std::sort(sortedExistingNodes.begin(), sortedExistingNodes.end());
+            
+            if (sortedNewNodes == sortedExistingNodes) {
+                qDebug() << "Group not added: Identical group already exists";
+                return;
+            }
+        }
+    }
+    
+    // 检查组重叠
+    for (const auto& existingGroup : _groups) {
+        // 计算节点交集
+        std::vector<NodeId> intersection;
+        for (const auto& nodeId : groupId.nodeIds) {
+            if (std::find(existingGroup.nodeIds.begin(), existingGroup.nodeIds.end(), nodeId) != existingGroup.nodeIds.end()) {
+                intersection.push_back(nodeId);
+            }
+        }
+        
+        // 如果有任何重叠节点，不添加新组
+        if (!intersection.empty()) {
+            qDebug() << "Group not added: Node overlap detected";
+            return;
+        }
+    }
+
+    // 添加新组
+//    qDebug() << "Adding group with" << groupId.nodeIds.size() << "nodes";
+    _groups.insert(groupId);
+    Q_EMIT groupCreated(groupId);
 }
 
 void DataFlowGraphModel::sendConnectionCreation(ConnectionId const connectionId)
@@ -448,6 +501,28 @@ bool DataFlowGraphModel::deleteNode(NodeId const nodeId)
 
     return true;
 }
+void DataFlowGraphModel::updateGroup(const GroupId oldGroupId, const GroupId newGroupId)
+{
+    // 删除旧组
+    if (auto it = _groups.find(oldGroupId); it != _groups.end()) {
+        _groups.erase(it);
+    }
+    // 插入新组(包含更新后的节点列表)
+    _groups.insert(newGroupId);
+
+    // 可选：如果需要更新关联数据
+    Q_EMIT groupUpdated(newGroupId);
+}
+bool DataFlowGraphModel::deleteGroup(GroupId const groupId)
+{
+    auto it = _groups.find(groupId);
+    if (it!= _groups.end()) {
+        _groups.erase(it);
+        Q_EMIT groupDeleted(groupId);
+        return true;
+    }
+    return false;
+}
 
 QJsonObject DataFlowGraphModel::saveNode(NodeId const nodeId) const
 {
@@ -492,7 +567,11 @@ QJsonObject DataFlowGraphModel::save() const
         connJsonArray.append(toJson(cid));
     }
     sceneJson["connections"] = connJsonArray;
-
+    QJsonArray groupJsonArray;
+    for (auto const &gid : _groups) {
+        groupJsonArray.append(groupToJson(gid));
+    }
+    sceneJson["groups"] = groupJsonArray;
     return sceneJson;
 }
 
@@ -546,21 +625,40 @@ void DataFlowGraphModel::loadNode(QJsonObject const &nodeJson)
 
 void DataFlowGraphModel::load(QJsonObject const &jsonDocument)
 {
+    // 先加载所有节点
     QJsonArray nodesJsonArray = jsonDocument["nodes"].toArray();
-
     for (QJsonValueRef nodeJson : nodesJsonArray) {
         loadNode(nodeJson.toObject());
     }
 
+    // 再加载所有连接
     QJsonArray connectionJsonArray = jsonDocument["connections"].toArray();
-
     for (QJsonValueRef connection : connectionJsonArray) {
         QJsonObject connJson = connection.toObject();
-
         ConnectionId connId = fromJson(connJson);
-
-        // Restore the connection
+        // 恢复连接
         addConnection(connId);
+    }
+
+    // 加载组之前，先收集所有组信息
+    std::vector<GroupId> allGroups;
+    QJsonArray groupJsonArray = jsonDocument["groups"].toArray();
+    for (QJsonValueRef group : groupJsonArray) {
+        QJsonObject groupJson = group.toObject();
+        GroupId groupId = QtNodes::fromJsonToGroup(groupJson);
+        allGroups.push_back(groupId);
+    }
+
+    // 对组进行排序，优先处理节点数量更多的组
+    // 这样可以确保先添加"大"组，减少删除操作
+    std::sort(allGroups.begin(), allGroups.end(), 
+        [](const GroupId& a, const GroupId& b) {
+            return a.nodeIds.size() > b.nodeIds.size(); // 降序排列
+        });
+
+    // 依次添加排序后的组
+    for (const auto& groupId : allGroups) {
+        addGroup(groupId);
     }
 }
 

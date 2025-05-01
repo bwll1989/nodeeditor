@@ -4,6 +4,7 @@ using QtNodes::ConnectionStyle;
 using QtNodes::GraphicsViewStyle;
 using QtNodes::NodeStyle;
 using QtNodes::StyleCollection;
+using QtNodes::GroupStyle;
 
 NodeStyle const &StyleCollection::nodeStyle()
 {
@@ -13,6 +14,10 @@ NodeStyle const &StyleCollection::nodeStyle()
 ConnectionStyle const &StyleCollection::connectionStyle()
 {
     return instance()._connectionStyle;
+}
+GroupStyle const &StyleCollection::groupStyle()
+{
+    return instance()._groupStyle;
 }
 
 GraphicsViewStyle const &StyleCollection::flowViewStyle()
@@ -28,6 +33,11 @@ void StyleCollection::setNodeStyle(NodeStyle nodeStyle)
 void StyleCollection::setConnectionStyle(ConnectionStyle connectionStyle)
 {
     instance()._connectionStyle = connectionStyle;
+}
+
+void StyleCollection::setGroupStyle(GroupStyle Style)
+{
+    instance()._groupStyle = Style;
 }
 
 void StyleCollection::setGraphicsViewStyle(GraphicsViewStyle flowViewStyle)

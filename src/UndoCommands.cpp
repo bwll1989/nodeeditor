@@ -6,6 +6,7 @@
 #include "BasicGraphicsScene.hpp"
 #include "ConnectionGraphicsObject.hpp"
 #include "ConnectionIdUtils.hpp"
+#include "GroupIdUtils.hpp"
 #include "Definitions.hpp"
 #include "NodeGraphicsObject.hpp"
 
@@ -51,9 +52,19 @@ static QJsonObject serializeSelectedItems(BasicGraphicsScene *scene)
         }
     }
 
+    QJsonArray groupsJsonArray;
+     for (QGraphicsItem *item : scene->selectedItems()) {
+
+         if (auto g = qgraphicsitem_cast<GroupGraphicsObject *>(item)) {
+            groupsJsonArray.append(groupToJson(g->groupId()));
+         }
+
+     }
+//
+
     serializedScene["nodes"] = nodesJsonArray;
     serializedScene["connections"] = connJsonArray;
-
+    serializedScene["groups"] = groupsJsonArray;
     return serializedScene;
 }
 
@@ -85,10 +96,23 @@ static void insertSerializedItems(QJsonObject const &json, BasicGraphicsScene *s
 
         scene->connectionGraphicsObject(connId)->setSelected(true);
     }
+    QJsonArray const &groupsJsonArray = json["groups"].toArray();
+    for (QJsonValue group : groupsJsonArray) {
+        QJsonObject groupJson = group.toObject();
+
+        graphModel.addGroup(fromJsonToGroup(groupJson));
+    }
 }
 
 static void deleteSerializedItems(QJsonObject &sceneJson, AbstractGraphModel &graphModel)
 {
+    QJsonArray GroupsJsonArray = sceneJson["groups"].toArray();
+    for (QJsonValueRef group : GroupsJsonArray) {
+        QJsonObject groupJson = group.toObject();
+        graphModel.deleteGroup(fromJsonToGroup(groupJson));
+
+    }
+
     QJsonArray connectionJsonArray = sceneJson["connections"].toArray();
 
     for (QJsonValueRef connection : connectionJsonArray) {
@@ -105,6 +129,8 @@ static void deleteSerializedItems(QJsonObject &sceneJson, AbstractGraphModel &gr
         QJsonObject nodeJson = node.toObject();
         graphModel.deleteNode(nodeJson["id"].toInt());
     }
+
+
 }
 
 static QPointF computeAverageNodePosition(QJsonObject const &sceneJson)
@@ -163,6 +189,7 @@ void CreateCommand::redo()
 DeleteCommand::DeleteCommand(BasicGraphicsScene *scene)
     : _scene(scene)
 {
+
     auto &graphModel = _scene->graphModel();
 
     QJsonArray connJsonArray;
@@ -172,11 +199,18 @@ DeleteCommand::DeleteCommand(BasicGraphicsScene *scene)
     for (QGraphicsItem *item : _scene->selectedItems()) {
         if (auto c = qgraphicsitem_cast<ConnectionGraphicsObject *>(item)) {
             auto const &cid = c->connectionId();
-
             connJsonArray.append(toJson(cid));
         }
     }
+    QJsonArray groupsJsonArray;
+    for (QGraphicsItem *item : _scene->selectedItems()) {
+        if (auto g = qgraphicsitem_cast<GroupGraphicsObject *>(item)) {
+            // saving connections attached to the selected groups
 
+            groupsJsonArray.append(groupToJson(g->groupId()));
+        }
+
+    }
     QJsonArray nodesJsonArray;
     // Delete the nodes; this will delete many of the connections.
     // Selected connections were already deleted prior to this loop,
@@ -192,11 +226,17 @@ DeleteCommand::DeleteCommand(BasicGraphicsScene *scene)
     }
 
     // If nothing is deleted, cancel this operation
-    if (connJsonArray.isEmpty() && nodesJsonArray.isEmpty())
+    if (connJsonArray.isEmpty() && nodesJsonArray.isEmpty()&&groupsJsonArray.isEmpty())
+    {
         setObsolete(true);
+        return;
+    }
+
 
     _sceneJson["nodes"] = nodesJsonArray;
     _sceneJson["connections"] = connJsonArray;
+    _sceneJson["groups"] = groupsJsonArray;
+
 }
 
 void DeleteCommand::undo()
@@ -206,6 +246,7 @@ void DeleteCommand::undo()
 
 void DeleteCommand::redo()
 {
+
     deleteSerializedItems(_sceneJson, _scene->graphModel());
 }
 
@@ -328,47 +369,66 @@ QJsonObject PasteCommand::takeSceneJsonFromClipboard()
 QJsonObject PasteCommand::makeNewNodeIdsInScene(QJsonObject const &sceneJson)
 {
     AbstractGraphModel &graphModel = _scene->graphModel();
-
     std::unordered_map<NodeId, NodeId> mapNodeIds;
 
+    // 1. 处理节点
     QJsonArray nodesJsonArray = sceneJson["nodes"].toArray();
-
     QJsonArray newNodesJsonArray;
     for (QJsonValueRef node : nodesJsonArray) {
         QJsonObject nodeJson = node.toObject();
-
         NodeId oldNodeId = nodeJson["id"].toInt();
-
         NodeId newNodeId = graphModel.newNodeId();
-
         mapNodeIds[oldNodeId] = newNodeId;
-
-        // Replace NodeId in json
+        
+        // 替换节点ID
         nodeJson["id"] = static_cast<qint64>(newNodeId);
-
         newNodesJsonArray.append(nodeJson);
     }
 
+    // 2. 处理连接
     QJsonArray connectionJsonArray = sceneJson["connections"].toArray();
-
     QJsonArray newConnJsonArray;
     for (QJsonValueRef connection : connectionJsonArray) {
         QJsonObject connJson = connection.toObject();
-
         ConnectionId connId = fromJson(connJson);
-
-        ConnectionId newConnId{mapNodeIds[connId.outNodeId],
-                               connId.outPortIndex,
-                               mapNodeIds[connId.inNodeId],
-                               connId.inPortIndex};
-
+        
+        // 使用新的节点ID创建连接
+        ConnectionId newConnId{
+            mapNodeIds[connId.outNodeId],
+            connId.outPortIndex,
+            mapNodeIds[connId.inNodeId],
+            connId.inPortIndex
+        };
         newConnJsonArray.append(toJson(newConnId));
     }
 
-    QJsonObject newSceneJson;
+    // 3. 处理组
+    QJsonArray groupsJsonArray = sceneJson["groups"].toArray();
+    QJsonArray newGroupsJsonArray;
+    for (QJsonValueRef group : groupsJsonArray) {
+        QJsonObject groupJson = group.toObject();
+        GroupId oldGroupId = fromJsonToGroup(groupJson);
+        
+        // 创建新的组，更新组内节点的ID
+        GroupId newGroupId;
+        for (const NodeId& oldNodeId : oldGroupId.nodeIds) {
+            auto it = mapNodeIds.find(oldNodeId);
+            if (it != mapNodeIds.end()) {
+                newGroupId.nodeIds.push_back(it->second);
+            }
+        }
+        
+        // 只有当组内有节点时才添加组
+        if (!newGroupId.nodeIds.empty()) {
+            newGroupsJsonArray.append(groupToJson(newGroupId));
+        }
+    }
 
+    // 4. 创建新的场景JSON
+    QJsonObject newSceneJson;
     newSceneJson["nodes"] = newNodesJsonArray;
     newSceneJson["connections"] = newConnJsonArray;
+    newSceneJson["groups"] = newGroupsJsonArray;
 
     return newSceneJson;
 }
@@ -463,4 +523,47 @@ bool MoveNodeCommand::mergeWith(QUndoCommand const *c)
     return false;
 }
 
+CreateGroupCommand::CreateGroupCommand(BasicGraphicsScene *scene)
+    : _scene(scene)
+    , _firstRun(true)  // 添加标志，用于跟踪是否是首次运行
+{
+    // 收集选中的节点
+    for (QGraphicsItem *item : _scene->selectedItems()) {
+        if (auto n = qgraphicsitem_cast<NodeGraphicsObject *>(item)) {
+            _groupId.nodeIds.push_back(n->nodeId());
+        }
+    }
+
+    // 判断选中的节点数
+    if (_groupId.nodeIds.size()== 0) {
+
+        setObsolete(true);  // 如果节点不足，标记命令为过时
+        
+    }
+}
+
+void CreateGroupCommand::undo()
+{
+    if (!_groupId.nodeIds.empty()) {
+        _scene->graphModel().deleteGroup(_groupId);
+    }
+}
+
+void CreateGroupCommand::redo()
+{
+    if (!_groupId.nodeIds.empty()) {
+        auto& graphModel = _scene->graphModel();
+        // 只在首次运行时才直接创建组
+        // 这确保了快捷键操作能立即看到效果
+        if (_firstRun) {
+            _firstRun = false;
+ 
+            graphModel.addGroup(_groupId);
+        } else {
+
+            graphModel.addGroup(_groupId);
+        }
+    }
+}
 } // namespace QtNodes
+

@@ -75,6 +75,12 @@ void SimpleGraphModel::addConnection(ConnectionId const connectionId)
     Q_EMIT connectionCreated(connectionId);
 }
 
+void SimpleGraphModel::addGroup(const GroupId groupId)
+{
+    _groups.insert(groupId);
+    Q_EMIT groupCreated(groupId);
+}
+
 bool SimpleGraphModel::nodeExists(NodeId const nodeId) const
 {
     return (_nodeIds.find(nodeId) != _nodeIds.end());
@@ -263,6 +269,19 @@ bool SimpleGraphModel::deleteNode(NodeId const nodeId)
     return true;
 }
 
+void SimpleGraphModel::updateGroup(const GroupId oldGroupId, const GroupId newGroupId)
+{
+    // 删除旧组
+    if (auto it = _groups.find(oldGroupId); it != _groups.end()) {
+        _groups.erase(it);
+    }
+    // 插入新组(包含更新后的节点列表)
+    _groups.insert(newGroupId);
+
+    // 可选：如果需要更新关联数据
+    Q_EMIT groupUpdated(newGroupId);
+}
+
 QJsonObject SimpleGraphModel::saveNode(NodeId const nodeId) const
 {
     QJsonObject nodeJson;
@@ -299,4 +318,20 @@ void SimpleGraphModel::loadNode(QJsonObject const &nodeJson)
 
         setNodeData(restoredNodeId, NodeRole::Position, pos);
     }
+}
+bool SimpleGraphModel::deleteGroup(GroupId const groupId)
+{
+    bool deleted = false;
+    auto it = _groups.find(groupId);
+    if (it!= _groups.end()) {
+        deleted = true;
+        _groups.erase(it);
+    }
+    if (deleted)
+        Q_EMIT groupDeleted(groupId);
+    return deleted;
+}
+std::unordered_set<GroupId> SimpleGraphModel::allGroupIds() const
+{
+    return _groups;
 }

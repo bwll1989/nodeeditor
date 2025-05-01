@@ -120,4 +120,17 @@ private:
     QPointF _diff;
 };
 
+class NODE_EDITOR_PUBLIC CreateGroupCommand : public QUndoCommand
+{
+public:
+    CreateGroupCommand(BasicGraphicsScene *scene);
+
+    void undo() override;
+    void redo() override;
+
+private:
+    BasicGraphicsScene *_scene;
+    GroupId _groupId;
+    bool _firstRun;  // 添加跟踪标志
+};
 } // namespace QtNodes

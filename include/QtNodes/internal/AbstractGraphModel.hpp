@@ -10,6 +10,7 @@
 #include <QtCore/QVariant>
 
 #include "ConnectionIdHash.hpp"
+#include "GroupIdHash.hpp"
 #include "Definitions.hpp"
 
 namespace QtNodes {
@@ -45,6 +46,7 @@ public:
    */
     virtual std::unordered_set<ConnectionId> allConnectionIds(NodeId const nodeId) const = 0;
 
+    virtual std::unordered_set<GroupId> allGroupIds() const = 0;
     /// @brief Returns all connected Node Ids for given port.
     /**
    * The returned set of nodes and port indices correspond to the type
@@ -66,7 +68,6 @@ public:
    * types and create a correct instance inside.
    */
     virtual NodeId addNode(QString const nodeType = QString()) = 0;
-
     /// Model decides if a conection with a given connection Id possible.
     /**
    * The default implementation compares corresponding data types.
@@ -88,7 +89,12 @@ public:
    * scene about the changes.
    */
     virtual void addConnection(ConnectionId const connectionId) = 0;
-
+    /// Creates a new group instance in the derived class.
+    /**
+     *
+     * @return
+     */
+    virtual void addGroup(GroupId const groupId) = 0;
     /**
    * @returns `true` if there is data in the model associated with the
    * given `nodeId`.
@@ -111,7 +117,7 @@ public:
         return nodeData(nodeId, role).value<T>();
     }
 
-    virtual NodeFlags nodeFlags(NodeId nodeId) const
+    virtual NodeFlags nodeFlags(NodeId nodeId=0) const
     {
         Q_UNUSED(nodeId);
         return NodeFlag::NoFlags;
@@ -154,6 +160,9 @@ public:
 
     virtual bool deleteNode(NodeId const nodeId) = 0;
 
+    virtual bool deleteGroup(GroupId const groupId) = 0;
+
+    virtual void updateGroup(GroupId const oldGroupId,GroupId const newGroupId)=0;
     /**
    * Reimplement the function if you want to store/restore the node's
    * inner state during undo/redo node deletion operations.
@@ -238,12 +247,21 @@ Q_SIGNALS:
 
     void nodeFlagsUpdated(NodeId const nodeId);
 
+    void groupFlagsUpdated(GroupId const groupId);
+
     void nodePositionUpdated(NodeId const nodeId);
 
     void modelReset();
 
+    void groupCreated(GroupId const groupId);
+
+    void groupDeleted(GroupId const groupId);
+
+    void groupUpdated(GroupId const groupId);
+
 private:
     std::vector<ConnectionId> _shiftedByDynamicPortsConnections;
+    std::vector<GroupId> _shiftedByGroups;
 };
 
 } // namespace QtNodes

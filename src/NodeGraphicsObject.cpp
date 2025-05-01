@@ -64,14 +64,15 @@ NodeGraphicsObject::NodeGraphicsObject(BasicGraphicsScene &scene, NodeId nodeId)
             &AbstractGraphModel::nodeFlagsUpdated,
             this,
             &NodeGraphicsObject::onLockedState);
+
 }
 
 NodeGraphicsObject::~NodeGraphicsObject()
 {
-    disconnect(&_graphModel,
-               &AbstractGraphModel::nodeFlagsUpdated,
-               this,
-               &NodeGraphicsObject::onLockedState);
+//    disconnect(&_graphModel,
+//               &AbstractGraphModel::nodeFlagsUpdated,
+//               this,
+//               &NodeGraphicsObject::onLockedState);
 }
 
 AbstractGraphModel &NodeGraphicsObject::graphModel() const
@@ -409,6 +410,7 @@ void NodeGraphicsObject::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 
 void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 {
+    qDebug()<<"NodeGraphicsObject::contextMenuEvent";
     Q_EMIT nodeScene()->nodeContextMenu(_nodeId, mapToScene(event->pos()));
 }
 

@@ -127,33 +127,30 @@ void PluginsManager::unloadPlugins()
 
 PluginInterface *PluginsManager::loadPluginFromPath(const QString &filePath)
 {
+    // 创建插件加载器
     QPluginLoader *loader = new QPluginLoader(filePath);
 
-    // qDebug() << loader->metaData();
+    // 检查插件是否已经加载，如果加载过则直接返回，现在不使用，允许重复加载
+    // auto existingLoader = _loaders.find(loader->metaData().value("IID"));
+    // if (existingLoader != _loaders.end()) {
+    //     delete loader;
+    //     return qobject_cast<PluginInterface *>(existingLoader->second->instance());
+    // }
 
-    if (loader->isLoaded()) {
+    // 尝试加载新插件
+    if (loader->load()) {
+        // 将加载的插件转换为PluginInterface接口
         PluginInterface *plugin = qobject_cast<PluginInterface *>(loader->instance());
-
-        QPluginLoader *l = _loaders.find(plugin->name())->second;
-        plugin = qobject_cast<PluginInterface *>(l->instance());
-
-        loader->unload();
-        delete loader;
-
-        return plugin;
+        if (plugin) {
+            // 将插件添加到加载器映射中
+            _loaders[plugin->name()] = loader;
+            return plugin;
+        }
     }
 
-    PluginInterface *plugin = qobject_cast<PluginInterface *>(loader->instance());
-    if (plugin) {
-        _loaders[plugin->name()] = loader;
-
-        return plugin;
-    } else {
-        qWarning() << loader->errorString();
-
-        delete loader;
-    }
-
+    // 加载失败，输出错误信息并清理资源
+    qWarning() << loader->errorString();
+    delete loader;
     return nullptr;
 }
 

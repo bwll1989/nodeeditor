@@ -38,5 +38,22 @@
     "PointDiameter": 10.0,
 
     "UseDataDefinedColors": false
+  },
+  "GroupStyle": {
+    "FontColor" : "white",
+    "NormalColor": "darkcyan",
+    "SelectedColor": "orange",
+    "SelectedHaloColor": "orange",
+    "HoveredColor": "lightcyan",
+    "CaptionColor": "darkcyan",
+    "Opacity": 0.8,
+    "LineWidth": 5.0,
+    "ConstructionLineWidth": 8.0,
+    "GradientColor0": "gray",
+    "CaptionHeight": 30.0,
+    "GradientColor1": [80, 80, 80],
+    "GradientColor2": [64, 64, 64],
+    "GradientColor3": [58, 58, 58],
+    "UseDataDefinedColors": false
   }
 }

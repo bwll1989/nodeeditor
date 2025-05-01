@@ -33,9 +33,10 @@ PluginsManagerDlg::PluginsManagerDlg(QWidget *parent)
 
     _model = new QStandardItemModel(pluginTable);
 
-    _model->setColumnCount(2);
+    _model->setColumnCount(3);
     _model->setHeaderData(0, Qt::Horizontal, "Name");
     _model->setHeaderData(1, Qt::Horizontal, "Version");
+    _model->setHeaderData(2, Qt::Horizontal, "Describe");
     pluginTable->setModel(_model);
 
     loadPluginsFromFolder();

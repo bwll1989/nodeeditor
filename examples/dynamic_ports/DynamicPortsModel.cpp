@@ -3,7 +3,7 @@
 #include "PortAddRemoveWidget.hpp"
 
 #include <QtNodes/ConnectionIdUtils>
-
+#include <QtNodes/GroupIdUtils>
 #include <QJsonArray>
 
 #include <iterator>
@@ -289,7 +289,17 @@ bool DynamicPortsModel::deleteNode(NodeId const nodeId)
 
     return true;
 }
-
+bool DynamicPortsModel::deleteGroup(GroupId const groupId)
+{
+   
+    auto it = _groups.find(groupId);
+    if (it != _groups.end()) {
+        _groups.erase(it);
+        Q_EMIT groupDeleted(groupId);
+        return true;
+    }
+    return false;
+}
 QJsonObject DynamicPortsModel::saveNode(NodeId const nodeId) const
 {
     QJsonObject nodeJson;
@@ -326,7 +336,11 @@ QJsonObject DynamicPortsModel::save() const
         connJsonArray.append(QtNodes::toJson(cid));
     }
     sceneJson["connections"] = connJsonArray;
-
+    QJsonArray groupJsonArray;
+    for (auto const &gid : _groups) {
+        groupJsonArray.append(groupToJson(gid));
+    }
+    sceneJson["groups"] = groupJsonArray;
     return sceneJson;
 }
 
@@ -373,6 +387,13 @@ void DynamicPortsModel::load(QJsonObject const &jsonDocument)
         // Restore the connection
         addConnection(connId);
     }
+    QJsonArray groupJsonArray = jsonDocument["groups"].toArray();
+    for (QJsonValueRef group : groupJsonArray) {
+        QJsonObject groupJson = group.toObject();
+        GroupId groupId = QtNodes::fromJsonToGroup(groupJson);
+        // Restore the connection
+        addGroup(groupId);
+    }
 }
 
 void DynamicPortsModel::addPort(NodeId nodeId, PortType portType, PortIndex portIndex)
@@ -414,4 +435,26 @@ void DynamicPortsModel::removePort(NodeId nodeId, PortType portType, PortIndex p
     portsDeleted();
 
     Q_EMIT nodeUpdated(nodeId);
+}
+void DynamicPortsModel::addGroup(const GroupId groupId)
+{
+    _groups.insert(groupId);
+    Q_EMIT groupCreated(groupId);
+}
+
+void DynamicPortsModel::updateGroup(const GroupId oldGroupId, const GroupId newGroupId)
+{
+    // 删除旧组
+    if (auto it = _groups.find(oldGroupId); it != _groups.end()) {
+        _groups.erase(it);
+    }
+    // 插入新组(包含更新后的节点列表)
+    _groups.insert(newGroupId);
+
+    // 可选：如果需要更新关联数据
+    Q_EMIT groupUpdated(newGroupId);
+}
+std::unordered_set<GroupId> DynamicPortsModel::allGroupIds() const
+{
+    return _groups;
 }

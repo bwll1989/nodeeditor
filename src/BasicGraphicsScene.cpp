@@ -83,6 +83,8 @@ BasicGraphicsScene::BasicGraphicsScene(AbstractGraphModel &graphModel, QObject *
 
     connect(&_graphModel,&AbstractGraphModel::groupDeleted, this, &BasicGraphicsScene::onGroupDeleted);
 
+    connect(&_graphModel,&AbstractGraphModel::groupUpdated, this, &BasicGraphicsScene::onGroupUpdate);
+
     traverseGraphAndPopulateGraphicsObjects();
 }
 
@@ -285,6 +287,21 @@ void BasicGraphicsScene::onGroupCreated(const QtNodes::GroupId groupId)
 {
     _groupGraphicsObjects[groupId] = std::make_unique<GroupGraphicsObject>(*this, groupId);
     Q_EMIT modified(this);
+}
+
+void BasicGraphicsScene::onGroupUpdate(const QtNodes::GroupId groupId)
+{
+    auto it = _groupGraphicsObjects.find(groupId);
+    if (it!= _groupGraphicsObjects.end()) {
+        auto groupObj = std::move(it->second);
+        _groupGraphicsObjects.erase(it);  // 删除旧键
+        auto newGroupId=groupObj->groupId();
+          // 3. 更新图形对象的内部ID
+        _groupGraphicsObjects[newGroupId] = std::move(groupObj);
+
+        Q_EMIT modified(this);
+    }
+
 }
 
 void BasicGraphicsScene::onGroupDeleted(const QtNodes::GroupId groupId)

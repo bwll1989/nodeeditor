@@ -153,13 +153,12 @@ void DataFlowGraphModel::addConnection(ConnectionId const connectionId)
 
 void DataFlowGraphModel::addGroup(GroupId const groupId)
 {
-//    // 如果组节点数量小于2，不创建组
-//    if (groupId.nodeIds.size() ==0) {
+//    // 如果组节点数量小�?，不创建�?//    if (groupId.nodeIds.size() ==0) {
         //qDebug() << "Group not added: Less than 2 nodes";
 //        return;
 //    }
     
-    // 检查是否已经存在完全相同的组
+    // 检查是否已经存在完全相同的�?   
     for (const auto& existingGroup : _groups) {
         // 首先比较节点数量是否相同
         if (existingGroup.nodeIds.size() == groupId.nodeIds.size()) {
@@ -186,7 +185,7 @@ void DataFlowGraphModel::addGroup(GroupId const groupId)
             }
         }
         
-        // 如果有任何重叠节点，不添加新组
+        // 如果有任何重叠节点，不添加新�?        
         if (!intersection.empty()) {
             qDebug() << "Group not added: Node overlap detected";
             return;
@@ -504,17 +503,18 @@ bool DataFlowGraphModel::deleteNode(NodeId const nodeId)
 void DataFlowGraphModel::updateGroup(const GroupId oldGroupId, const GroupId newGroupId)
 {
     // 删除旧组
-    if (auto it = _groups.find(oldGroupId); it != _groups.end()) {
+    if (auto it = _groups.find(oldGroupId);
+        it != _groups.end()) {
         _groups.erase(it);
+        // 插入新组(包含更新后的节点列表)
+        _groups.insert(newGroupId);
+        Q_EMIT groupUpdated(oldGroupId);
     }
-    // 插入新组(包含更新后的节点列表)
-    _groups.insert(newGroupId);
 
-    // 可选：如果需要更新关联数据
-    Q_EMIT groupUpdated(newGroupId);
 }
 bool DataFlowGraphModel::deleteGroup(GroupId const groupId)
 {
+
     auto it = _groups.find(groupId);
     if (it!= _groups.end()) {
         _groups.erase(it);
@@ -625,13 +625,13 @@ void DataFlowGraphModel::loadNode(QJsonObject const &nodeJson)
 
 void DataFlowGraphModel::load(QJsonObject const &jsonDocument)
 {
-    // 先加载所有节点
+    // 先加载所有节�?   
     QJsonArray nodesJsonArray = jsonDocument["nodes"].toArray();
     for (QJsonValueRef nodeJson : nodesJsonArray) {
         loadNode(nodeJson.toObject());
     }
 
-    // 再加载所有连接
+    // 再加载所有连�?    
     QJsonArray connectionJsonArray = jsonDocument["connections"].toArray();
     for (QJsonValueRef connection : connectionJsonArray) {
         QJsonObject connJson = connection.toObject();
@@ -649,14 +649,13 @@ void DataFlowGraphModel::load(QJsonObject const &jsonDocument)
         allGroups.push_back(groupId);
     }
 
-    // 对组进行排序，优先处理节点数量更多的组
-    // 这样可以确保先添加"大"组，减少删除操作
+    // 对组进行排序，优先处理节点数量更多的�?    // 这样可以确保先添�?�?组，减少删除操作
     std::sort(allGroups.begin(), allGroups.end(), 
         [](const GroupId& a, const GroupId& b) {
             return a.nodeIds.size() > b.nodeIds.size(); // 降序排列
         });
 
-    // 依次添加排序后的组
+    // 依次添加排序后的�?   
     for (const auto& groupId : allGroups) {
         addGroup(groupId);
     }

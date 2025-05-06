@@ -112,7 +112,6 @@ static void deleteSerializedItems(QJsonObject &sceneJson, AbstractGraphModel &gr
         graphModel.deleteGroup(fromJsonToGroup(groupJson));
 
     }
-
     QJsonArray connectionJsonArray = sceneJson["connections"].toArray();
 
     for (QJsonValueRef connection : connectionJsonArray) {

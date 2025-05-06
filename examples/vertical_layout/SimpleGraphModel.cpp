@@ -274,12 +274,10 @@ void SimpleGraphModel::updateGroup(const GroupId oldGroupId, const GroupId newGr
     // 删除旧组
     if (auto it = _groups.find(oldGroupId); it != _groups.end()) {
         _groups.erase(it);
+        _groups.insert(newGroupId);
+        Q_EMIT groupUpdated(oldGroupId);
     }
-    // 插入新组(包含更新后的节点列表)
-    _groups.insert(newGroupId);
 
-    // 可选：如果需要更新关联数据
-    Q_EMIT groupUpdated(newGroupId);
 }
 
 QJsonObject SimpleGraphModel::saveNode(NodeId const nodeId) const

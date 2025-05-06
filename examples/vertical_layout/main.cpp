@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
 
     SimpleGraphModel graphModel;
-
+    auto scene = new BasicGraphicsScene(graphModel);
     // Initialize and connect two nodes.
     {
         NodeId id1 = graphModel.addNode();
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
         graphModel.addConnection(ConnectionId{id1, 0, id2, 0});
     }
 
-    auto scene = new BasicGraphicsScene(graphModel);
+
 
     scene->setOrientation(Qt::Vertical);
 

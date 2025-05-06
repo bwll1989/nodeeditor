@@ -327,7 +327,7 @@ void SimpleGraphModel::updateGroup(const GroupId oldGroupId, const GroupId newGr
     _groups.insert(newGroupId);
 
     // 可选：如果需要更新关联数据
-    Q_EMIT groupUpdated(newGroupId);
+    Q_EMIT groupUpdated(oldGroupId);
 }
 std::unordered_set<GroupId> SimpleGraphModel::allGroupIds() const
 {

@@ -8,6 +8,7 @@
 #include "BasicGraphicsScene.hpp"
 #include "GroupStyle.hpp"
 #include "NodeGraphicsObject.hpp"
+#include "QtNodes/GroupIdUtils"
 #include "StyleCollection.hpp"
 #include "UndoCommands.hpp"
 
@@ -35,7 +36,7 @@ GroupGraphicsObject::GroupGraphicsObject(BasicGraphicsScene &scene,
 
 //    addGraphicsEffect();
     setCacheMode(QGraphicsItem::DeviceCoordinateCache);
-    setZValue(-10.0);
+    setZValue(-1);
     GroupStyle Style=StyleCollection::groupStyle();
     setOpacity(Style.Opacity);
 
@@ -137,6 +138,7 @@ void GroupGraphicsObject::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 
 void GroupGraphicsObject::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 {
+
     QGraphicsItem::mouseDoubleClickEvent(event);
 }
 
@@ -312,8 +314,14 @@ void GroupGraphicsObject::onNodeDeleted(NodeId nodeId)
     auto it = std::find(_groupId.nodeIds.begin(), _groupId.nodeIds.end(), nodeId);
     if (it != _groupId.nodeIds.end()) {
         _groupId.nodeIds.erase(it);
+        if (_groupId.nodeIds.empty()) {
+            graphModel().deleteGroup(oldGroupId); // 直接删除空分组
+            return;
+        }
     }
+    // 如果组内没有节点，删除组
     graphModel().updateGroup(oldGroupId,_groupId);
+
     updateGroupBounds();
 }
 

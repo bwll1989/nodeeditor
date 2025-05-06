@@ -169,6 +169,8 @@ public Q_SLOTS:
 
     void onGroupDeleted(GroupId const groupId);
 
+    void onGroupUpdate(GroupId const groupId);
+
     void onModelReset();
 
 private:

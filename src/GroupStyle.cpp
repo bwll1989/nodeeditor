@@ -108,20 +108,17 @@ void GroupStyle::loadJson(QJsonObject const &json)
     QJsonValue nodeStyleValues = json["GroupStyle"];
 
     QJsonObject obj = nodeStyleValues.toObject();
-
     GROUP_STYLE_READ_COLOR(obj, NormalColor);
     GROUP_STYLE_READ_COLOR(obj, SelectedColor);
-    GROUP_STYLE_READ_COLOR(obj, SelectedHaloColor);
     GROUP_STYLE_READ_COLOR(obj, GradientColor0);
     GROUP_STYLE_READ_COLOR(obj, GradientColor1);
     GROUP_STYLE_READ_COLOR(obj, GradientColor2);
     GROUP_STYLE_READ_COLOR(obj, GradientColor3);
     GROUP_STYLE_READ_COLOR(obj, CaptionColor);
-    GROUP_STYLE_READ_COLOR(obj, HoveredColor);
     GROUP_STYLE_READ_FLOAT(obj, Opacity);
     GROUP_STYLE_READ_COLOR(obj, FontColor);
-    GROUP_STYLE_READ_FLOAT(obj, LineWidth);
-    GROUP_STYLE_READ_FLOAT(obj,ConstructionLineWidth)
+    GROUP_STYLE_READ_FLOAT(obj, PenWidth);
+    GROUP_STYLE_READ_FLOAT(obj, HoveredPenWidth);
     GROUP_STYLE_READ_BOOL(obj, UseDataDefinedColors);
     GROUP_STYLE_READ_FLOAT(obj,CaptionHeight)
 
@@ -130,22 +127,18 @@ void GroupStyle::loadJson(QJsonObject const &json)
 QJsonObject GroupStyle::toJson() const
 {
     QJsonObject obj;
-
-
     GROUP_STYLE_WRITE_COLOR(obj, NormalColor);
     GROUP_STYLE_WRITE_COLOR(obj, SelectedColor);
-    GROUP_STYLE_WRITE_COLOR(obj, SelectedHaloColor);
     GROUP_STYLE_WRITE_COLOR(obj, GradientColor0);
     GROUP_STYLE_WRITE_COLOR(obj, GradientColor1);
     GROUP_STYLE_WRITE_COLOR(obj, GradientColor2);
     GROUP_STYLE_WRITE_COLOR(obj, GradientColor3);
     GROUP_STYLE_WRITE_COLOR(obj, CaptionColor);
-    GROUP_STYLE_WRITE_COLOR(obj, HoveredColor);
     GROUP_STYLE_WRITE_COLOR(obj, FontColor);
-    GROUP_STYLE_WRITE_FLOAT(obj, LineWidth);
+    GROUP_STYLE_WRITE_FLOAT(obj, PenWidth);
+    GROUP_STYLE_WRITE_FLOAT(obj, HoveredPenWidth);
     GROUP_STYLE_WRITE_BOOL(obj,  UseDataDefinedColors);
     GROUP_STYLE_WRITE_FLOAT(obj, Opacity);
-    GROUP_STYLE_WRITE_FLOAT(obj,ConstructionLineWidth)
     GROUP_STYLE_WRITE_FLOAT(obj,CaptionHeight)
 
     QJsonObject root;

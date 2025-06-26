@@ -36,15 +36,15 @@ NodeGraphicsObject::NodeGraphicsObject(BasicGraphicsScene &scene, NodeId nodeId)
     QJsonObject nodeStyleJson = _graphModel.nodeData(_nodeId, NodeRole::Style).toJsonObject();
 
     NodeStyle nodeStyle(nodeStyleJson);
-
-    {
-        auto effect = new QGraphicsDropShadowEffect;
-        effect->setOffset(4, 4);
-        effect->setBlurRadius(20);
-        effect->setColor(nodeStyle.ShadowColor);
-
-        setGraphicsEffect(effect);
-    }
+    //不显示阴影效果
+    // {
+    //     auto effect = new QGraphicsDropShadowEffect;
+    //     effect->setOffset(4, 4);
+    //     effect->setBlurRadius(20);
+    //     effect->setColor(nodeStyle.ShadowColor);
+    //
+    //     setGraphicsEffect(effect);
+    // }
 
     setOpacity(nodeStyle.Opacity);
 
@@ -460,7 +460,7 @@ void NodeGraphicsObject::startEditingRemarks()
     auto* scene = static_cast<BasicGraphicsScene*>(this->scene());
     auto& geometry = scene->nodeGeometry();
   
-    QRectF captionRect = QRectF(0,0,geometry.size(_nodeId).width()-1, geometry.captionPosition(_nodeId).y()*2-geometry.captionRect(_nodeId).height());
+    QRectF captionRect = QRectF(0,0,geometry.size(_nodeId).width()-1, geometry.captionPosition(_nodeId).y()*2-geometry.captionRect(_nodeId).height()-1);
     QRectF sceneRect = mapToScene(captionRect).boundingRect();
     
     _remarksEditor->setText(currentRemarks);

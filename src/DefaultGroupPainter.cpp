@@ -32,11 +32,16 @@ void DefaultGroupPainter::drawGroupRect(QPainter *painter, GroupGraphicsObject c
 
     auto const &groupStyle = QtNodes::StyleCollection::groupStyle();
 
-    auto color = ggo.isSelected() ? groupStyle.SelectedColor : groupStyle.NormalColor;
+     auto color = ggo.isSelected() ? groupStyle.SelectedColor : groupStyle.NormalColor;
 
-    auto linwidth=ggo.isSelected()? groupStyle.LineWidth : groupStyle.ConstructionLineWidth;
-    QPen p(color, linwidth);
-    painter->setPen(p);
+     if (ggo.isUnderMouse()) {
+         QPen p(color, groupStyle.HoveredPenWidth);
+         painter->setPen(p);
+     } else {
+         QPen p(color, groupStyle.PenWidth);
+         painter->setPen(p);
+     }
+
     QRectF boundary(0, 0, ggo.boundingRect().width(), ggo.boundingRect().height());
     double const radius = 2.0;
     QLinearGradient gradient(QPointF(0.0, 0.0), QPointF(2.0, ggo.boundingRect().height()));

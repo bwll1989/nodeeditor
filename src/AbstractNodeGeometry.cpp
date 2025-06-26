@@ -18,11 +18,13 @@ AbstractNodeGeometry::AbstractNodeGeometry(AbstractGraphModel &graphModel)
 QRectF AbstractNodeGeometry::boundingRect(NodeId const nodeId) const
 {
     QSize s = size(nodeId);
-
-    double ratio = 0.20;
-
-    int widthMargin = s.width() * ratio;
-    int heightMargin = s.height() * ratio;
+    //将按比例扩展选择范围，改为按绝对值，左右各扩展5
+    // double ratio = 0.20;
+    //
+    // int widthMargin = s.width() * ratio;
+    // int heightMargin = s.height() * ratio;
+    int widthMargin = 5;
+    int heightMargin = 5;
 
     QMargins margins(widthMargin, heightMargin, widthMargin, heightMargin);
 

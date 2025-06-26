@@ -27,16 +27,14 @@ public:
 public:
     QColor NormalColor;
     QColor SelectedColor;
-    QColor SelectedHaloColor;
-    QColor HoveredColor;
     QColor FontColor;
     QColor GradientColor0;
     QColor GradientColor1;
     QColor GradientColor2;
     QColor GradientColor3;
     QColor CaptionColor;
-    float LineWidth;
-    float ConstructionLineWidth;
+    float PenWidth;
+    float HoveredPenWidth;
     bool UseDataDefinedColors;
     float Opacity;
     float CaptionHeight;

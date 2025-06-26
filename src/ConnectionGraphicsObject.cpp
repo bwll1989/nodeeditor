@@ -42,7 +42,7 @@ ConnectionGraphicsObject::ConnectionGraphicsObject(BasicGraphicsScene &scene,
 
     //addGraphicsEffect();
 
-    setZValue(-2.0);
+    setZValue(-1.0);
 
     initializePosition();
 }

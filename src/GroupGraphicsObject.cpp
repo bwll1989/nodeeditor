@@ -34,7 +34,7 @@ GroupGraphicsObject::GroupGraphicsObject(BasicGraphicsScene &scene,
 
     setAcceptHoverEvents(true);
 
-//    addGraphicsEffect();
+    // addGraphicsEffect();
     setCacheMode(QGraphicsItem::DeviceCoordinateCache);
     setZValue(-1);
     GroupStyle Style=StyleCollection::groupStyle();
@@ -81,12 +81,7 @@ QRectF GroupGraphicsObject::boundingRect() const
 }
 
 void GroupGraphicsObject::move()
-{
-   
-    
-
- 
-}
+{}
 
 void GroupGraphicsObject::paint(QPainter *painter,
                                      QStyleOptionGraphicsItem const *option,
@@ -140,6 +135,17 @@ void GroupGraphicsObject::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 {
 
     QGraphicsItem::mouseDoubleClickEvent(event);
+    auto* scene = nodeScene();
+    if (scene) {
+        for (const NodeId& nodeId : _groupId.nodeIds) {
+            if (auto* nodeItem = scene->nodeGraphicsObject(nodeId)) {
+
+                _graphModel.setNodeData(nodeId,NodeRole::WidgetEmbeddable,!_graphModel.nodeData(nodeId, NodeRole::WidgetEmbeddable).toBool());
+
+                Q_EMIT nodeScene()->nodeDoubleClicked(nodeId);
+            }
+        }
+    }
 }
 
 void GroupGraphicsObject::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
@@ -218,7 +224,7 @@ void GroupGraphicsObject::startEditingRemarks()
     auto* scene = static_cast<BasicGraphicsScene*>(this->scene());
 //    auto& geometry = scene->nodeGeometry();
     GroupStyle Style=StyleCollection::groupStyle();
-    QRectF captionRect =QRectF(0, 0, _rect.width(), Style.CaptionHeight);
+    QRectF captionRect =QRectF(0, 0, _rect.width()-1, Style.CaptionHeight-1);
     QRectF sceneRect = mapToScene(captionRect).boundingRect();
 //
     _remarksEditor->setText(_groupId.groupRemarks);

@@ -12,16 +12,14 @@
     "GradientColor2": [64, 64, 64],
     "GradientColor3": [58, 58, 58],
     "ShadowColor": [20, 20, 20],
-    "FontColor" : "white",
+    "FontColor" : [53, 53, 53],
     "FontColorFaded" : "gray",
     "ConnectionPointColor": [169, 169, 169],
     "FilledConnectionPointColor": "cyan",
     "ErrorColor": "red",
     "WarningColor": [128, 128, 0],
-
     "PenWidth": 1.0,
     "HoveredPenWidth": 1.5,
-
     "ConnectionPointDiameter": 8.0,
 
     "Opacity": 0.8
@@ -32,23 +30,21 @@
     "SelectedColor": [100, 100, 100],
     "SelectedHaloColor": "orange",
     "HoveredColor": "lightcyan",
-
     "LineWidth": 3.0,
     "ConstructionLineWidth": 2.0,
     "PointDiameter": 10.0,
-
     "UseDataDefinedColors": false
   },
   "GroupStyle": {
-    "FontColor" : "white",
-    "NormalColor": "darkcyan",
+    "NormalBoundaryColor": [255, 255, 255],
+    "FontColor" : [53, 53, 53],
+    "NormalColor": [255, 255, 255],
     "SelectedColor": "orange",
     "SelectedHaloColor": "orange",
-    "HoveredColor": "lightcyan",
     "CaptionColor": "darkcyan",
     "Opacity": 0.8,
-    "LineWidth": 5.0,
-    "ConstructionLineWidth": 8.0,
+    "PenWidth": 1.0,
+    "HoveredPenWidth": 1.5,
     "GradientColor0": "gray",
     "CaptionHeight": 30.0,
     "GradientColor1": [80, 80, 80],

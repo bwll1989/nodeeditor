@@ -132,7 +132,7 @@ inline void invertConnection(ConnectionId &id)
 struct GroupId
 {
     std::vector<NodeId> nodeIds;
-    QString groupRemarks;
+    QString groupRemarks="Untitled group";
 //    std::vector<ConnectionId> connectionIds;
 };
 

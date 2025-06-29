@@ -23,8 +23,8 @@ QRectF AbstractNodeGeometry::boundingRect(NodeId const nodeId) const
     //
     // int widthMargin = s.width() * ratio;
     // int heightMargin = s.height() * ratio;
-    int widthMargin = 5;
-    int heightMargin = 5;
+    int widthMargin = 8;
+    int heightMargin = 8;
 
     QMargins margins(widthMargin, heightMargin, widthMargin, heightMargin);
 

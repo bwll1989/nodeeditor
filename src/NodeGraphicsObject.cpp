@@ -36,15 +36,16 @@ NodeGraphicsObject::NodeGraphicsObject(BasicGraphicsScene &scene, NodeId nodeId)
     QJsonObject nodeStyleJson = _graphModel.nodeData(_nodeId, NodeRole::Style).toJsonObject();
 
     NodeStyle nodeStyle(nodeStyleJson);
-    //不显示阴影效果
-    // {
-    //     auto effect = new QGraphicsDropShadowEffect;
-    //     effect->setOffset(4, 4);
-    //     effect->setBlurRadius(20);
-    //     effect->setColor(nodeStyle.ShadowColor);
-    //
-    //     setGraphicsEffect(effect);
-    // }
+    // 不显示阴影效果
+    if(nodeStyle.ShadowEnabled)
+     {
+         auto effect = new QGraphicsDropShadowEffect;
+         effect->setOffset(4, 4);
+         effect->setBlurRadius(20);
+         effect->setColor(nodeStyle.ShadowColor);
+
+         setGraphicsEffect(effect);
+     }
 
     setOpacity(nodeStyle.Opacity);
 

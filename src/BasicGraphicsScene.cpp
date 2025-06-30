@@ -95,6 +95,11 @@ AbstractGraphModel const &BasicGraphicsScene::graphModel() const
     return _graphModel;
 }
 
+AbstractNodeGeometry const &BasicGraphicsScene::nodeGeometry() const
+{
+    return *_nodeGeometry;
+}
+
 AbstractGraphModel &BasicGraphicsScene::graphModel()
 {
     return _graphModel;

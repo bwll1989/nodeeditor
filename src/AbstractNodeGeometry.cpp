@@ -15,24 +15,6 @@ AbstractNodeGeometry::AbstractNodeGeometry(AbstractGraphModel &graphModel)
     //
 }
 
-QRectF AbstractNodeGeometry::boundingRect(NodeId const nodeId) const
-{
-    QSize s = size(nodeId);
-    //将按比例扩展选择范围，改为按绝对值，左右各扩展5
-    // double ratio = 0.20;
-    //
-    // int widthMargin = s.width() * ratio;
-    // int heightMargin = s.height() * ratio;
-    int widthMargin = 8;
-    int heightMargin = 8;
-
-    QMargins margins(widthMargin, heightMargin, widthMargin, heightMargin);
-
-    QRectF r(QPointF(0, 0), s);
-
-    return r.marginsAdded(margins);
-}
-
 QPointF AbstractNodeGeometry::portScenePosition(NodeId const nodeId,
                                                 PortType const portType,
                                                 PortIndex const index,

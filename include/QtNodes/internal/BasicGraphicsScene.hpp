@@ -47,6 +47,8 @@ public:
     /// @returns associated AbstractGraphModel.
     AbstractGraphModel const &graphModel() const;
 
+    AbstractNodeGeometry const &nodeGeometry() const;
+
     AbstractGraphModel &graphModel();
 
     AbstractNodeGeometry &nodeGeometry();

@@ -25,7 +25,7 @@ public:
    * The default implementation returns QSize + 20 percent of width and heights
    * at each side of the rectangle.
    */
-    virtual QRectF boundingRect(NodeId const nodeId) const;
+    virtual QRectF boundingRect(NodeId const nodeId) const = 0;
 
     /// A direct rectangle defining the borders of the node's rectangle.
     virtual QSize size(NodeId const nodeId) const = 0;

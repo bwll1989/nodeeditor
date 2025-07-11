@@ -28,17 +28,17 @@ using QtNodes::NodeDelegateModelRegistry;
 static std::shared_ptr<NodeDelegateModelRegistry> registerDataModels()
 {
     auto ret = std::make_shared<NodeDelegateModelRegistry>();
-    ret->registerModel<NumberSourceDataModel>("Sources");
+    ret->registerModel<NumberSourceDataModel>("Number","Sources");
 
-    ret->registerModel<NumberDisplayDataModel>("Displays");
+    ret->registerModel<NumberDisplayDataModel>("Displays","Displays");
 
-    ret->registerModel<AdditionModel>("Operators");
+    ret->registerModel<AdditionModel>("Addition","Operators");
 
-    ret->registerModel<SubtractionModel>("Operators");
+    ret->registerModel<SubtractionModel>("Subtraction","Operators");
 
-    ret->registerModel<MultiplicationModel>("Operators");
+    ret->registerModel<MultiplicationModel>("Multiplication","Operators");
 
-    ret->registerModel<DivisionModel>("Operators");
+    ret->registerModel<DivisionModel>("Division","Operators");
 
     return ret;
 }

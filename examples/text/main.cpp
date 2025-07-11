@@ -18,8 +18,8 @@ static std::shared_ptr<NodeDelegateModelRegistry> registerDataModels()
 {
     auto ret = std::make_shared<NodeDelegateModelRegistry>();
 
-    ret->registerModel<TextSourceDataModel>();
-    ret->registerModel<TextDisplayDataModel>();
+    ret->registerModel<TextSourceDataModel>("Text Source");
+    ret->registerModel<TextDisplayDataModel>("Text Display");
 
     return ret;
 }

@@ -1,7 +1,9 @@
 #include "NumberSourceDataModel.hpp"
 
-#include "DecimalData.hpp"
+#include <QVBoxLayout>
 
+#include "DecimalData.hpp"
+#include <QSpinBox>
 #include <QtCore/QJsonValue>
 #include <QtGui/QDoubleValidator>
 #include <QtWidgets/QLineEdit>
@@ -76,18 +78,24 @@ std::shared_ptr<NodeData> NumberSourceDataModel::outData(PortIndex)
 
 QWidget *NumberSourceDataModel::embeddedWidget()
 {
+    auto *widget = new QWidget();
+    auto *layout = new QVBoxLayout(widget);
+    widget->setLayout(layout);
     if (!_lineEdit) {
         _lineEdit = new QLineEdit();
 
+        layout->addWidget(_lineEdit);
+        layout->addWidget(new QSpinBox());
         _lineEdit->setValidator(new QDoubleValidator());
         _lineEdit->setMaximumSize(_lineEdit->sizeHint());
 
         connect(_lineEdit, &QLineEdit::textChanged, this, &NumberSourceDataModel::onTextEdited);
 
         _lineEdit->setText(QString::number(_number->number()));
+
     }
 
-    return _lineEdit;
+    return widget;
 }
 
 void NumberSourceDataModel::setNumber(double n)

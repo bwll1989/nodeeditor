@@ -15,6 +15,7 @@
 #define PLUGIN_VERSION "1.0"
 #define PLUGIN_DESCRIBE "文本输入"
 #define PLUGIN_TAG "Text"
+
 class DLL_EXPORT Plugin
     : public QObject
     , public QtNodes::PluginInterface
@@ -29,6 +30,7 @@ public:
     QString name() const override { return PLUGIN_NAME; };
     QString version() const override {return PLUGIN_VERSION;};
     QString describe() const override {return PLUGIN_DESCRIBE;};
+    QString tag() const override {return PLUGIN_TAG;};
     void registerDataModels(std::shared_ptr<QtNodes::NodeDelegateModelRegistry> &reg) override;
 
 private:

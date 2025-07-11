@@ -38,7 +38,7 @@ class NODE_EDITOR_PUBLIC NodeDelegateModel : public QObject, public Serializable
 public:
     bool CaptionVisible=true;
     QString Caption="Default Node";
-    bool WidgetEmbeddable=true;
+    bool WidgetEmbeddable=false;
     bool Resizable=false;
     unsigned int InPortCount=1;
     unsigned int OutPortCount=1;
@@ -57,7 +57,18 @@ public:
     virtual bool portCaptionVisible(PortType, PortIndex) const { return !WidgetEmbeddable; }
 
     /// Port caption is used in GUI to label individual ports
-    virtual QString portCaption(PortType portType, PortIndex portIndex) const { return dataType(portType, portIndex).name; }
+    virtual QString portCaption(PortType portType, PortIndex portIndex) const
+    {
+        switch(portType)
+        {
+            case PortType::In:
+                return "INPUT "+QString::number(portIndex);
+            case PortType::Out:
+                return "OUTPUT "+QString::number(portIndex);
+            default:
+                return "";
+        }
+    }
 
     /// Name makes this model unique
     virtual QString type() const { return Caption; };

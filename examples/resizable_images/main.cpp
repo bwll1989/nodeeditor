@@ -19,9 +19,9 @@ using QtNodes::NodeDelegateModelRegistry;
 static std::shared_ptr<NodeDelegateModelRegistry> registerDataModels()
 {
     auto ret = std::make_shared<NodeDelegateModelRegistry>();
-    ret->registerModel<ImageShowModel>();
+    ret->registerModel<ImageShowModel>("Image Source");
 
-    ret->registerModel<ImageLoaderModel>();
+    ret->registerModel<ImageLoaderModel>("Image Display");
 
     return ret;
 }

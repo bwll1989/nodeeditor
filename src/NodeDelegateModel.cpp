@@ -212,6 +212,7 @@ void NodeDelegateModel::registerOSCControl(const QString& oscAddress, QWidget* c
     control->installEventFilter(this);
     control->setMouseTracking(true);
     _OscMapping[oscAddress] = control;
+
 }
 
 void NodeDelegateModel::unregisterOSCControl(const QString& oscAddress)

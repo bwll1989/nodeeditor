@@ -40,22 +40,28 @@ public:
     NodeDelegateModelRegistry &operator=(NodeDelegateModelRegistry &&) = default;
 
 public:
-    template<typename ModelType>
-    void registerModel(RegistryItemCreator creator, QString const &category = "Nodes")
-    {
-        QString const name = computeName<ModelType>(HasStaticMethodName<ModelType>{}, creator);
-        if (!_registeredItemCreators.count(name)) {
-            _registeredItemCreators[name] = std::move(creator);
-            _categories.insert(category);
-            _registeredModelsCategory[name] = category;
-        }
-    }
 
+    /**
+     * @brief 注册模型类型，不会实例化对象
+     * 
+     * 这个方法使用模板参数中的类型名称，避免实例化对象
+     * 
+     * @tparam ModelType 要注册的模型类型
+     * @param category 模型类别
+     */
     template<typename ModelType>
-    void registerModel(QString const &category = "Nodes")
+    void registerModel(QString const& name = "Nodes",QString const& category = "Nodes")
     {
-        RegistryItemCreator creator = []() { return std::make_unique<ModelType>(); };
-        registerModel<ModelType>(std::move(creator), category);
+        static_assert(std::is_base_of<NodeDelegateModel, ModelType>::value,
+                    "Model must inherit from NodeDelegateModel");
+
+        QString const m_name = name;
+
+        RegistryItemCreator creator = [](){ return std::make_unique<ModelType>(); };
+
+        _registeredItemCreators[m_name] = std::move(creator);
+        _registeredModelsCategory[m_name] = category;
+        _categories.insert(category);
     }
 
 #if 0

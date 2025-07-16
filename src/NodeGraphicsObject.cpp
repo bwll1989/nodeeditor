@@ -417,7 +417,9 @@ void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 
 void NodeGraphicsObject::keyPressEvent(QKeyEvent* event)
 {
-    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
+    // 修改条件：添加Ctrl修饰键判断
+    if ((event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) &&
+        event->modifiers() & Qt::ControlModifier){
         startEditingRemarks();
         event->accept();
     } else {
@@ -495,7 +497,7 @@ void NodeGraphicsObject::finishEditingRemarks()
 bool NodeGraphicsObject::eventFilter(QObject* watched, QEvent* event)
 {
     if (watched == _remarksEditor) {
-        if (event->type() == QEvent::KeyPress) {
+        if (event->type() == QEvent::KeyPress ) {
             QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
             if (keyEvent->key() == Qt::Key_Escape) {
                 _remarksEditor->hide();

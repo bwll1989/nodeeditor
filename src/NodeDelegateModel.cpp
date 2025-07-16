@@ -94,7 +94,7 @@ bool NodeDelegateModel::eventFilter(QObject* watched, QEvent* event)
         switch (event->type()) {
             case QEvent::MouseButtonPress: {
                 QMouseEvent* mouseEvent = static_cast<QMouseEvent*>(event);
-                if (mouseEvent->button() == Qt::LeftButton) {
+                if (mouseEvent->button() == Qt::LeftButton && (mouseEvent->modifiers() & Qt::ControlModifier)) {
                     dragStartPosition = mouseEvent->pos();
                     isDragging = true;
                    

@@ -217,6 +217,11 @@ QRect DefaultVerticalNodeGeometry::resizeHandleRect(NodeId const nodeId) const
     return QRect(size.width() - rectSize, size.height() - rectSize, rectSize, rectSize);
 }
 
+int DefaultVerticalNodeGeometry::portSpacing(NodeId const nodeId) const {
+    return _portSpasing;
+}
+
+
 QRectF DefaultVerticalNodeGeometry::portTextRect(NodeId const nodeId,
                                                  PortType const portType,
                                                  PortIndex const portIndex) const

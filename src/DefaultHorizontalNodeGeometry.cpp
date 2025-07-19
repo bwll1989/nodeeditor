@@ -183,7 +183,7 @@ QPointF DefaultHorizontalNodeGeometry::widgetPosition(NodeId const nodeId) const
         // place it immediately after the caption.
         if (w->sizePolicy().verticalPolicy() & QSizePolicy::ExpandFlag) {
             return QPointF(2.0 * _portSpasing + maxPortsTextAdvance(nodeId, PortType::In),
-                           _portSpasing +captionHeight);
+                           captionHeight);
         } else {
             return QPointF(2.0 * _portSpasing + maxPortsTextAdvance(nodeId, PortType::In),
                            (captionHeight + size.height() - w->height()) / 2.0);
@@ -196,9 +196,13 @@ QRect DefaultHorizontalNodeGeometry::resizeHandleRect(NodeId const nodeId) const
 {
     QSize size = _graphModel.nodeData<QSize>(nodeId, NodeRole::Size);
 
-    unsigned int rectSize = 7;
+    unsigned int rectSize = 10;
 
-    return QRect(size.width() - _portSpasing, size.height() - _portSpasing, rectSize, rectSize);
+    return QRect(size.width() - rectSize, size.height() - rectSize, rectSize, rectSize);
+}
+
+int DefaultHorizontalNodeGeometry::portSpacing(NodeId const nodeId) const {
+    return _portSpasing;
 }
 
 QRectF DefaultHorizontalNodeGeometry::portTextRect(NodeId const nodeId,

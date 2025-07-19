@@ -1,5 +1,7 @@
 #include "DataFlowGraphicsScene.hpp"
 
+#include <QMessageBox>
+
 #include "ConnectionGraphicsObject.hpp"
 #include "GraphicsView.hpp"
 #include "NodeDelegateModelRegistry.hpp"

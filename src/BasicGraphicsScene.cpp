@@ -75,6 +75,11 @@ BasicGraphicsScene::BasicGraphicsScene(AbstractGraphModel &graphModel, QObject *
             this,
             &BasicGraphicsScene::onNodeUpdated);
 
+    connect(&_graphModel,
+            &AbstractGraphModel::nodeWidgetUpdated,
+            this,
+            &BasicGraphicsScene::onNodeWidgetUpdated);
+
     connect(this, &BasicGraphicsScene::nodeClicked, this, &BasicGraphicsScene::onNodeClicked);
 
     connect(&_graphModel, &AbstractGraphModel::modelReset, this, &BasicGraphicsScene::onModelReset);
@@ -378,6 +383,15 @@ void BasicGraphicsScene::onModelReset()
     clear();
 
     traverseGraphAndPopulateGraphicsObjects();
+}
+
+void BasicGraphicsScene::onNodeWidgetUpdated(NodeId const nodeId) {
+    auto node = nodeGraphicsObject(nodeId);
+    if (node) {
+        node->onEmbedWidgetChanged();
+        // node->updateQWidgetEmbedPos();
+        node->update();
+    }
 }
 
 } // namespace QtNodes

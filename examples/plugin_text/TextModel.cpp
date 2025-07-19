@@ -1,11 +1,13 @@
 #include "TextModel.hpp"
 
+#include <qtextbrowser.h>
 #include <QtWidgets/QTextEdit>
 
 TextModel::TextModel()
 {
     //
-    qDebug() << "TextModel constructor";
+    PortEditable=true;
+    Resizable=true;
 }
 
 unsigned int TextModel::nPorts(PortType portType) const
@@ -14,11 +16,11 @@ unsigned int TextModel::nPorts(PortType portType) const
 
     switch (portType) {
     case PortType::In:
-        result = 1;
+        result = 2;
         break;
 
     case PortType::Out:
-        result = 1;
+        result = 2;
 
     default:
         break;
@@ -46,12 +48,14 @@ std::shared_ptr<NodeData> TextModel::outData(PortIndex const portIndex)
 QWidget *TextModel::embeddedWidget()
 {
     if (!_textEdit) {
-        _textEdit = new QTextEdit();
+
 
         connect(_textEdit, &QTextEdit::textChanged, this, &TextModel::onTextEdited);
     }
 
     return _textEdit;
+
+
 }
 
 void TextModel::setInData(std::shared_ptr<NodeData> data, PortIndex const)

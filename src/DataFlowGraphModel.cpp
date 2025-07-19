@@ -289,14 +289,33 @@ QVariant DataFlowGraphModel::nodeData(NodeId nodeId, NodeRole role) const
         break;
 
     case NodeRole::Widget: {
-        auto w = model->embeddedWidget();
-        result = QVariant::fromValue(w);
+        // switch (model->getWidgetType()) {
+        //     case NodeWidgetType::InternalWidget: {
+                auto w = model->embeddedWidget();
+                result = QVariant::fromValue(w);
+        //     }
+        //         break;
+        //     case  NodeWidgetType::PortEditWidget: {
+        //         auto w = model->PortEditWidget;
+        //         result = QVariant::fromValue(w);
+        //     }
+        //         break;
+        //     default:
+        //         break;
+        // }
+
     } break;
     case NodeRole::NodeID:
         result = model->getNodeID();
         break;
     case NodeRole::Remarks:
         result = model->getRemarks();
+        break;
+    case NodeRole::PortEditable:
+        result = model->PortEditable;
+        break;
+    case NodeRole::EmbeddWidgetType:
+        result=static_cast<int>(model->getWidgetType());
         break;
     default:
         break;
@@ -351,12 +370,31 @@ bool DataFlowGraphModel::setNodeData(NodeId nodeId, NodeRole role, QVariant valu
     case NodeRole::InternalData:
         break;
 
-    case NodeRole::InPortCount:
+    case NodeRole::InPortCount: {
+        auto it = _models.find(nodeId);
+        auto &model = it->second;
+        model->InPortCount = value.toInt();
+        model->embeddedWidgetSizeUpdated();
+        Q_EMIT nodeUpdated(nodeId);
+    }
         break;
 
-    case NodeRole::OutPortCount:
+    case NodeRole::OutPortCount:{
+        auto it = _models.find(nodeId);
+        auto &model = it->second;
+        model->OutPortCount = value.toInt();
+        model->embeddedWidgetSizeUpdated();
+        Q_EMIT nodeUpdated(nodeId);
+    }
         break;
-
+    case NodeRole::EmbeddWidgetType: {
+        auto it = _models.find(nodeId);
+        auto &model = it->second;
+        model->setEmbeddWidgetType(static_cast<decltype(model->getWidgetType())>(value.toInt())); // 显式类型转换
+        Q_EMIT nodeWidgetUpdated(nodeId);
+        result=true;
+    }
+        break;
     case NodeRole::WidgetEmbeddable: {
         auto it = _models.find(nodeId);
         auto &model = it->second;

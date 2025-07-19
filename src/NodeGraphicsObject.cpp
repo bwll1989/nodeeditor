@@ -114,7 +114,13 @@ void NodeGraphicsObject::embedQWidget()
 {
     AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
     geometry.recomputeSize(_nodeId);
-
+    if(_proxyWidget) {
+        scene()->removeItem(_proxyWidget);
+        _proxyWidget->setWidget(nullptr);
+        _proxyWidget->setParentItem(nullptr);
+        _proxyWidget->deleteLater();  // 删除小部件
+        _proxyWidget=nullptr;
+    }
     if (!_graphModel.nodeData(_nodeId, NodeRole::WidgetEmbeddable).value<bool>())
         return;
 
@@ -127,10 +133,10 @@ void NodeGraphicsObject::embedQWidget()
         _proxyWidget->setPreferredWidth(5);
 
         geometry.recomputeSize(_nodeId);
-
+        //需要考虑节点尺寸上预留的两个端口间隙的控件
         if (w->sizePolicy().verticalPolicy() & QSizePolicy::ExpandFlag) {
             unsigned int widgetHeight = geometry.size(_nodeId).height() -
-                                        geometry.captionRect(_nodeId).height();
+                                        geometry.captionRect(_nodeId).height()-geometry.portSpacing(_nodeId)*2;
 
             // If the widget wants to use as much vertical space as possible, set
             // it to have the geom's equivalentWidgetHeight.
@@ -411,20 +417,74 @@ void NodeGraphicsObject::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 
 void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 {
-    qDebug()<<"NodeGraphicsObject::contextMenuEvent";
-    Q_EMIT nodeScene()->nodeContextMenu(_nodeId, mapToScene(event->pos()));
+
+
+
+    // NodeFlags flags = _graphModel.nodeFlags(_nodeId);
+
+    // bool const locked = flags.testFlag(NodeFlag::Locked);
+    // QAction* lockAction = menu.addAction(locked?"Unlock Node":"Lock Node");
+    // lockAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_L));  // 添加快捷键
+    // 连接菜单项信号
+
+    // connect(lockAction, &QAction::triggered, [this]() {
+    //     setLockedState();
+    // });
+    // ====== 补充：显示view的actions ======
+    // 获取 view
+    // 添加菜单项（示例动作，可根据需要扩展）
+    QMenu* m_Menu = new QMenu();
+    QAction* renameAction = m_Menu->addAction( "Edit Remarks");
+    renameAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));  // 添加快捷键
+    connect(renameAction, &QAction::triggered, [this]() {
+        startEditingRemarks(); // 假设这是重命名功能
+    });
+
+    if (_graphModel.nodeData<bool>(_nodeId, NodeRole::PortEditable)) {
+
+        QAction* editPortAction = m_Menu->addAction( _graphModel.nodeData(_nodeId, NodeRole::EmbeddWidgetType).toBool()?"Finished Port Edit":"Edit Port");
+        editPortAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_P));  // 添加快捷键
+        connect(editPortAction, &QAction::triggered, [this]() {
+            _graphModel.setNodeData(_nodeId, NodeRole::EmbeddWidgetType, !_graphModel.nodeData(_nodeId, NodeRole::EmbeddWidgetType).toBool());
+        });
+
+    }
+    auto* scene = this->scene();
+    auto views = scene ? scene->views() : QList<QGraphicsView*>();
+    if (!views.isEmpty()) {
+        auto* view = views.first();
+        // 遍历 view 的 actions
+        for (QAction* act : view->actions()) {
+            m_Menu->addAction(act);
+        }
+    }
+
+    // 显示菜单并等待用户选择
+     m_Menu->exec(event->screenPos());
+
+    // 如果用户没有选择任何项，仍然传递信号给scene
+    // if (!selectedAction) {
+    //     Q_EMIT nodeScene()->nodeContextMenu(_nodeId, mapToScene(event->pos()));
+    // }
+
+    event->accept(); // 确保事件被处理
 }
 
 void NodeGraphicsObject::keyPressEvent(QKeyEvent* event)
 {
     // 修改条件：添加Ctrl修饰键判断
-    if ((event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) &&
-        event->modifiers() & Qt::ControlModifier){
+    if ((event->key() == Qt::Key_E) && (event->modifiers() & Qt::ControlModifier)){
         startEditingRemarks();
         event->accept();
-    } else {
-        QGraphicsObject::keyPressEvent(event);
+        return;
     }
+    if ((event->key() == Qt::Key_P) && (event->modifiers() & Qt::ControlModifier)) {
+        _graphModel.setNodeData(_nodeId, NodeRole::EmbeddWidgetType, !_graphModel.nodeData(_nodeId, NodeRole::EmbeddWidgetType).toBool());
+        embedQWidget();
+        return;
+    }
+    QGraphicsObject::keyPressEvent(event);
+
 }
 
 void NodeGraphicsObject::initRemarksEditor()
@@ -494,20 +554,5 @@ void NodeGraphicsObject::finishEditingRemarks()
     update();
 }
 
-bool NodeGraphicsObject::eventFilter(QObject* watched, QEvent* event)
-{
-    if (watched == _remarksEditor) {
-        if (event->type() == QEvent::KeyPress ) {
-            QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
-            if (keyEvent->key() == Qt::Key_Escape) {
-                _remarksEditor->hide();
-                _remarksEditor->setParent(nullptr);
-                this->setFocus();
-                return true;
-            }
-        }
-    }
-    return QGraphicsObject::eventFilter(watched, event);
-}
 
 } // namespace QtNodes

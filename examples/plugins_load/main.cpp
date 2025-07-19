@@ -69,6 +69,7 @@ int main(int argc, char *argv[])
     auto scene = new DataFlowGraphicsScene(dataFlowGraphModel, &mainWidget);
 
     auto view = new GraphicsView(scene);
+
     l->addWidget(view);
     l->setContentsMargins(0, 0, 0, 0);
     l->setSpacing(0);

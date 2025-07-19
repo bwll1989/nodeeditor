@@ -21,6 +21,8 @@
 #include <QSpinBox>
 #include <QLineEdit>
 #include <QLabel>
+#include <qtmetamacros.h>
+
 namespace QtNodes {
 
 class StyleCollection;
@@ -43,6 +45,7 @@ public:
     unsigned int InPortCount=1;
     unsigned int OutPortCount=1;
     bool  PortEditable=false;
+    NodeWidgetType WidgetType= NodeWidgetType::InternalWidget;
     NodeDelegateModel();
 
     virtual ~NodeDelegateModel() = default;
@@ -75,6 +78,12 @@ public:
 
     virtual bool portEditable() const { return PortEditable; }
 
+    virtual void setEmbeddWidgetType(NodeWidgetType widgetType) {
+        WidgetType = widgetType;
+        embeddedWidgetSizeUpdated();
+    }
+
+    virtual NodeWidgetType getWidgetType() const { return WidgetType; }
 public:
     QJsonObject save() const override;
 

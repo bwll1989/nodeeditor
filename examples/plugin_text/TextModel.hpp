@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <QTextEdit>
 
 #include "TextData.hpp"
 
@@ -50,5 +51,5 @@ private Q_SLOTS:
     void onTextEdited();
 
 private:
-    QTextEdit *_textEdit = nullptr;
+    QTextEdit * _textEdit = new QTextEdit();
 };

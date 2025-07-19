@@ -163,6 +163,8 @@ public Q_SLOTS:
 
     void onNodePositionUpdated(NodeId const nodeId);
 
+    void onNodeWidgetUpdated(NodeId const nodeId);
+
     void onNodeUpdated(NodeId const nodeId);
 
     void onNodeClicked(NodeId const nodeId);

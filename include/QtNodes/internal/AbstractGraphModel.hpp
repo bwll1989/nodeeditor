@@ -245,6 +245,8 @@ Q_SIGNALS:
 
     void nodeUpdated(NodeId const nodeId);
 
+    void nodeWidgetUpdated(NodeId const nodeId);
+
     void nodeFlagsUpdated(NodeId const nodeId);
 
     void groupFlagsUpdated(GroupId const groupId);

@@ -275,8 +275,17 @@ void DefaultNodePainter::drawResizeRect(QPainter *painter, NodeGraphicsObject &n
 
     if (model.nodeFlags(nodeId) & NodeFlag::Resizable) {
         painter->setBrush(Qt::gray);
+        painter->setPen(Qt::NoPen);
+        // 获取调整手柄的矩形区域
+        QRect handleRect = geometry.resizeHandleRect(nodeId);
 
-        painter->drawEllipse(geometry.resizeHandleRect(nodeId));
+        // 创建三角形路径（右下角三角形）
+        QPolygonF triangle;
+        triangle << handleRect.topRight()
+                 << handleRect.bottomRight()
+                 << handleRect.bottomLeft();
+
+        painter->drawPolygon(triangle);
     }
 }
 

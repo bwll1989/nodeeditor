@@ -52,6 +52,9 @@ public:
 
     void updateQWidgetEmbedPos();
 
+    void onEmbedWidgetChanged() {
+        embedQWidget();
+    }
 protected:
     void paint(QPainter *painter,
                QStyleOptionGraphicsItem const *option,
@@ -77,7 +80,7 @@ protected:
 
     void keyPressEvent(QKeyEvent *event) override;
 
-    bool eventFilter(QObject *watched, QEvent *event) override;
+
 
 
 private:

@@ -33,11 +33,12 @@ Q_NAMESPACE_EXPORT(NODE_EDITOR_PUBLIC)
         OutPortCount=8,     ///< `unsigned int`
         Widget=9,           ///< Optional `QWidget*` or `nullptr`
         WidgetEmbeddable=10, ///< `bool` for widget embeddability
-        PortEditableWidget=11,
+        PortEditWidget=11,
         PortEditable=12,
         OSCAddress=13,
         NodeID=14,
         Remarks=15,
+        EmbeddWidgetType=16,
     };
 Q_ENUM_NS(NodeRole)
 
@@ -54,6 +55,11 @@ Q_DECLARE_FLAGS(NodeFlags, NodeFlag)
 Q_FLAG_NS(NodeFlags)
 Q_DECLARE_OPERATORS_FOR_FLAGS(NodeFlags)
 
+enum class NodeWidgetType {
+    InternalWidget = 0,             ///internal widget
+    PortEditWidget = 1,                 ///port edit widget
+};
+Q_ENUM_NS(NodeWidgetType)
 /**
  * Constants for fetching port-related information from the GraphModel.
  */

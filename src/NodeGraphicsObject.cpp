@@ -478,9 +478,10 @@ void NodeGraphicsObject::keyPressEvent(QKeyEvent* event)
         event->accept();
         return;
     }
-    if ((event->key() == Qt::Key_P) && (event->modifiers() & Qt::ControlModifier)) {
+    if ((event->key() == Qt::Key_P) && (event->modifiers() & Qt::ControlModifier) && _graphModel.nodeData(_nodeId, NodeRole::PortEditable).toBool()) {
+
         _graphModel.setNodeData(_nodeId, NodeRole::EmbeddWidgetType, !_graphModel.nodeData(_nodeId, NodeRole::EmbeddWidgetType).toBool());
-        embedQWidget();
+        // embedQWidget();
         return;
     }
     QGraphicsObject::keyPressEvent(event);

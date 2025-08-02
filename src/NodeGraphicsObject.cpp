@@ -433,8 +433,8 @@ void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
     // ====== 补充：显示view的actions ======
     // 获取 view
     // 添加菜单项（示例动作，可根据需要扩展）
-    QMenu* m_Menu = new QMenu();
-    QAction* renameAction = m_Menu->addAction( "Edit Remarks");
+    QMenu m_Menu;
+    QAction* renameAction = m_Menu.addAction( "Edit Remarks");
     renameAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));  // 添加快捷键
     connect(renameAction, &QAction::triggered, [this]() {
         startEditingRemarks(); // 假设这是重命名功能
@@ -442,25 +442,30 @@ void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 
     if (_graphModel.nodeData<bool>(_nodeId, NodeRole::PortEditable)) {
 
-        QAction* editPortAction = m_Menu->addAction( _graphModel.nodeData(_nodeId, NodeRole::EmbeddWidgetType).toBool()?"Finished Port Edit":"Edit Port");
+        QAction* editPortAction = m_Menu.addAction( _graphModel.nodeData(_nodeId, NodeRole::EmbeddWidgetType).toBool()?"Finished Port Edit":"Edit Port");
         editPortAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_P));  // 添加快捷键
         connect(editPortAction, &QAction::triggered, [this]() {
             _graphModel.setNodeData(_nodeId, NodeRole::EmbeddWidgetType, !_graphModel.nodeData(_nodeId, NodeRole::EmbeddWidgetType).toBool());
         });
 
     }
+    QAction* helpAction = m_Menu.addAction( "Node Help");
+    helpAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_H));  // 添加快捷键
+    connect(helpAction, &QAction::triggered, [this]() {
+        qDebug()<<"Node type: "<<_graphModel.nodeData(_nodeId,NodeRole::Type).toString()<<" help function not realize";
+    });
     auto* scene = this->scene();
     auto views = scene ? scene->views() : QList<QGraphicsView*>();
     if (!views.isEmpty()) {
         auto* view = views.first();
         // 遍历 view 的 actions
         for (QAction* act : view->actions()) {
-            m_Menu->addAction(act);
+            m_Menu.addAction(act);
         }
     }
 
     // 显示菜单并等待用户选择
-     m_Menu->exec(event->screenPos());
+     m_Menu.exec(event->screenPos());
 
     // 如果用户没有选择任何项，仍然传递信号给scene
     // if (!selectedAction) {

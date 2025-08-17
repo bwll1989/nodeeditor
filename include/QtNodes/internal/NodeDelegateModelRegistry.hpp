@@ -172,6 +172,85 @@ private:
 
     template<typename CreatorResult>
     using compute_model_type_t = typename UnwrapUniquePtr<CreatorResult>::type;
-};
 
+
+
+public:
+    // 工厂函数类型定义
+    using FactoryFunction = std::function<std::unique_ptr<NodeDelegateModel>()>;
+    using FactoryFunctionMap = std::unordered_map<QString, FactoryFunction>;
+    
+    /**
+     * @brief 注册工厂函数用于创建节点模型
+     * 
+     * 这个方法允许注册自定义的工厂函数来创建节点模型实例，
+     * 提供比模板注册更灵活的创建方式
+     * 
+     * @param modelName 模型名称
+     * @param factory 工厂函数，返回NodeDelegateModel的unique_ptr
+     * @param category 模型类别，默认为"Nodes"
+     */
+    void registerFactory(QString const& modelName, 
+                        FactoryFunction factory, 
+                        QString const& category = "Nodes");
+    
+    /**
+     * @brief 注册带参数的工厂函数
+     * 
+     * 允许注册需要特定参数的工厂函数
+     * 
+     * @tparam Args 工厂函数参数类型
+     * @param modelName 模型名称
+     * @param factory 工厂函数
+     * @param category 模型类别
+     * @param args 工厂函数参数
+     */
+    template<typename... Args>
+    void registerFactoryWithArgs(QString const& modelName,
+                                std::function<std::unique_ptr<NodeDelegateModel>(Args...)> factory,
+                                QString const& category,
+                                Args... args)
+    {
+        auto boundFactory = [factory, args...]() -> std::unique_ptr<NodeDelegateModel> {
+            return factory(args...);
+        };
+        
+        registerFactory(modelName, boundFactory, category);
+    }
+    
+    /**
+     * @brief 检查是否存在指定名称的工厂函数
+     * 
+     * @param modelName 模型名称
+     * @return true 如果存在工厂函数
+     * @return false 如果不存在工厂函数
+     */
+    bool hasFactory(QString const& modelName) const;
+    
+    /**
+     * @brief 获取所有已注册的工厂函数
+     * 
+     * @return const FactoryFunctionMap& 工厂函数映射表的常量引用
+     */
+    FactoryFunctionMap const& registeredFactories() const;
+    
+    /**
+     * @brief 移除指定的工厂函数
+     * 
+     * @param modelName 要移除的模型名称
+     * @return true 如果成功移除
+     * @return false 如果模型不存在
+     */
+    bool unregisterFactory(QString const& modelName);
+
+private:
+    // 工厂函数存储
+    FactoryFunctionMap _registeredFactories;
+    
+    // If the registered ModelType class has the static member method
+    // `static QString Name();`, use it. Otherwise use the non-static
+    // method: `virtual QString name() const;`
+
+};
 } // namespace QtNodes
+

@@ -17,6 +17,8 @@ Plugin::~Plugin()
 void Plugin::registerDataModels(std::shared_ptr<QtNodes::NodeDelegateModelRegistry> &reg)
 {
     assert(reg);
-
-    reg->registerModel<TextModel>(name(),tag());
+    //实例化注册对象
+    reg->registerModelInstance<TextModel>(tag());
+    //注册对象不实例化
+    // reg->registerModel<TextModel>(name(),tag());
 }

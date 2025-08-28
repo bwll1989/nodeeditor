@@ -63,6 +63,30 @@ public:
         _registeredModelsCategory[m_name] = category;
         _categories.insert(category);
     }
+    /**
+    * @brief 实例化并注册模型类型
+    *
+    * 这个方法使用模板参数中的类型，并实例化对象
+    *
+    * @tparam ModelType 要注册的模型
+    * @param category 模型类别
+    */
+    template<typename ModelType>
+   void registerModelInstance(RegistryItemCreator creator, QString const &category = "Nodes")
+    {
+        QString const name = computeName<ModelType>(HasStaticMethodName<ModelType>{}, creator);
+        if (!_registeredItemCreators.count(name)) {
+            _registeredItemCreators[name] = std::move(creator);
+            _categories.insert(category);
+            _registeredModelsCategory[name] = category;
+        }
+    }
+    template<typename ModelType>
+    void registerModelInstance(QString const &category = "Nodes")
+    {
+        RegistryItemCreator creator = []() { return std::make_unique<ModelType>(); };
+        registerModelInstance<ModelType>(std::move(creator), category);
+    }
 
 #if 0
   template<typename ModelType>

@@ -33,12 +33,13 @@ Q_NAMESPACE_EXPORT(NODE_EDITOR_PUBLIC)
         OutPortCount=8,     ///< `unsigned int`
         Widget=9,           ///< Optional `QWidget*` or `nullptr`
         WidgetEmbeddable=10, ///< `bool` for widget embeddability
-        PortEditWidget=11,
-        PortEditable=12,
-        OSCAddress=13,
-        NodeID=14,
-        Remarks=15,
-        EmbeddWidgetType=16,
+        ValidationState = 11, ///< Enum NodeValidationState of the node
+        PortEditWidget=12,
+        PortEditable=13,
+        OSCAddress=14,
+        NodeID=15,
+        Remarks=16,
+        EmbeddWidgetType=17,
     };
 Q_ENUM_NS(NodeRole)
 

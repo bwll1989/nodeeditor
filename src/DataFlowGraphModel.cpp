@@ -305,6 +305,11 @@ QVariant DataFlowGraphModel::nodeData(NodeId nodeId, NodeRole role) const
         // }
 
     } break;
+    case NodeRole::ValidationState: {
+        auto validationState = model->validationState();
+        result = QVariant::fromValue(validationState);
+    } break;
+
     case NodeRole::NodeID:
         result = model->getNodeID();
         break;
@@ -406,6 +411,16 @@ bool DataFlowGraphModel::setNodeData(NodeId nodeId, NodeRole role, QVariant valu
         break;
     case NodeRole::Widget:
         break;
+    case NodeRole::ValidationState: {
+        if (value.canConvert<NodeValidationState>()) {
+            auto state = value.value<NodeValidationState>();
+            if (auto node = delegateModel<NodeDelegateModel>(nodeId); node != nullptr) {
+                node->setValidatonState(state);
+            }
+        }
+        Q_EMIT nodeUpdated(nodeId);
+        result=true;
+    } break;
     case NodeRole::NodeID:{ 
         auto it = _models.find(nodeId);
         auto &model = it->second;

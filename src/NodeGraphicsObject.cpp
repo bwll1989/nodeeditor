@@ -13,6 +13,7 @@
 #include "ConnectionGraphicsObject.hpp"
 #include "ConnectionIdUtils.hpp"
 #include "NodeConnectionInteraction.hpp"
+#include "NodeDelegateModel.hpp"
 #include "StyleCollection.hpp"
 #include "UndoCommands.hpp"
 
@@ -204,6 +205,16 @@ void NodeGraphicsObject::reactToConnection(ConnectionGraphicsObject const *cgo)
 
 void NodeGraphicsObject::paint(QPainter *painter, QStyleOptionGraphicsItem const *option, QWidget *)
 {
+    QString tooltip;
+    QVariant var = _graphModel.nodeData(_nodeId, NodeRole::ValidationState);
+    if (var.canConvert<NodeValidationState>()) {
+        auto state = var.value<NodeValidationState>();
+        if (state._state != NodeValidationState::State::Valid) {
+            tooltip = state._stateMessage;
+        }
+    }
+    setToolTip(tooltip);
+
     painter->setClipRect(option->exposedRect);
 
     nodeScene()->nodePainter().paint(painter, *this);
@@ -220,8 +231,9 @@ QVariant NodeGraphicsObject::itemChange(GraphicsItemChange change, const QVarian
 
 void NodeGraphicsObject::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
-    // if (_nodeState.locked())
-    // return;
+    if (graphModel().nodeFlags(_nodeId) & NodeFlag::Locked) {
+        return;
+    }
 
     AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
 
@@ -556,7 +568,7 @@ void NodeGraphicsObject::finishEditingRemarks()
     _remarksEditor->hide();
     _remarksEditor->setParent(nullptr);
     this->setFocus();
-    
+
     update();
 }
 

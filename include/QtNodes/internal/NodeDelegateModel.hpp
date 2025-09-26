@@ -25,6 +25,24 @@
 
 namespace QtNodes {
 
+/**
+ * Describes whether a node configuration is usable and defines a description message
+ */
+struct NodeValidationState
+{
+    enum class State : int {
+        Valid = 0,      ///< All required inputs are present and correct.
+        Warning = 1,    ///< Some inputs are missing or questionable, processing may be unreliable.
+        Error = 2,      ///< Inputs or settings are invalid, preventing successful computation.
+    };
+    bool isValid() { return _state == State::Valid; };
+    QString const message() { return _stateMessage; }
+    State state() { return _state; }
+
+    State _state{State::Valid};
+    QString _stateMessage{""};
+};
+
 class StyleCollection;
 
 /**
@@ -75,7 +93,10 @@ public:
 
     /// Name makes this model unique
     virtual QString type() const { return Caption; };
-
+    
+    /// Validation State will default to Valid, but you can manipulate it by overriding in an inherited class
+    virtual NodeValidationState validationState() const { return _nodeValidationState; }
+    
     virtual bool portEditable() const { return PortEditable; }
 
     virtual void setEmbeddWidgetType(NodeWidgetType widgetType) {
@@ -89,7 +110,8 @@ public:
 
     void load(QJsonObject const &) override;
 
-public:
+ 	void setValidatonState(const NodeValidationState &validationState);
+
     virtual unsigned int nPorts(PortType portType) const;
 
     virtual NodeDataType dataType(PortType portType, PortIndex portIndex) const = 0;
@@ -231,6 +253,8 @@ private:
     bool isDragging = false;
 
     QString _remarks;
+    
+    NodeValidationState _nodeValidationState;
 };
 
 } // namespace QtNodes

@@ -105,6 +105,8 @@ public:
     }
 
     virtual NodeWidgetType getWidgetType() const { return WidgetType; }
+
+    virtual void updateNodeState(QtNodes::NodeValidationState::State state= QtNodes::NodeValidationState::State::Valid,QString message="");
 public:
     QJsonObject save() const override;
 

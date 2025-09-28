@@ -36,6 +36,29 @@ void NodeDelegateModel::setValidatonState(const NodeValidationState &validationS
     _nodeValidationState = validationState;
 }
 
+void NodeDelegateModel::updateNodeState(QtNodes::NodeValidationState::State state, QString message) {
+    QtNodes::NodeValidationState ste;
+    switch (state) {
+        case QtNodes::NodeValidationState::State::Error:
+            ste._state = QtNodes::NodeValidationState::State::Error;
+            ste._stateMessage = message.isEmpty() ? QStringLiteral("Error") : message;
+            break;
+        case QtNodes::NodeValidationState::State::Warning:
+            ste._state = QtNodes::NodeValidationState::State::Warning;
+            ste._stateMessage = message.isEmpty() ? QStringLiteral("Warning") : message;
+            break;
+        case QtNodes::NodeValidationState::State::Valid:
+            ste._state = QtNodes::NodeValidationState::State::Valid;
+            ste._stateMessage = message.isEmpty() ? QStringLiteral("Normal") : message;
+            break;
+        default:
+            ste._state = QtNodes::NodeValidationState::State::Valid;
+            ste._stateMessage = message;
+            break;
+    }
+    setValidatonState(ste);
+}
+
 ConnectionPolicy NodeDelegateModel::portConnectionPolicy(PortType portType, PortIndex) const
 {
     auto result = ConnectionPolicy::One;
@@ -245,5 +268,6 @@ std::unordered_map<QString, QWidget*> NodeDelegateModel::getOscMapping() const
 {
     return _OscMapping;
 }
+
 
 } // namespace QtNodes

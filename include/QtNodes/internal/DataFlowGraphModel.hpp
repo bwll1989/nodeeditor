@@ -87,6 +87,11 @@ public:
 
     void load(QJsonObject const &json) override;
 
+    void setModelAlias(QString newAlias) {
+        _modelAlias = newAlias;
+    }
+
+    QString modelAlias() const { return _modelAlias; }
     /**
    * Fetches the NodeDelegateModel for the given `nodeId` and tries to cast the
    * stored pointer to the given type
@@ -133,6 +138,8 @@ private:
     std::shared_ptr<NodeDelegateModelRegistry> _registry;
 
     NodeId _nextNodeId;
+
+    QString _modelAlias;
 
     std::unordered_map<NodeId, std::unique_ptr<NodeDelegateModel>> _models;
 

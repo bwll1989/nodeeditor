@@ -167,7 +167,7 @@ void NodeDelegateModel::startDrag(QWidget* widget){
     if (oscAddress.isEmpty()) return;
 
     OSCMessage message;
-    message.address = "/dataflow/" + QString::number(_nodeId) + oscAddress;
+    message.address = "/dataflow/" + _parentAlias + "/" + QString::number(_nodeId) + oscAddress;
     message.host = "127.0.0.1";
     message.port = 8991;
 

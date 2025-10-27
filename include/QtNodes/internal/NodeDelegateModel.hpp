@@ -153,6 +153,7 @@ public:
      * 获取节点ID
      */
     NodeId getNodeID() const;
+    void setParentAlias(QString alias){_parentAlias=alias;};
     /**
      * 注册控件OSC地址和Widget指针
      */
@@ -245,6 +246,10 @@ private:
      * 节点ID
      */
     NodeId _nodeId;
+    /**
+     * 所属数据模型别名
+     */
+    QString _parentAlias="Dataflow";
     /**
      * 拖拽起始位置
      */

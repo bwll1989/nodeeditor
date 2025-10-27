@@ -2,34 +2,28 @@
 
 #include <QtNodes/NodeDelegateModel>
 
+#include <QtCore/QJsonObject>
 #include <QtCore/QObject>
+#include <QtWidgets/QLabel>
 
 #include <iostream>
-#include <QLineEdit>
-#include "DecimalData.hpp"
+
+class DecimalData;
 
 using QtNodes::NodeData;
 using QtNodes::NodeDataType;
 using QtNodes::NodeDelegateModel;
 using QtNodes::PortIndex;
 using QtNodes::PortType;
+
 /// The model dictates the number of inputs and outputs for the Node.
 /// In this example it has no logic.
-class NumberDisplayDataModel : public NodeDelegateModel
+class MathOperationDataModel : public NodeDelegateModel
 {
     Q_OBJECT
 
 public:
-    NumberDisplayDataModel();
-
-    ~NumberDisplayDataModel() = default;
-
-public:
-    QString caption() const override { return QStringLiteral("Displays"); }
-
-    bool captionVisible() const override { return false; }
-
-    QString type() const override { return QStringLiteral("Displays"); }
+    ~MathOperationDataModel() = default;
 
 public:
     unsigned int nPorts(PortType portType) const override;
@@ -40,12 +34,14 @@ public:
 
     void setInData(std::shared_ptr<NodeData> data, PortIndex portIndex) override;
 
-    QWidget *embeddedWidget() override;
+    QWidget *embeddedWidget() override { return nullptr; }
 
-    double number() const;
+protected:
+    virtual void compute() = 0;
 
-private:
-    std::shared_ptr<DecimalData> _numberData;
+protected:
+    std::weak_ptr<DecimalData> _number1;
+    std::weak_ptr<DecimalData> _number2;
 
-    QLineEdit *_label;
+    std::shared_ptr<DecimalData> _result;
 };

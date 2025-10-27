@@ -51,5 +51,5 @@ private Q_SLOTS:
     void onTextEdited();
 
 private:
-    QTextEdit * _textEdit = new QTextEdit();
+    QLineEdit * _textEdit = new QLineEdit();
 };

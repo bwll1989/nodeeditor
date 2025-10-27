@@ -68,6 +68,7 @@ NodeId DataFlowGraphModel::addNode(QString const nodeType)
     if (model) {
         NodeId newId = newNodeId();
         model->setNodeID(newId);
+        model->setParentAlias(modelAlias());
         connect(model.get(),
                 &NodeDelegateModel::dataUpdated,
                 [newId, this](PortIndex const portIndex) {
@@ -322,6 +323,8 @@ QVariant DataFlowGraphModel::nodeData(NodeId nodeId, NodeRole role) const
     case NodeRole::EmbeddWidgetType:
         result=static_cast<int>(model->getWidgetType());
         break;
+    case NodeRole::ModelAlias:
+        result= modelAlias();
     default:
         break;
     }
@@ -434,6 +437,12 @@ bool DataFlowGraphModel::setNodeData(NodeId nodeId, NodeRole role, QVariant valu
         model->setRemarks(value.toString());
         Q_EMIT nodeUpdated(nodeId);
         result = true;
+    }
+            break;
+    case NodeRole::ModelAlias:{
+        auto it = _models.find(nodeId);
+        auto &model = it->second;
+        model->setParentAlias(this->modelAlias());
     }
         break;
     default:

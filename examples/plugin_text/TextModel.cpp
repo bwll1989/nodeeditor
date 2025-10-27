@@ -8,6 +8,7 @@ TextModel::TextModel()
     //
     PortEditable=true;
     Resizable=true;
+    registerOSCControl("/text", _textEdit);
 }
 
 unsigned int TextModel::nPorts(PortType portType) const
@@ -42,7 +43,7 @@ NodeDataType TextModel::dataType(PortType, PortIndex) const
 std::shared_ptr<NodeData> TextModel::outData(PortIndex const portIndex)
 {
     Q_UNUSED(portIndex);
-    return std::make_shared<TextData>(_textEdit->toPlainText());
+    return std::make_shared<TextData>(_textEdit->text());
 }
 
 QWidget *TextModel::embeddedWidget()
@@ -50,7 +51,7 @@ QWidget *TextModel::embeddedWidget()
     if (!_textEdit) {
 
 
-        connect(_textEdit, &QTextEdit::textChanged, this, &TextModel::onTextEdited);
+        connect(_textEdit, &QLineEdit::textChanged, this, &TextModel::onTextEdited);
     }
 
     return _textEdit;

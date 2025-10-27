@@ -7,7 +7,7 @@
 #include <iostream>
 #include <QLineEdit>
 #include "DecimalData.hpp"
-
+#include "ModelDataBridge.hpp"
 using QtNodes::NodeData;
 using QtNodes::NodeDataType;
 using QtNodes::NodeDelegateModel;
@@ -15,21 +15,21 @@ using QtNodes::PortIndex;
 using QtNodes::PortType;
 /// The model dictates the number of inputs and outputs for the Node.
 /// In this example it has no logic.
-class NumberDisplayDataModel : public NodeDelegateModel
+class ExportDataModel : public NodeDelegateModel
 {
     Q_OBJECT
 
 public:
-    NumberDisplayDataModel();
+    ExportDataModel();
 
-    ~NumberDisplayDataModel() = default;
+    ~ExportDataModel();
 
 public:
-    QString caption() const override { return QStringLiteral("Displays"); }
+    QString caption() const override { return QStringLiteral("Export"); }
 
-    bool captionVisible() const override { return false; }
+    bool captionVisible() const override { return true; }
 
-    QString type() const override { return QStringLiteral("Displays"); }
+    QString type() const override { return QStringLiteral("Export"); }
 
 public:
     unsigned int nPorts(PortType portType) const override;
@@ -42,10 +42,7 @@ public:
 
     QWidget *embeddedWidget() override;
 
-    double number() const;
-
+    void setRemarks(const QString& remarks) override;
 private:
-    std::shared_ptr<DecimalData> _numberData;
-
-    QLineEdit *_label;
+    std::unordered_map<PortIndex, std::shared_ptr<NodeData>> _dataMap;
 };

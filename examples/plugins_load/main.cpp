@@ -4,6 +4,7 @@
 #include <QFileDialog>
 #include <QMenuBar>
 #include <QObject>
+#include <qtabwidget.h>
 #include <QVBoxLayout>
 #include <QtNodes/DataFlowGraphModel>
 #include <QtNodes/DataFlowGraphicsScene>
@@ -62,19 +63,23 @@ int main(int argc, char *argv[])
                      &PluginsManagerDlg::openPluginsFolder);
 
     QVBoxLayout *l = new QVBoxLayout(&mainWidget);
-
-    DataFlowGraphModel dataFlowGraphModel(PluginsManager::instance()->registry());
-
+    QTabWidget *tabWidget = new QTabWidget(&mainWidget);
+    DataFlowGraphModel dataFlowGraphModel1(PluginsManager::instance()->registry());
+    dataFlowGraphModel1.setModelAlias("1");
+    DataFlowGraphModel dataFlowGraphModel2(PluginsManager::instance()->registry());
+    dataFlowGraphModel2.setModelAlias("2");
     l->addWidget(menuBar);
-    auto scene = new DataFlowGraphicsScene(dataFlowGraphModel, &mainWidget);
-
-    auto view = new GraphicsView(scene);
-
-    l->addWidget(view);
+    l->addWidget(tabWidget);
+    auto scene1 = new DataFlowGraphicsScene(dataFlowGraphModel1, &mainWidget);
+    auto view1 = new GraphicsView(scene1);
+    auto scene2 = new DataFlowGraphicsScene(dataFlowGraphModel2, &mainWidget);
+    auto view2 = new GraphicsView(scene2);
+    tabWidget->insertTab(0,view1,"1");
+    tabWidget->insertTab(0,view2,"2");
     l->setContentsMargins(0, 0, 0, 0);
     l->setSpacing(0);
 
-    QObject::connect(scene, &DataFlowGraphicsScene::sceneLoaded, view, &GraphicsView::centerScene);
+    QObject::connect(scene1, &DataFlowGraphicsScene::sceneLoaded, view1, &GraphicsView::centerScene);
 
     mainWidget.setWindowTitle("Data Flow: Plugins Load");
     mainWidget.resize(800, 600);

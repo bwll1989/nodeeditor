@@ -94,6 +94,7 @@ private:
     QAction *_copySelectionAction = nullptr;
     QAction *_pasteAction = nullptr;
     QAction *_createGroupAction = nullptr;
+    QAction *_createNewViewAction = nullptr;
     QPointF _clickPos;
     ScaleRange _scaleRange;
 };

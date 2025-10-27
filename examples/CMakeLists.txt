@@ -20,3 +20,4 @@ add_subdirectory(plugin_text)
 
 add_subdirectory(plugins_load)
 
+add_subdirectory(MultipleCalculator)

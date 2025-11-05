@@ -153,7 +153,14 @@ public:
      * 获取节点ID
      */
     NodeId getNodeID() const;
+    /**
+     * 设置父模型别名
+     */
     void setParentAlias(QString alias){_parentAlias=alias;};
+    /**
+     * 获取父模型别名
+     */
+    QString getParentAlias() const{return _parentAlias;};
     /**
      * 注册控件OSC地址和Widget指针
      */
@@ -173,20 +180,17 @@ public:
     /**
      * 设置备注
      */
-    virtual void setRemarks(const QString& remarks){
-        _remarks = remarks;
-    };
+    virtual void setRemarks(const QString& remarks);
     /**
      * 获取备注
      */
-    virtual QString getRemarks() const{
-        if (_remarks.isEmpty())
-        {
-            return type();
-        }
-        
-        return _remarks;
-    };
+    virtual QString getRemarks() const;
+
+    /**
+     * 注册节点OSC反馈
+     */
+    virtual void registerOSCFeedBack(const QString& oscAddress,QWidget* feedback);
+
 public Q_SLOTS:
 
     virtual void inputConnectionCreated(ConnectionId const &) {}
@@ -197,6 +201,7 @@ public Q_SLOTS:
 
     virtual void outputConnectionDeleted(ConnectionId const &) {}
 
+    virtual void stateFeedBack(const QString& oscAddress,QVariant value);
 Q_SIGNALS:
 
     /// Triggers the updates in the nodes downstream.
@@ -232,7 +237,6 @@ Q_SIGNALS:
 
     /// Call this function when data and port moditications are finished.
     void portsInserted();
-
 protected:
     virtual bool eventFilter(QObject* watched, QEvent* event) override;
 private:

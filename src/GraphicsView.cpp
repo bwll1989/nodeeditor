@@ -195,6 +195,12 @@ void GraphicsView::contextMenuEvent(QContextMenuEvent *event)
 
 void GraphicsView::wheelEvent(QWheelEvent *event)
 {
+    //shit, shift + wheel scroll zooms in and out
+    if (itemAt(event->position().toPoint()) && (event->modifiers() & Qt::ShiftModifier)) {
+        QGraphicsView::wheelEvent(event);
+        return;
+    }
+
     QPoint delta = event->angleDelta();
 
     if (delta.y() == 0) {

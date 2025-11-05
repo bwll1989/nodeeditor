@@ -85,7 +85,7 @@ QWidget *NumberSourceDataModel::embeddedWidget()
 
         _lineEdit->setValidator(new QDoubleValidator());
         _lineEdit->setMaximumSize(_lineEdit->sizeHint());
-
+        NodeDelegateModel::registerOSCControl("/number",_lineEdit);
         connect(_lineEdit, &QLineEdit::textChanged, this, &NumberSourceDataModel::onTextEdited);
 
         _lineEdit->setText(QString::number(_number->number()));

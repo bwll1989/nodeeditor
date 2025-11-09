@@ -73,6 +73,9 @@ protected:
 
     void hoverLeaveEvent(QGraphicsSceneHoverEvent *event) override;
 
+    void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
+
+    void keyPressEvent(QKeyEvent *event) override;
 private:
     void initializePosition();
 

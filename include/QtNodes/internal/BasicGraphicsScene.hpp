@@ -177,6 +177,7 @@ public Q_SLOTS:
 
     void onModelReset();
 
+    void centerOnNode(NodeId nodeId);
 private:
     AbstractGraphModel &_graphModel;
 

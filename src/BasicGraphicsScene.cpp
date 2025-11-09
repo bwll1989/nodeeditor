@@ -385,6 +385,13 @@ void BasicGraphicsScene::onModelReset()
     traverseGraphAndPopulateGraphicsObjects();
 }
 
+void BasicGraphicsScene::centerOnNode(NodeId nodeId) {
+    auto nodeItem = nodeGraphicsObject(nodeId);
+    if (nodeItem) {
+        views().first()->centerOn(nodeItem);
+    }
+}
+
 void BasicGraphicsScene::onNodeWidgetUpdated(NodeId const nodeId) {
     auto node = nodeGraphicsObject(nodeId);
     if (node) {

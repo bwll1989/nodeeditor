@@ -377,4 +377,70 @@ std::pair<QPointF, QPointF> ConnectionGraphicsObject::pointsC1C2Vertical() const
     return std::make_pair(c1, c2);
 }
 
+void ConnectionGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
+{
+    QMenu m_Menu;
+    QAction* focusInAction = m_Menu.addAction( "Focus Next Node");
+    focusInAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_I));
+    // focusInAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_I));  // 添加快捷键
+    connect(focusInAction, &QAction::triggered, [this]() {
+        if (auto nodeObj = nodeScene()->nodeGraphicsObject(_connectionId.inNodeId)) {
+            nodeScene()->centerOnNode(_connectionId.inNodeId);
+            nodeObj->setSelected(true);
+        }
+    });
+
+    QAction* focusOutAction = m_Menu.addAction( "Focus Previous Node");
+    focusOutAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_O));  // 添加快捷键
+    connect(focusOutAction, &QAction::triggered, [this]() {
+        if (auto nodeObj = nodeScene()->nodeGraphicsObject(_connectionId.outNodeId)) {
+           nodeScene()->centerOnNode(_connectionId.outNodeId);
+           nodeObj->setSelected(true);
+       }
+    });
+
+    auto* scene = this->scene();
+    auto views = scene ? scene->views() : QList<QGraphicsView*>();
+    if (!views.isEmpty()) {
+        auto* view = views.first();
+        // 遍历 view 的 actions
+        for (QAction* act : view->actions()) {
+            m_Menu.addAction(act);
+        }
+    }
+
+    // 显示菜单并等待用户选择
+    m_Menu.exec(event->screenPos());
+
+    // 如果用户没有选择任何项，仍然传递信号给scene
+    // if (!selectedAction) {
+    //     Q_EMIT nodeScene()->nodeContextMenu(_nodeId, mapToScene(event->pos()));
+    // }
+
+    event->accept(); // 确保事件被处理
+}
+
+void ConnectionGraphicsObject::keyPressEvent(QKeyEvent* event) {
+
+    if ((event->key() == Qt::Key_I) && (event->modifiers() & Qt::AltModifier)) {
+
+        nodeScene()->centerOnNode(_connectionId.inNodeId);
+        nodeScene()->clearSelection();
+        nodeScene()->nodeGraphicsObject(_connectionId.inNodeId)->setSelected(true);
+        event->accept();
+        return;
+    }
+    if ((event->key() == Qt::Key_O) && (event->modifiers() & Qt::AltModifier)) {
+
+        nodeScene()->centerOnNode(_connectionId.outNodeId);
+        nodeScene()->clearSelection();
+        nodeScene()->nodeGraphicsObject(_connectionId.outNodeId)->setSelected(true);
+        event->accept();
+        return;
+    }
+
+    QGraphicsObject::keyPressEvent(event);
+
+
+}
 } // namespace QtNodes

@@ -72,9 +72,12 @@ protected:
 
     void keyPressEvent(QKeyEvent *event) override;
 
-    bool eventFilter(QObject *obj, QEvent *event) override;
+    // bool eventFilter(QObject *obj, QEvent *event) override;
 
     QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
+
+    void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
+
 private:
     void updatePosition();
 

@@ -184,12 +184,13 @@ QPainterPath GroupGraphicsObject::shape() const
 }
 void GroupGraphicsObject::keyPressEvent(QKeyEvent *event)
 {
-    if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
+    // 修改条件：添加Ctrl修饰键判断
+    if ((event->key() == Qt::Key_E) && (event->modifiers() & Qt::ControlModifier)){
         startEditingRemarks();
         event->accept();
-    } else {
-        QGraphicsObject::keyPressEvent(event);
+        return;
     }
+    QGraphicsObject::keyPressEvent(event);
 }
 void GroupGraphicsObject::initRemarksEditor()
 {
@@ -255,21 +256,21 @@ void GroupGraphicsObject::finishEditingRemarks()
     update();
 }
 
-bool GroupGraphicsObject::eventFilter(QObject* watched, QEvent* event)
-{
-    if (watched == _remarksEditor) {
-        if (event->type() == QEvent::KeyPress) {
-            QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
-            if (keyEvent->key() == Qt::Key_Escape) {
-                _remarksEditor->hide();
-                _remarksEditor->setParent(nullptr);
-                this->setFocus();
-                return true;
-            }
-        }
-    }
-    return QGraphicsObject::eventFilter(watched, event);
-}
+// bool GroupGraphicsObject::eventFilter(QObject* watched, QEvent* event)
+// {
+//     if (watched == _remarksEditor) {
+//         if (event->type() == QEvent::KeyPress) {
+//             QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+//             if (keyEvent->key() == Qt::Key_Escape) {
+//                 _remarksEditor->hide();
+//                 _remarksEditor->setParent(nullptr);
+//                 this->setFocus();
+//                 return true;
+//             }
+//         }
+//     }
+//     return QGraphicsObject::eventFilter(watched, event);
+// }
 
 // 当组被取消选中时，也取消组内节点的选中状态
 QVariant GroupGraphicsObject::itemChange(GraphicsItemChange change, const QVariant &value)
@@ -392,5 +393,33 @@ void GroupGraphicsObject::onLockedState(GroupId groupId)
     if (groupId == _groupId) {
         setLockedState();
     }
+}
+void GroupGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
+{
+    QMenu m_Menu;
+    QAction* renameAction = m_Menu.addAction( "Edit Remarks");
+    renameAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));  // 添加快捷键
+    connect(renameAction, &QAction::triggered, [this]() {
+        startEditingRemarks(); // 假设这是重命名功能
+    });
+    auto* scene = this->scene();
+    auto views = scene ? scene->views() : QList<QGraphicsView*>();
+    if (!views.isEmpty()) {
+        auto* view = views.first();
+        // 遍历 view 的 actions
+        for (QAction* act : view->actions()) {
+            m_Menu.addAction(act);
+        }
+    }
+
+    // 显示菜单并等待用户选择
+     m_Menu.exec(event->screenPos());
+
+    // 如果用户没有选择任何项，仍然传递信号给scene
+    // if (!selectedAction) {
+    //     Q_EMIT nodeScene()->nodeContextMenu(_nodeId, mapToScene(event->pos()));
+    // }
+
+    event->accept(); // 确保事件被处理
 }
 } // namespace QtNodes

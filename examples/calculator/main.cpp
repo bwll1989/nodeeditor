@@ -18,6 +18,7 @@
 #include "NumberDisplayDataModel.hpp"
 #include "NumberSourceDataModel.hpp"
 #include "SubtractionModel.hpp"
+#include "MiniMapWidget.hpp"
 
 using QtNodes::ConnectionStyle;
 using QtNodes::DataFlowGraphicsScene;
@@ -95,6 +96,8 @@ int main(int argc, char *argv[])
     l->addWidget(view);
     l->setContentsMargins(0, 0, 0, 0);
     l->setSpacing(0);
+
+    // new MiniMapWidget(view);
 
     QObject::connect(saveAction, &QAction::triggered, scene, [scene, &mainWidget]() {
         if (scene->save())

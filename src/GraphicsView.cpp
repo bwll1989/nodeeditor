@@ -414,7 +414,7 @@ void GraphicsView::showEvent(QShowEvent *event)
 {
     QGraphicsView::showEvent(event);
 
-    centerScene();
+    // centerScene();
 }
 
 BasicGraphicsScene *GraphicsView::nodeScene()

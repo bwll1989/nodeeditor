@@ -3,6 +3,7 @@ set(CALC_SOURCE_FILES
   MathOperationDataModel.cpp
   NumberDisplayDataModel.cpp
   NumberSourceDataModel.cpp
+  MiniMapWidget.cpp
 )
 
 set(CALC_HEADER_FILES
@@ -13,6 +14,7 @@ set(CALC_HEADER_FILES
   NumberDisplayDataModel.hpp
   NumberSourceDataModel.hpp
   SubtractionModel.hpp
+  MiniMapWidget.hpp
 )
 
 add_executable(calculator

@@ -164,7 +164,7 @@ public:
     /**
      * 注册控件OSC地址和Widget指针
      */
-    virtual void registerOSCControl(const QString& oscAddress, QWidget* control);
+    virtual void registerOSCControl(const QString &oscAddress, QWidget *control);
     /**
      * 注销控件OSC地址和Widget指针
      */

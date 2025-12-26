@@ -334,7 +334,7 @@ void NodeDelegateModel::registerOSCFeedBack(const QString& oscAddress, QWidget* 
         });
     } else if (auto* checkBox = qobject_cast<QCheckBox*>(feedback)) {
         this->stateFeedBack(oscAddress, QVariant(checkBox->isChecked()));
-        QObject::connect(checkBox, &QCheckBox::stateChanged, this, [this, oscAddress](int state) {
+        QObject::connect(checkBox, &QCheckBox::checkStateChanged, this, [this, oscAddress](int state) {
             this->stateFeedBack(oscAddress, QVariant(state));
         });
     }

@@ -14,6 +14,7 @@ namespace QtNodes {
 struct OSCMessage {
     QString address;
     QString host;
+    QString type;
     int port;
     QVariant value;
 };
@@ -180,14 +181,19 @@ void NodeDelegateModel::startDrag(QWidget* widget){
     clipboard->setText(message.address);
     // 获取控件的值
     if (auto* button = qobject_cast<QAbstractButton*>(widget)) {
+        message.type = "Int";
         message.value = button->isChecked();
     } else if (auto* slider = qobject_cast<QAbstractSlider*>(widget)) {
+        message.type = "Float";
         message.value = slider->value();
     } else if (auto* spinBox = qobject_cast<QSpinBox*>(widget)) {
+        message.type = "Float";
         message.value = spinBox->value();
     } else if (auto* lineEdit = qobject_cast<QLineEdit*>(widget)) {
+        message.type = "String";
         message.value = lineEdit->text();
     } else if (auto* label = qobject_cast<QLabel*>(widget)) {
+        message.type = "String";
         message.value = label->text();
     } else {
         message.value = QVariant();
@@ -195,7 +201,7 @@ void NodeDelegateModel::startDrag(QWidget* widget){
 
     QByteArray itemData;
     QDataStream dataStream(&itemData, QIODevice::WriteOnly);
-    dataStream << message.host << message.port << message.address << message.value;
+    dataStream << message.host << message.port << message.address << message.type << message.value;
 
     QMimeData* mimeData = new QMimeData;
     mimeData->setData("application/x-osc-address", itemData);

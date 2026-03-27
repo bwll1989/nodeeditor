@@ -564,5 +564,29 @@ void CreateGroupCommand::redo()
         }
     }
 }
+
+//------
+
+AlignNodesCommand::AlignNodesCommand(BasicGraphicsScene *scene, std::vector<NodeMove> const &moves)
+    : _scene(scene)
+    , _moves(moves)
+{
+    setText("Align Nodes");
+}
+
+void AlignNodesCommand::undo()
+{
+    for (auto const &move : _moves) {
+        _scene->graphModel().setNodeData(move.nodeId, NodeRole::Position, move.oldPos);
+    }
+}
+
+void AlignNodesCommand::redo()
+{
+    for (auto const &move : _moves) {
+        _scene->graphModel().setNodeData(move.nodeId, NodeRole::Position, move.newPos);
+    }
+}
+
 } // namespace QtNodes
 

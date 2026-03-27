@@ -8,7 +8,7 @@ TextModel::TextModel()
     //
     PortEditable=true;
     Resizable=true;
-    registerOSCControl("/text", _textEdit);
+    registerExternalControl("/text", _textEdit);
 }
 
 unsigned int TextModel::nPorts(PortType portType) const

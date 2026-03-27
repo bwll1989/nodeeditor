@@ -73,7 +73,7 @@ void DefaultNodePainter::drawNodeRect(QPainter *painter, NodeGraphicsObject &ngo
         }
     }
 
-    float penWidth = ngo.nodeState().hovered() ? nodeStyle.HoveredPenWidth : nodeStyle.PenWidth;
+    float penWidth = ngo.nodeState().hovered() || ngo.isSelected() ? nodeStyle.HoveredPenWidth : nodeStyle.PenWidth;
     if (validationState != NodeValidationState::State::Valid) {
         float factor = (validationState == NodeValidationState::State::Error) ? 3.0f : 2.0f;
         penWidth *= factor;
@@ -93,9 +93,7 @@ void DefaultNodePainter::drawNodeRect(QPainter *painter, NodeGraphicsObject &ngo
 
     QRectF boundary(0, 0, size.width(), size.height());
 
-    double const radius = 2.0;
-
-    painter->drawRoundedRect(boundary, radius, radius);
+    painter->drawRoundedRect(boundary, nodeStyle.BoundaryRadius, nodeStyle.BoundaryRadius);
 }
 
 void DefaultNodePainter::drawConnectionPoints(QPainter *painter, NodeGraphicsObject &ngo) const
@@ -160,7 +158,6 @@ void DefaultNodePainter::drawConnectionPoints(QPainter *painter, NodeGraphicsObj
             } else {
                 painter->setBrush(nodeStyle.ConnectionPointColor);
             }
-
             painter->drawEllipse(p, reducedDiameter * r, reducedDiameter * r);
         }
     }
@@ -207,7 +204,6 @@ void DefaultNodePainter::drawFilledConnectionPoints(QPainter *painter, NodeGraph
                     painter->setPen(nodeStyle.FilledConnectionPointColor);
                     painter->setBrush(nodeStyle.FilledConnectionPointColor);
                 }
-
                 painter->drawEllipse(p, diameter * 0.4, diameter * 0.4);
             }
         }
@@ -232,13 +228,15 @@ void DefaultNodePainter::drawNodeCaption(QPainter *painter, NodeGraphicsObject &
 
     QJsonDocument json = QJsonDocument::fromVariant(model.nodeData(nodeId, NodeRole::Style));
     NodeStyle nodeStyle(json.object());
+    auto offset=ngo.nodeState().hovered() || ngo.isSelected() ? nodeStyle.HoveredPenWidth : nodeStyle.PenWidth;
     // draw caption color
-    painter->drawRoundedRect(0,
-        0,
-        geometry.size(nodeId).width(),
-        geometry.captionPosition(nodeId).y()*2-geometry.captionRect(nodeId).height(),
-        2.0,
-        2.0);
+    painter->setPen(Qt::NoPen);
+    painter->drawRoundedRect(offset,
+        offset,
+        geometry.size(nodeId).width()-2*offset,
+        geometry.captionPosition(nodeId).y()*2-geometry.captionRect(nodeId).height()-offset,
+        nodeStyle.BoundaryRadius-offset,
+        nodeStyle.BoundaryRadius-offset);
     painter->setFont(f);
     painter->setPen(nodeStyle.FontColor);
     painter->drawText(position, name);

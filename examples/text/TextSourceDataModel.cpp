@@ -50,7 +50,7 @@ QWidget *TextSourceDataModel::embeddedWidget()
 {
     if (!_lineEdit) {
         _lineEdit = new QLineEdit("Default Text"),
-        NodeDelegateModel::registerOSCControl("/text",_lineEdit);
+        NodeDelegateModel::registerExternalControl("/text",_lineEdit);
         connect(_lineEdit, &QLineEdit::textEdited, this, &TextSourceDataModel::onTextEdited);
     }
 

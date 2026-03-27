@@ -18,7 +18,7 @@ EntranceDataModel::EntranceDataModel()
     WidgetEmbeddable= true;
     Resizable=false;
     PortEditable= true;
-    registerOSCControl("/number",_inputSelector);
+    registerExternalControl("/number",_inputSelector);
     setRemarks("Out");
     ModelDataBridge::instance().registerEntranceDelegate(this);
     connect(_inputSelector,&QComboBox::currentTextChanged,this,&EntranceDataModel::setRemarks);

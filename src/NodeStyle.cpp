@@ -1,14 +1,12 @@
 #include "NodeStyle.hpp"
 
-#include <iostream>
+#include "StyleCollection.hpp"
 
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonObject>
 #include <QtCore/QJsonValueRef>
 
 #include <QtCore/QDebug>
-
-#include "StyleCollection.hpp"
 
 using QtNodes::NodeStyle;
 
@@ -124,7 +122,7 @@ void NodeStyle::loadJson(QJsonObject const &json)
     NODE_STYLE_READ_FLOAT(obj, PenWidth);
     NODE_STYLE_READ_FLOAT(obj, HoveredPenWidth);
     NODE_STYLE_READ_FLOAT(obj, ConnectionPointDiameter);
-
+    NODE_STYLE_READ_FLOAT(obj, BoundaryRadius);
     NODE_STYLE_READ_FLOAT(obj, Opacity);
 }
 
@@ -150,7 +148,7 @@ QJsonObject NodeStyle::toJson() const
     NODE_STYLE_WRITE_FLOAT(obj, PenWidth);
     NODE_STYLE_WRITE_FLOAT(obj, HoveredPenWidth);
     NODE_STYLE_WRITE_FLOAT(obj, ConnectionPointDiameter);
-
+    NODE_STYLE_WRITE_FLOAT(obj, BoundaryRadius);
     NODE_STYLE_WRITE_FLOAT(obj, Opacity);
 
     QJsonObject root;

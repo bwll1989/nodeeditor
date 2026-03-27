@@ -47,7 +47,7 @@ public:
 
     float PenWidth;
     float HoveredPenWidth;
-
+    float BoundaryRadius;
     float ConnectionPointDiameter;
 
     float Opacity;

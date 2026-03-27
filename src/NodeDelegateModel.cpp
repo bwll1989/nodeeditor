@@ -237,7 +237,7 @@ void NodeDelegateModel::startDrag(QWidget* widget){
 /**
  * 注册OSC地址和控件
  */
-void NodeDelegateModel::registerOSCControl(const QString& oscAddress, QWidget* control)
+void NodeDelegateModel::registerExternalControl(const QString& oscAddress, QWidget* control)
 {
     // 如果oscAddress不以"/"开头，则不注册
     if (!oscAddress.startsWith("/")) return;
@@ -252,14 +252,14 @@ void NodeDelegateModel::registerOSCControl(const QString& oscAddress, QWidget* c
     control->installEventFilter(this);
     // control->setMouseTracking(true);
     _OscMapping[oscAddress] = control;
-    registerOSCFeedBack(oscAddress,control);
+    // registerOSCFeedBack(oscAddress,control);
     // 绑定控件销毁时自动注销
     QObject::connect(control, &QObject::destroyed, this, [this, oscAddress]() {
-        this->unregisterOSCControl(oscAddress);
+        this->unregisterExternalControl(oscAddress);
     });
 }
 
-void NodeDelegateModel::unregisterOSCControl(const QString& oscAddress)
+void NodeDelegateModel::unregisterExternalControl(const QString& oscAddress)
 {
     if (!oscAddress.startsWith("/")) return;
     auto it = _OscMapping.find(oscAddress);
@@ -271,7 +271,7 @@ void NodeDelegateModel::unregisterOSCControl(const QString& oscAddress)
 /**
  * 获取OSC地址对应的控件
  */
-QWidget* NodeDelegateModel::getWidgetFromOSCAddress(const QString& oscAddress) const
+QWidget* NodeDelegateModel::getWidgetFromAddress(const QString& oscAddress) const
 {
     auto it = _OscMapping.find(oscAddress);
     return it != _OscMapping.end() ? it->second : nullptr;
@@ -280,7 +280,7 @@ QWidget* NodeDelegateModel::getWidgetFromOSCAddress(const QString& oscAddress) c
 /**
  * 获取OSC地址和控件的映射
  */
-std::unordered_map<QString, QWidget*> NodeDelegateModel::getOscMapping() const
+std::unordered_map<QString, QWidget*> NodeDelegateModel::getExternalControlAddressMapping() const
 {
     return _OscMapping;
 }
@@ -297,58 +297,10 @@ QString NodeDelegateModel::getRemarks() const{
 
     return _remarks;
 }
-
-
-void NodeDelegateModel::registerOSCFeedBack(const QString& oscAddress, QWidget* feedback)
-{
-
-    // 绑定值变化信号到 stateFeedBack
-    if (auto* button = qobject_cast<QAbstractButton*>(feedback)) {
-        if (button->isCheckable()){
-            this->stateFeedBack(oscAddress, QVariant(button->isChecked()));
-            QObject::connect(button, &QAbstractButton::toggled, this, [this, oscAddress](bool checked) {
-                this->stateFeedBack(oscAddress, QVariant(checked));
-            });
-        }else {
-            QObject::connect(button, &QAbstractButton::pressed, this, [this, oscAddress]() {
-            this->stateFeedBack(oscAddress, QVariant(1));
-        });
-            QObject::connect(button, &QAbstractButton::released, this, [this, oscAddress]() {
-            this->stateFeedBack(oscAddress, QVariant(0));
-        });
-        }
-
-    } else if (auto* slider = qobject_cast<QAbstractSlider*>(feedback)) {
-        this->stateFeedBack(oscAddress, QVariant(slider->value()));
-        QObject::connect(slider, &QAbstractSlider::valueChanged, this, [this, oscAddress](int value) {
-            this->stateFeedBack(oscAddress, QVariant(value));
-        });
-    } else if (auto* spinBox = qobject_cast<QSpinBox*>(feedback)) {
-        this->stateFeedBack(oscAddress, QVariant(spinBox->value()));
-        QObject::connect(spinBox, QOverload<int>::of(&QSpinBox::valueChanged), this, [this, oscAddress](int value) {
-            this->stateFeedBack(oscAddress, QVariant(value));
-        });
-    } else if (auto* lineEdit = qobject_cast<QLineEdit*>(feedback)) {
-        this->stateFeedBack(oscAddress, QVariant(lineEdit->text()));
-        QObject::connect(lineEdit, &QLineEdit::textChanged, this, [this, oscAddress](const QString& text) {
-            this->stateFeedBack(oscAddress, QVariant(text));
-        });
-    } else if (auto* comboBox = qobject_cast<QComboBox*>(feedback)) {
-        this->stateFeedBack(oscAddress, QVariant(comboBox->currentIndex()));
-        QObject::connect(comboBox, &QComboBox::currentIndexChanged, this, [this, oscAddress](int value) {
-            this->stateFeedBack(oscAddress, QVariant(value));
-        });
-    } else if (auto* checkBox = qobject_cast<QCheckBox*>(feedback)) {
-        this->stateFeedBack(oscAddress, QVariant(checkBox->isChecked()));
-        QObject::connect(checkBox, &QCheckBox::checkStateChanged, this, [this, oscAddress](int state) {
-            this->stateFeedBack(oscAddress, QVariant(state));
-        });
-    }
-}
-
 void NodeDelegateModel::stateFeedBack(const QString& oscAddress,QVariant value)
 {
     qDebug() << "stateFeedBack function undefined" << oscAddress << value;
 }
+
 }
 // namespace QtNodes

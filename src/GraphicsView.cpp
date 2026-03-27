@@ -151,6 +151,36 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
 
         connect(_createGroupAction, &QAction::triggered, this, &GraphicsView::onCreateGroup);
         addAction(_createGroupAction);
+
+    }
+    {
+        delete _alignTopAction;
+        _alignTopAction = new QAction(QStringLiteral("Align Top"), this);
+        _alignTopAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
+        _alignTopAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Up));
+        connect(_alignTopAction, &QAction::triggered, this, &GraphicsView::onAlignTop);
+        addAction(_alignTopAction);
+
+        delete _alignBottomAction;
+        _alignBottomAction = new QAction(QStringLiteral("Align Bottom"), this);
+        _alignBottomAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
+        _alignBottomAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Down));
+        connect(_alignBottomAction, &QAction::triggered, this, &GraphicsView::onAlignBottom);
+        addAction(_alignBottomAction);
+
+        delete _alignLeftAction;
+        _alignLeftAction = new QAction(QStringLiteral("Align Left"), this);
+        _alignLeftAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
+        _alignLeftAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Left));
+        connect(_alignLeftAction, &QAction::triggered, this, &GraphicsView::onAlignLeft);
+        addAction(_alignLeftAction);
+
+        delete _alignRightAction;
+        _alignRightAction = new QAction(QStringLiteral("Align Right"), this);
+        _alignRightAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
+        _alignRightAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Right));
+        connect(_alignRightAction, &QAction::triggered, this, &GraphicsView::onAlignRight);
+        addAction(_alignRightAction);
     }
     auto undoAction = scene->undoStack().createUndoAction(this, tr("&Undo"));
     undoAction->setShortcuts(QKeySequence::Undo);
@@ -320,6 +350,146 @@ void GraphicsView::onCreateGroup()
 
     nodeScene()->undoStack().push(new CreateGroupCommand(nodeScene()));
 
+}
+
+void GraphicsView::onAlignTop()
+{
+    auto scene = nodeScene();
+    if (!scene) return;
+
+    std::vector<NodeGraphicsObject*> nodes;
+    for (QGraphicsItem *item : scene->selectedItems()) {
+        if (auto n = qgraphicsitem_cast<NodeGraphicsObject *>(item)) {
+            nodes.push_back(n);
+        }
+    }
+
+    if (nodes.size() < 2) return;
+
+    double minY = std::numeric_limits<double>::max();
+    for (auto n : nodes) {
+        QPointF pos = scene->graphModel().nodeData(n->nodeId(), NodeRole::Position).value<QPointF>();
+        minY = std::min(minY, pos.y());
+    }
+
+    std::vector<AlignNodesCommand::NodeMove> moves;
+    for (auto n : nodes) {
+        QPointF oldPos = scene->graphModel().nodeData(n->nodeId(), NodeRole::Position).value<QPointF>();
+        QPointF newPos(oldPos.x(), minY);
+        if (oldPos != newPos) {
+            moves.push_back({n->nodeId(), oldPos, newPos});
+        }
+    }
+
+    if (!moves.empty()) {
+        scene->undoStack().push(new AlignNodesCommand(scene, moves));
+    }
+}
+
+void GraphicsView::onAlignBottom()
+{
+    auto scene = nodeScene();
+    if (!scene) return;
+
+    std::vector<NodeGraphicsObject*> nodes;
+    for (QGraphicsItem *item : scene->selectedItems()) {
+        if (auto n = qgraphicsitem_cast<NodeGraphicsObject *>(item)) {
+            nodes.push_back(n);
+        }
+    }
+
+    if (nodes.size() < 2) return;
+
+    double maxBottom = std::numeric_limits<double>::lowest();
+    for (auto n : nodes) {
+        QPointF pos = scene->graphModel().nodeData(n->nodeId(), NodeRole::Position).value<QPointF>();
+        QSize size = scene->graphModel().nodeData(n->nodeId(), NodeRole::Size).value<QSize>();
+        maxBottom = std::max(maxBottom, pos.y() + size.height());
+    }
+
+    std::vector<AlignNodesCommand::NodeMove> moves;
+    for (auto n : nodes) {
+        QPointF oldPos = scene->graphModel().nodeData(n->nodeId(), NodeRole::Position).value<QPointF>();
+        QSize size = scene->graphModel().nodeData(n->nodeId(), NodeRole::Size).value<QSize>();
+        QPointF newPos(oldPos.x(), maxBottom - size.height());
+        if (oldPos != newPos) {
+            moves.push_back({n->nodeId(), oldPos, newPos});
+        }
+    }
+
+    if (!moves.empty()) {
+        scene->undoStack().push(new AlignNodesCommand(scene, moves));
+    }
+}
+
+void GraphicsView::onAlignLeft()
+{
+    auto scene = nodeScene();
+    if (!scene) return;
+
+    std::vector<NodeGraphicsObject*> nodes;
+    for (QGraphicsItem *item : scene->selectedItems()) {
+        if (auto n = qgraphicsitem_cast<NodeGraphicsObject *>(item)) {
+            nodes.push_back(n);
+        }
+    }
+
+    if (nodes.size() < 2) return;
+
+    double minX = std::numeric_limits<double>::max();
+    for (auto n : nodes) {
+        QPointF pos = scene->graphModel().nodeData(n->nodeId(), NodeRole::Position).value<QPointF>();
+        minX = std::min(minX, pos.x());
+    }
+
+    std::vector<AlignNodesCommand::NodeMove> moves;
+    for (auto n : nodes) {
+        QPointF oldPos = scene->graphModel().nodeData(n->nodeId(), NodeRole::Position).value<QPointF>();
+        QPointF newPos(minX, oldPos.y());
+        if (oldPos != newPos) {
+            moves.push_back({n->nodeId(), oldPos, newPos});
+        }
+    }
+
+    if (!moves.empty()) {
+        scene->undoStack().push(new AlignNodesCommand(scene, moves));
+    }
+}
+
+void GraphicsView::onAlignRight()
+{
+    auto scene = nodeScene();
+    if (!scene) return;
+
+    std::vector<NodeGraphicsObject*> nodes;
+    for (QGraphicsItem *item : scene->selectedItems()) {
+        if (auto n = qgraphicsitem_cast<NodeGraphicsObject *>(item)) {
+            nodes.push_back(n);
+        }
+    }
+
+    if (nodes.size() < 2) return;
+
+    double maxRight = std::numeric_limits<double>::lowest();
+    for (auto n : nodes) {
+        QPointF pos = scene->graphModel().nodeData(n->nodeId(), NodeRole::Position).value<QPointF>();
+        QSize size = scene->graphModel().nodeData(n->nodeId(), NodeRole::Size).value<QSize>();
+        maxRight = std::max(maxRight, pos.x() + size.width());
+    }
+
+    std::vector<AlignNodesCommand::NodeMove> moves;
+    for (auto n : nodes) {
+        QPointF oldPos = scene->graphModel().nodeData(n->nodeId(), NodeRole::Position).value<QPointF>();
+        QSize size = scene->graphModel().nodeData(n->nodeId(), NodeRole::Size).value<QSize>();
+        QPointF newPos(maxRight - size.width(), oldPos.y());
+        if (oldPos != newPos) {
+            moves.push_back({n->nodeId(), oldPos, newPos});
+        }
+    }
+
+    if (!moves.empty()) {
+        scene->undoStack().push(new AlignNodesCommand(scene, moves));
+    }
 }
 
 void GraphicsView::keyPressEvent(QKeyEvent *event)

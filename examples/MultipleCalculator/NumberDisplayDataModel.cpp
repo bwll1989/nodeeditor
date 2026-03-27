@@ -56,7 +56,7 @@ QWidget *NumberDisplayDataModel::embeddedWidget()
 {
     if (!_label) {
         _label = new QLineEdit();
-        registerOSCControl("/number",_label);
+        registerExternalControl("/number",_label);
     }
 
     return _label;

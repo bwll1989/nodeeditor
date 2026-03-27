@@ -136,8 +136,10 @@ public:
    * @returns Port Data Type, Port Data, Connection Policy, Port
    * Caption.
    */
-    virtual QVariant portData(NodeId nodeId, PortType portType, PortIndex index, PortRole role) const
-        = 0;
+    virtual QVariant portData(NodeId nodeId,
+                              PortType portType,
+                              PortIndex index,
+                              PortRole role) const = 0;
 
     /**
    * A utility function that unwraps the `QVariant` value returned from the

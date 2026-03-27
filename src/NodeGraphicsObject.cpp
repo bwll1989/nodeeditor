@@ -507,20 +507,12 @@ void NodeGraphicsObject::keyPressEvent(QKeyEvent* event)
 
 void NodeGraphicsObject::initRemarksEditor()
 {
+    QJsonObject nodeStyleJson = _graphModel.nodeData(_nodeId, NodeRole::Style).toJsonObject();
+
+    NodeStyle nodeStyle(nodeStyleJson);
+    auto fontColor= nodeStyle.FontColor;
     if (!_remarksEditor) {
         _remarksEditor = new QLineEdit();
-        _remarksEditor->setStyleSheet(
-            "QLineEdit {"
-            "  background-color: #2D2D2D;"
-            "  border: 1px solid #4D4D4D;"
-            "  border-radius: 3px;"
-            "  color: white;"
-            "  padding: 2px 6px;"
-            "}"
-            "QLineEdit:focus {"
-            "  border: 1px solid #6D6D6D;"
-            "}"
-        );
         
         connect(_remarksEditor, &QLineEdit::editingFinished,
                 this, &NodeGraphicsObject::finishEditingRemarks);
@@ -540,8 +532,15 @@ void NodeGraphicsObject::startEditingRemarks()
     // 设置编辑器位置和大小
     auto* scene = static_cast<BasicGraphicsScene*>(this->scene());
     auto& geometry = scene->nodeGeometry();
-  
-    QRectF captionRect = QRectF(0,0,geometry.size(_nodeId).width()-1, geometry.captionPosition(_nodeId).y()*2-geometry.captionRect(_nodeId).height()-1);
+    QJsonObject nodeStyleJson = _graphModel.nodeData(_nodeId, NodeRole::Style).toJsonObject();
+
+    NodeStyle nodeStyle(nodeStyleJson);
+    // QRectF captionRect = QRectF(0,0,geometry.size(_nodeId).width()-20, geometry.captionPosition(_nodeId).y()*2-geometry.captionRect(_nodeId).height());
+    // QRectF captionRect=QRectF(10,
+    //     nodeStyle.HoveredPenWidth,
+    //     geometry.size(_nodeId).width()-20,
+    //     geometry.captionPosition(_nodeId).y()*2-geometry.captionRect(_nodeId).height()-nodeStyle.HoveredPenWidth*2);
+    QRectF captionRect = QRectF(0,-geometry.captionRect(_nodeId).height()*2,geometry.size(_nodeId).width(), geometry.captionRect(_nodeId).height()*2);
     QRectF sceneRect = mapToScene(captionRect).boundingRect();
     
     _remarksEditor->setText(currentRemarks);

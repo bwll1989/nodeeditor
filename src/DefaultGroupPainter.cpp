@@ -43,7 +43,7 @@ void DefaultGroupPainter::drawGroupRect(QPainter *painter, GroupGraphicsObject c
      }
 
     QRectF boundary(0, 0, ggo.boundingRect().width(), ggo.boundingRect().height());
-    double const radius = 2.0;
+
     QLinearGradient gradient(QPointF(0.0, 0.0), QPointF(2.0, ggo.boundingRect().height()));
 
     gradient.setColorAt(0.0, groupStyle.GradientColor0);
@@ -52,7 +52,7 @@ void DefaultGroupPainter::drawGroupRect(QPainter *painter, GroupGraphicsObject c
     gradient.setColorAt(1.0, groupStyle.GradientColor3);
 
     painter->setBrush(gradient);
-    painter->drawRoundedRect(boundary, radius, radius);
+    painter->drawRoundedRect(boundary, groupStyle.BoundaryRadius, groupStyle.BoundaryRadius);
 
 }
 

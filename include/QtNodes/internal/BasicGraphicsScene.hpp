@@ -1,5 +1,13 @@
 #pragma once
 
+#include "AbstractGraphModel.hpp"
+#include "AbstractNodeGeometry.hpp"
+#include "ConnectionIdHash.hpp"
+#include "Definitions.hpp"
+#include "Export.hpp"
+
+#include "QUuidStdHash.hpp"
+
 #include <QtCore/QUuid>
 #include <QtWidgets/QGraphicsScene>
 #include <QtWidgets/QMenu>
@@ -9,13 +17,8 @@
 #include <tuple>
 #include <unordered_map>
 
-#include "AbstractGraphModel.hpp"
-#include "AbstractNodeGeometry.hpp"
-#include "ConnectionIdHash.hpp"
-#include "Definitions.hpp"
-#include "Export.hpp"
+
 #include "GroupIdHash.hpp"
-#include "QUuidStdHash.hpp"
 #include "GroupGraphicsObject.hpp"
 #include "AbstractGroupPainter.hpp"
 class QUndoStack;
@@ -47,9 +50,9 @@ public:
     /// @returns associated AbstractGraphModel.
     AbstractGraphModel const &graphModel() const;
 
-    AbstractNodeGeometry const &nodeGeometry() const;
-
     AbstractGraphModel &graphModel();
+
+    AbstractNodeGeometry const &nodeGeometry() const;
 
     AbstractNodeGeometry &nodeGeometry();
 

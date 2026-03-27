@@ -35,6 +35,7 @@ public:
     QColor CaptionColor;
     float PenWidth;
     float HoveredPenWidth;
+    float BoundaryRadius;
     bool UseDataDefinedColors;
     float Opacity;
     float CaptionHeight;

@@ -61,6 +61,11 @@ public Q_SLOTS:
     void onPasteObjects();
 
     void onCreateGroup();
+
+    void onAlignTop();
+    void onAlignBottom();
+    void onAlignLeft();
+    void onAlignRight();
 Q_SIGNALS:
     void scaleChanged(double scale);
 
@@ -95,6 +100,11 @@ private:
     QAction *_pasteAction = nullptr;
     QAction *_createGroupAction = nullptr;
     QAction *_createNewViewAction = nullptr;
+    
+    QAction *_alignTopAction = nullptr;
+    QAction *_alignBottomAction = nullptr;
+    QAction *_alignLeftAction = nullptr;
+    QAction *_alignRightAction = nullptr;
     QPointF _clickPos;
     ScaleRange _scaleRange;
 };

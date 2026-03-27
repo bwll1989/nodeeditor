@@ -2,6 +2,9 @@
 
 #include <memory>
 
+#include <QMetaType>
+#include <QPixmap>
+#include <QtGui/QColor>
 #include <QtWidgets/QWidget>
 
 #include "Definitions.hpp"
@@ -96,7 +99,7 @@ public:
     
     /// Validation State will default to Valid, but you can manipulate it by overriding in an inherited class
     virtual NodeValidationState validationState() const { return _nodeValidationState; }
-    
+
     virtual bool portEditable() const { return PortEditable; }
 
     virtual void setEmbeddWidgetType(NodeWidgetType widgetType) {
@@ -164,19 +167,19 @@ public:
     /**
      * 注册控件OSC地址和Widget指针
      */
-    virtual void registerOSCControl(const QString &oscAddress, QWidget *control);
+    virtual void registerExternalControl(const QString &oscAddress, QWidget *control);
     /**
      * 注销控件OSC地址和Widget指针
      */
-    virtual void unregisterOSCControl(const QString& oscAddress);
+    virtual void unregisterExternalControl(const QString& oscAddress);
     /**
      * 获取控件OSC地址和Widget指针
      */
-    virtual QWidget* getWidgetFromOSCAddress(const QString& oscAddress) const;
+    virtual QWidget* getWidgetFromAddress(const QString& oscAddress) const;
     /**
      * 获取OSC地址和控件的映射
      */
-    virtual std::unordered_map<QString, QWidget*> getOscMapping() const;
+    virtual std::unordered_map<QString, QWidget*> getExternalControlAddressMapping() const;
     /**
      * 设置备注
      */
@@ -189,7 +192,7 @@ public:
     /**
      * 注册节点OSC反馈
      */
-    virtual void registerOSCFeedBack(const QString& oscAddress,QWidget* feedback);
+    // virtual void registerOSCFeedBack(const QString& oscAddress,QWidget* feedback);
 
 public Q_SLOTS:
 

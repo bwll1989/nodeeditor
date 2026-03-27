@@ -1,10 +1,11 @@
 #pragma once
 
 #include "Definitions.hpp"
+#include "Export.hpp"
 
-#include <QUndoCommand>
 #include <QtCore/QJsonObject>
 #include <QtCore/QPointF>
+#include <QUndoCommand>
 
 #include <unordered_set>
 
@@ -133,4 +134,24 @@ private:
     GroupId _groupId;
     bool _firstRun;  // 添加跟踪标志
 };
+
+class NODE_EDITOR_PUBLIC AlignNodesCommand : public QUndoCommand
+{
+public:
+    struct NodeMove {
+        NodeId nodeId;
+        QPointF oldPos;
+        QPointF newPos;
+    };
+
+    AlignNodesCommand(BasicGraphicsScene *scene, std::vector<NodeMove> const &moves);
+
+    void undo() override;
+    void redo() override;
+
+private:
+    BasicGraphicsScene *_scene;
+    std::vector<NodeMove> _moves;
+};
+
 } // namespace QtNodes

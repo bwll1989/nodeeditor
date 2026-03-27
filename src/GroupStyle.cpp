@@ -119,6 +119,7 @@ void GroupStyle::loadJson(QJsonObject const &json)
     GROUP_STYLE_READ_COLOR(obj, FontColor);
     GROUP_STYLE_READ_FLOAT(obj, PenWidth);
     GROUP_STYLE_READ_FLOAT(obj, HoveredPenWidth);
+    GROUP_STYLE_READ_FLOAT(obj, BoundaryRadius);
     GROUP_STYLE_READ_BOOL(obj, UseDataDefinedColors);
     GROUP_STYLE_READ_FLOAT(obj,CaptionHeight)
 
@@ -137,6 +138,7 @@ QJsonObject GroupStyle::toJson() const
     GROUP_STYLE_WRITE_COLOR(obj, FontColor);
     GROUP_STYLE_WRITE_FLOAT(obj, PenWidth);
     GROUP_STYLE_WRITE_FLOAT(obj, HoveredPenWidth);
+    GROUP_STYLE_WRITE_FLOAT(obj, BoundaryRadius);
     GROUP_STYLE_WRITE_BOOL(obj,  UseDataDefinedColors);
     GROUP_STYLE_WRITE_FLOAT(obj, Opacity);
     GROUP_STYLE_WRITE_FLOAT(obj,CaptionHeight)

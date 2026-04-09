@@ -141,6 +141,7 @@ struct GroupId
 {
     std::vector<NodeId> nodeIds;
     QString groupRemarks="Untitled group";
+    bool collapsed = false;
 //    std::vector<ConnectionId> connectionIds;
 };
 

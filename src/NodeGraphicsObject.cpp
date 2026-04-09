@@ -231,6 +231,8 @@ QVariant NodeGraphicsObject::itemChange(GraphicsItemChange change, const QVarian
 
 void NodeGraphicsObject::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
+    _pressedOnCaption = false;
+
     if (graphModel().nodeFlags(_nodeId) & NodeFlag::Locked) {
         return;
     }
@@ -291,6 +293,25 @@ void NodeGraphicsObject::mousePressEvent(QGraphicsSceneMouseEvent *event)
         _nodeState.setResizing(hit);
     }
 
+    // 如果当前不处于调整大小状态
+    if (!_nodeState.resizing()) {
+        // 获取节点标题是否可见的标志
+        bool const captionVisible = _graphModel.nodeData<bool>(_nodeId, NodeRole::CaptionVisible);
+
+        // 如果标题不可见，则认为点击发生在标题区域
+        if (!captionVisible) {
+            _pressedOnCaption = true;
+        } else {
+            // 计算标题栏的高度：标题位置Y坐标的两倍减去标题矩形的高度
+            QSize const size = geometry.size(_nodeId);
+            qreal const titleHeight = geometry.captionPosition(_nodeId).y() * 2.0 - geometry.captionRect(_nodeId).height();
+            // 构建标题栏矩形区域，确保高度不小于0
+            QRectF const titleRect(0.0, 0.0, size.width(), std::max<qreal>(0.0, titleHeight));
+            // 判断鼠标点击位置是否在标题栏矩形内
+            _pressedOnCaption = titleRect.contains(event->pos());
+        }
+    }
+
     if (!event->isAccepted()) {
         QGraphicsObject::mousePressEvent(event);
     }
@@ -302,6 +323,11 @@ void NodeGraphicsObject::mousePressEvent(QGraphicsSceneMouseEvent *event)
 
 void NodeGraphicsObject::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
+    if (!_pressedOnCaption && !_nodeState.resizing()) {
+        event->ignore();
+        return;
+    }
+
     // Deselect all other items after this one is selected.
     // Unless we press a CTRL button to add the item to the selected group before
     // starting moving.
@@ -353,6 +379,7 @@ void NodeGraphicsObject::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 
 void NodeGraphicsObject::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
+    _pressedOnCaption = false;
     _nodeState.setResizing(false);
 
     if (!event->isAccepted()) {
@@ -429,6 +456,10 @@ void NodeGraphicsObject::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 
 void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 {
+    if (_graphModel.nodeFlags(_nodeId).testFlag(NodeFlag::Locked)) {
+        event->ignore();
+        return;
+    }
 
 
 
@@ -489,6 +520,10 @@ void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 
 void NodeGraphicsObject::keyPressEvent(QKeyEvent* event)
 {
+    if (_graphModel.nodeFlags().testFlag(NodeFlag::Locked)) {
+        event->ignore();
+        return;
+    }
     // 修改条件：添加Ctrl修饰键判断
     if ((event->key() == Qt::Key_E) && (event->modifiers() & Qt::ControlModifier)){
         startEditingRemarks();

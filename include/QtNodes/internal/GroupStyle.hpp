@@ -33,11 +33,15 @@ public:
     QColor GradientColor2;
     QColor GradientColor3;
     QColor CaptionColor;
+    QColor PortColor;
+    float PortHeight;
+    float PortWidth;
     float PenWidth;
     float HoveredPenWidth;
     float BoundaryRadius;
     bool UseDataDefinedColors;
     float Opacity;
     float CaptionHeight;
+    float CollapsedHeight;
 };
 } // namespace QtNodes

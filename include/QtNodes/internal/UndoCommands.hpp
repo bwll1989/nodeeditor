@@ -8,6 +8,7 @@
 #include <QUndoCommand>
 
 #include <unordered_set>
+#include <vector>
 
 namespace QtNodes {
 
@@ -101,6 +102,10 @@ class NODE_EDITOR_PUBLIC MoveNodeCommand : public QUndoCommand
 public:
     MoveNodeCommand(BasicGraphicsScene *scene, QPointF const &diff);
 
+    MoveNodeCommand(BasicGraphicsScene *scene,
+                    QPointF const &diff,
+                    std::unordered_set<NodeId> selectedNodes);
+
     void undo() override;
     void redo() override;
 
@@ -133,6 +138,25 @@ private:
     BasicGraphicsScene *_scene;
     GroupId _groupId;
     bool _firstRun;  // 添加跟踪标志
+};
+
+class NODE_EDITOR_PUBLIC RemoveFromGroupCommand : public QUndoCommand
+{
+public:
+    explicit RemoveFromGroupCommand(BasicGraphicsScene *scene);
+
+    void undo() override;
+    void redo() override;
+
+private:
+    struct GroupChange {
+        GroupId before;
+        GroupId after;
+        bool deleted;
+    };
+
+    BasicGraphicsScene *_scene;
+    std::vector<GroupChange> _changes;
 };
 
 class NODE_EDITOR_PUBLIC AlignNodesCommand : public QUndoCommand

@@ -8,7 +8,9 @@
 #include "Definitions.hpp"
 #include <QtWidgets/QLineEdit>
 #include <QKeyEvent>
+
 class QGraphicsSceneMouseEvent;
+class QTimer;
 
 namespace QtNodes {
 
@@ -43,7 +45,13 @@ public:
         _groupId.groupRemarks = std::move(remarks);
     }
 
+    bool isCollapsed() const { return _collapsed; }
+
+    QPointF collapsedPortScenePosition(PortType portType) const;
+
     QRectF boundingRect() const override;
+
+    QRectF contentRect() const { return _rect; }
 
     QPainterPath shape() const override;
 
@@ -53,6 +61,8 @@ public:
     GroupId groupId() const {
 //        qDebug() << "groupId: "<< _groupId.nodeIds.size() ;
         return _groupId; }
+
+    void applyGroupId(GroupId const &groupId);
 protected:
     void paint(QPainter *painter,
                QStyleOptionGraphicsItem const *option,
@@ -89,6 +99,12 @@ private:
 
     void finishEditingRemarks();
 
+    void setCollapsed(bool collapsed, bool updateModel = true);
+
+    void setGroupItemsVisible(bool visible);
+
+    void scheduleGroupBoundsUpdate();
+
     void updateGroupBounds();
 
     void onNodePositionUpdated(NodeId nodeId);
@@ -106,6 +122,12 @@ private:
     QRectF _rect;
     QLineEdit* _remarksEditor = nullptr;
     QString _remarks="Group";
+
+    bool _pressedOnCaption = false;
+    bool _collapsed = false;
+    bool _lockForcesCollapse = false;
+    bool _collapsedBeforeLock = false;
+    QTimer* _boundsUpdateTimer = nullptr;
 };
 
 } // namespace QtNodes

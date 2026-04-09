@@ -3,6 +3,7 @@
 #include "GroupIdHash.hpp"
 #include <QJsonArray>
 
+#include <algorithm>
 #include <stdexcept>
 
 namespace QtNodes {
@@ -693,15 +694,6 @@ void DataFlowGraphModel::load(QJsonObject const &jsonDocument)
         loadNode(nodeJson.toObject());
     }
 
-    // 再加载所有连�?    
-    QJsonArray connectionJsonArray = jsonDocument["connections"].toArray();
-    for (QJsonValueRef connection : connectionJsonArray) {
-        QJsonObject connJson = connection.toObject();
-        ConnectionId connId = fromJson(connJson);
-        // 恢复连接
-        addConnection(connId);
-    }
-
     // 加载组之前，先收集所有组信息
     std::vector<GroupId> allGroups;
     QJsonArray groupJsonArray = jsonDocument["groups"].toArray();
@@ -711,15 +703,24 @@ void DataFlowGraphModel::load(QJsonObject const &jsonDocument)
         allGroups.push_back(groupId);
     }
 
-    // 对组进行排序，优先处理节点数量更多的�?    // 这样可以确保先添�?�?组，减少删除操作
+    // 对组进行排序，优先处理节点数量更多的分组，这样可以确保先添加最大节点数的组，减少删除操作
     std::sort(allGroups.begin(), allGroups.end(), 
         [](const GroupId& a, const GroupId& b) {
             return a.nodeIds.size() > b.nodeIds.size(); // 降序排列
         });
 
-    // 依次添加排序后的�?   
+    // 依次添加排序后的组   
     for (const auto& groupId : allGroups) {
         addGroup(groupId);
+    }
+
+    // 再加载所有连接    
+    QJsonArray connectionJsonArray = jsonDocument["connections"].toArray();
+    for (QJsonValueRef connection : connectionJsonArray) {
+        QJsonObject connJson = connection.toObject();
+        ConnectionId connId = fromJson(connJson);
+        // 恢复连接
+        addConnection(connId);
     }
 }
 

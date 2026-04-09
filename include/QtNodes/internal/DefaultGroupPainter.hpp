@@ -23,6 +23,8 @@ public:
 
     void drawGroupCaption(QPainter *painter, GroupGraphicsObject const &ggo) const;
 
+    void drawGroupPorts(QPainter *painter, GroupGraphicsObject const &ggo) const;
+
 //    void drawEntryLabels(QPainter *painter, GroupGraphicsObject const &ggo) const;
 
 //    void drawResizeRect(QPainter *painter, NodeGraphicsObject &ngo) const;

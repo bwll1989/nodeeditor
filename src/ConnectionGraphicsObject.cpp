@@ -7,10 +7,13 @@
 #include "ConnectionIdUtils.hpp"
 #include "ConnectionState.hpp"
 #include "ConnectionStyle.hpp"
+#include "GroupGraphicsObject.hpp"
 #include "NodeConnectionInteraction.hpp"
 #include "NodeGraphicsObject.hpp"
 #include "StyleCollection.hpp"
 #include "locateNode.hpp"
+
+#include <algorithm>
 
 #include <QtWidgets/QGraphicsBlurEffect>
 #include <QtWidgets/QGraphicsDropShadowEffect>
@@ -38,6 +41,13 @@ ConnectionGraphicsObject::ConnectionGraphicsObject(BasicGraphicsScene &scene,
     setFlag(QGraphicsItem::ItemIsFocusable, true);
     setFlag(QGraphicsItem::ItemIsSelectable, true);
 
+    setLockedState();
+
+    connect(&_graphModel,
+            &AbstractGraphModel::nodeFlagsUpdated,
+            this,
+            &ConnectionGraphicsObject::onLockedState);
+
     setAcceptHoverEvents(true);
 
     //addGraphicsEffect();
@@ -62,19 +72,36 @@ void ConnectionGraphicsObject::initializePosition()
         PortIndex portIndex = getPortIndex(attachedPort, _connectionId);
         NodeId nodeId = getNodeId(attachedPort, _connectionId);
 
-        NodeGraphicsObject *ngo = nodeScene()->nodeGraphicsObject(nodeId);
+        GroupGraphicsObject* collapsedGroup = nullptr;
+        auto const groups = _graphModel.allGroupIds();
+        for (auto const &gid : groups) {
+            if (std::find(gid.nodeIds.begin(), gid.nodeIds.end(), nodeId) != gid.nodeIds.end()) {
+                if (auto* ggo = nodeScene()->groupGraphicsObject(gid)) {
+                    if (ggo->isCollapsed()) {
+                        //折叠状态下端口连接位置设置为分组所持有的代理端口
+                        collapsedGroup = ggo;
+                    }
+                }
+                break;
+            }
+        }
 
-        if (ngo) {
-            QTransform nodeSceneTransform = ngo->sceneTransform();
+        if (collapsedGroup) {
+            //折叠状态下端口连接位置设置为分组所持有的代理端口
+            this->setPos(collapsedGroup->collapsedPortScenePosition(attachedPort));
+        } else {
+            //否则设置为普通节点所持有的端口
+            NodeGraphicsObject *ngo = nodeScene()->nodeGraphicsObject(nodeId);
 
-            AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
-
-            QPointF pos = geometry.portScenePosition(nodeId,
-                                                     attachedPort,
-                                                     portIndex,
-                                                     nodeSceneTransform);
-
-            this->setPos(pos);
+            if (ngo) {
+                QTransform nodeSceneTransform = ngo->sceneTransform();
+                AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
+                QPointF pos = geometry.portScenePosition(nodeId,
+                                                         attachedPort,
+                                                         portIndex,
+                                                         nodeSceneTransform);
+                this->setPos(pos);
+            }
         }
     }
 
@@ -149,12 +176,56 @@ void ConnectionGraphicsObject::setEndPoint(PortType portType, QPointF const &poi
 
 void ConnectionGraphicsObject::move()
 {
-    auto moveEnd = [this](ConnectionId cId, PortType portType) {
+    // 根据节点ID查找其所属的折叠分组
+    auto collapsedGroupForNode = [this](NodeId nodeId) -> GroupGraphicsObject* {
+        if (nodeId == InvalidNodeId)
+            return nullptr;
+
+        auto const groups = _graphModel.allGroupIds();
+        for (auto const &gid : groups) {
+            // 若分组中包含该节点
+            if (std::find(gid.nodeIds.begin(), gid.nodeIds.end(), nodeId) != gid.nodeIds.end()) {
+                if (auto* ggo = nodeScene()->groupGraphicsObject(gid)) {
+                    if (ggo->isCollapsed()) {
+                        return ggo; // 返回折叠的分组
+                    }
+                }
+                return nullptr;
+            }
+        }
+        return nullptr;
+    };
+
+    // 分别获取起点和终点节点所在的折叠分组
+    GroupGraphicsObject* outGroup = collapsedGroupForNode(_connectionId.outNodeId);
+    GroupGraphicsObject* inGroup = collapsedGroupForNode(_connectionId.inNodeId);
+
+    // 若两端都在同一折叠分组内，则隐藏连线
+    if (outGroup && inGroup && outGroup == inGroup) {
+        setVisible(false);
+        return;
+    }
+
+    setVisible(true);
+
+    // 移动连线端点到对应端口位置
+    auto moveEnd = [this, outGroup, inGroup](ConnectionId cId, PortType portType) {
         NodeId nodeId = getNodeId(portType, cId);
 
         if (nodeId == InvalidNodeId)
             return;
 
+        // 若端口属于折叠分组，则使用分组的代理端口位置
+        GroupGraphicsObject* ggo = (portType == PortType::Out) ? outGroup : inGroup;
+
+        if (ggo) {
+            QPointF scenePos = ggo->collapsedPortScenePosition(portType);
+            QPointF connectionPos = sceneTransform().inverted().map(scenePos);
+            setEndPoint(portType, connectionPos);
+            return;
+        }
+
+        // 否则使用普通节点的端口位置
         NodeGraphicsObject *ngo = nodeScene()->nodeGraphicsObject(nodeId);
 
         if (ngo) {
@@ -171,6 +242,7 @@ void ConnectionGraphicsObject::move()
         }
     };
 
+    // 更新起点和终点
     moveEnd(_connectionId, PortType::Out);
     moveEnd(_connectionId, PortType::In);
 
@@ -189,6 +261,24 @@ ConnectionState &ConnectionGraphicsObject::connectionState()
     return _connectionState;
 }
 
+void ConnectionGraphicsObject::setLockedState()
+{
+    NodeFlags flags = _graphModel.nodeFlags();
+
+    bool const locked = flags.testFlag(NodeFlag::Locked);
+
+    setFlag(QGraphicsItem::ItemIsMovable, !locked);
+    setFlag(QGraphicsItem::ItemIsSelectable, !locked);
+    setFlag(QGraphicsItem::ItemSendsScenePositionChanges, !locked);
+}
+
+void ConnectionGraphicsObject::onLockedState(NodeId nodeId)
+{
+    if (nodeId == 0 || nodeId == _connectionId.outNodeId || nodeId == _connectionId.inNodeId) {
+        setLockedState();
+    }
+}
+
 void ConnectionGraphicsObject::paint(QPainter *painter,
                                      QStyleOptionGraphicsItem const *option,
                                      QWidget *)
@@ -203,6 +293,11 @@ void ConnectionGraphicsObject::paint(QPainter *painter,
 
 void ConnectionGraphicsObject::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
+    if (_graphModel.nodeFlags().testFlag(NodeFlag::Locked)) {
+        event->ignore();
+        return;
+    }
+
     QGraphicsItem::mousePressEvent(event);
 }
 
@@ -379,6 +474,11 @@ std::pair<QPointF, QPointF> ConnectionGraphicsObject::pointsC1C2Vertical() const
 
 void ConnectionGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 {
+    if (_graphModel.nodeFlags().testFlag(NodeFlag::Locked)) {
+        event->ignore();
+        return;
+    }
+
     QMenu m_Menu;
     QAction* focusInAction = m_Menu.addAction( "Focus Next Node");
     focusInAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_I));
@@ -421,7 +521,10 @@ void ConnectionGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *
 }
 
 void ConnectionGraphicsObject::keyPressEvent(QKeyEvent* event) {
-
+    if (_graphModel.nodeFlags().testFlag(NodeFlag::Locked)) {
+        event->ignore();
+        return;
+    }
     if ((event->key() == Qt::Key_I) && (event->modifiers() & Qt::AltModifier)) {
 
         nodeScene()->centerOnNode(_connectionId.inNodeId);

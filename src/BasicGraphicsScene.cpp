@@ -316,11 +316,37 @@ void BasicGraphicsScene::onGroupUpdate(const QtNodes::GroupId groupId)
 
 void BasicGraphicsScene::onGroupDeleted(const QtNodes::GroupId groupId)
 {
-
+    // 在组图形对象映射中查找指定 groupId
     auto it = _groupGraphicsObjects.find(groupId);
-    if (it!= _groupGraphicsObjects.end()) {
+    if (it != _groupGraphicsObjects.end()) {
+        // 获取该组对应的 GroupId（包含组内所有节点 ID）
+        GroupId const gid = it->first;
+
+        // 将被删除组内的所有节点设为可见
+        for (auto const nodeId : gid.nodeIds) {
+            if (auto* nodeItem = nodeGraphicsObject(nodeId)) {
+                nodeItem->setVisible(true);
+            }
+        }
+
+        // 收集该组内所有节点相关的连接 ID，使用无序集合去重
+        std::unordered_set<ConnectionId> affectedConnections;
+        for (auto const nodeId : gid.nodeIds) {
+            auto const conns = _graphModel.allConnectionIds(nodeId);
+            affectedConnections.insert(conns.begin(), conns.end());
+        }
+
+        // 通知所有受影响的连接重新计算位置
+        for (auto const &cid : affectedConnections) {
+            if (auto* cgo = connectionGraphicsObject(cid)) {
+                cgo->move();
+            }
+        }
+
+        // 从映射中移除该组图形对象
         _groupGraphicsObjects.erase(it);
     }
+    // 发送场景被修改的信号
     Q_EMIT modified(this);
 }
 

@@ -29,38 +29,62 @@ static QJsonObject serializeSelectedItems(BasicGraphicsScene *scene)
     auto &graphModel = scene->graphModel();
 
     std::unordered_set<NodeId> selectedNodes;
-
-    QJsonArray nodesJsonArray;
+    std::vector<GroupId> selectedGroups;
 
     for (QGraphicsItem *item : scene->selectedItems()) {
         if (auto n = qgraphicsitem_cast<NodeGraphicsObject *>(item)) {
-            nodesJsonArray.append(graphModel.saveNode(n->nodeId()));
-
             selectedNodes.insert(n->nodeId());
+        } else if (auto g = qgraphicsitem_cast<GroupGraphicsObject *>(item)) {
+            selectedGroups.push_back(g->groupId());
         }
     }
 
+    bool const hasSelectedGroups = !selectedGroups.empty();
+
+    if (hasSelectedGroups) {
+        for (auto const &gid : selectedGroups) {
+            for (auto const nodeId : gid.nodeIds) {
+                selectedNodes.insert(nodeId);
+            }
+        }
+    }
+
+    QJsonArray nodesJsonArray;
+    for (auto const nodeId : selectedNodes) {
+        nodesJsonArray.append(graphModel.saveNode(nodeId));
+    }
+
     QJsonArray connJsonArray;
+    if (hasSelectedGroups) {
+        std::unordered_set<ConnectionId> selectedConnections;
 
-    for (QGraphicsItem *item : scene->selectedItems()) {
-        if (auto c = qgraphicsitem_cast<ConnectionGraphicsObject *>(item)) {
-            auto const &cid = c->connectionId();
+        for (auto const nodeId : selectedNodes) {
+            for (auto const &cid : graphModel.allConnectionIds(nodeId)) {
+                if (selectedNodes.count(cid.outNodeId) > 0 && selectedNodes.count(cid.inNodeId) > 0) {
+                    selectedConnections.insert(cid);
+                }
+            }
+        }
 
-            if (selectedNodes.count(cid.outNodeId) > 0 && selectedNodes.count(cid.inNodeId) > 0) {
-                connJsonArray.append(toJson(cid));
+        for (auto const &cid : selectedConnections) {
+            connJsonArray.append(toJson(cid));
+        }
+    } else {
+        for (QGraphicsItem *item : scene->selectedItems()) {
+            if (auto c = qgraphicsitem_cast<ConnectionGraphicsObject *>(item)) {
+                auto const &cid = c->connectionId();
+
+                if (selectedNodes.count(cid.outNodeId) > 0 && selectedNodes.count(cid.inNodeId) > 0) {
+                    connJsonArray.append(toJson(cid));
+                }
             }
         }
     }
 
     QJsonArray groupsJsonArray;
-     for (QGraphicsItem *item : scene->selectedItems()) {
-
-         if (auto g = qgraphicsitem_cast<GroupGraphicsObject *>(item)) {
-            groupsJsonArray.append(groupToJson(g->groupId()));
-         }
-
-     }
-//
+    for (auto const &gid : selectedGroups) {
+        groupsJsonArray.append(groupToJson(gid));
+    }
 
     serializedScene["nodes"] = nodesJsonArray;
     serializedScene["connections"] = connJsonArray;
@@ -84,6 +108,13 @@ static void insertSerializedItems(QJsonObject const &json, BasicGraphicsScene *s
         scene->nodeGraphicsObject(id)->setSelected(true);
     }
 
+    QJsonArray const &groupsJsonArray = json["groups"].toArray();
+    for (QJsonValue group : groupsJsonArray) {
+        QJsonObject groupJson = group.toObject();
+
+        graphModel.addGroup(fromJsonToGroup(groupJson));
+    }
+
     QJsonArray const &connJsonArray = json["connections"].toArray();
 
     for (QJsonValue connection : connJsonArray) {
@@ -94,13 +125,9 @@ static void insertSerializedItems(QJsonObject const &json, BasicGraphicsScene *s
         // Restore the connection
         graphModel.addConnection(connId);
 
-        scene->connectionGraphicsObject(connId)->setSelected(true);
-    }
-    QJsonArray const &groupsJsonArray = json["groups"].toArray();
-    for (QJsonValue group : groupsJsonArray) {
-        QJsonObject groupJson = group.toObject();
-
-        graphModel.addGroup(fromJsonToGroup(groupJson));
+        if (auto* cgo = scene->connectionGraphicsObject(connId)) {
+            cgo->setSelected(true);
+        }
     }
 }
 
@@ -191,46 +218,54 @@ DeleteCommand::DeleteCommand(BasicGraphicsScene *scene)
 
     auto &graphModel = _scene->graphModel();
 
-    QJsonArray connJsonArray;
-    // Delete the selected connections first, ensuring that they won't be
-    // automatically deleted when selected nodes are deleted (deleting a
-    // node deletes some connections as well)
+    std::unordered_set<NodeId> selectedNodes;
+    std::vector<GroupId> selectedGroups;
+    std::unordered_set<ConnectionId> selectedConnections;
+
     for (QGraphicsItem *item : _scene->selectedItems()) {
         if (auto c = qgraphicsitem_cast<ConnectionGraphicsObject *>(item)) {
-            auto const &cid = c->connectionId();
-            connJsonArray.append(toJson(cid));
+            selectedConnections.insert(c->connectionId());
+        } else if (auto n = qgraphicsitem_cast<NodeGraphicsObject *>(item)) {
+            selectedNodes.insert(n->nodeId());
+        } else if (auto g = qgraphicsitem_cast<GroupGraphicsObject *>(item)) {
+            selectedGroups.push_back(g->groupId());
         }
     }
-    QJsonArray groupsJsonArray;
-    for (QGraphicsItem *item : _scene->selectedItems()) {
-        if (auto g = qgraphicsitem_cast<GroupGraphicsObject *>(item)) {
-            // saving connections attached to the selected groups
 
-            groupsJsonArray.append(groupToJson(g->groupId()));
-        }
-
-    }
-    QJsonArray nodesJsonArray;
-    // Delete the nodes; this will delete many of the connections.
-    // Selected connections were already deleted prior to this loop,
-    for (QGraphicsItem *item : _scene->selectedItems()) {
-        if (auto n = qgraphicsitem_cast<NodeGraphicsObject *>(item)) {
-            // saving connections attached to the selected nodes
-            for (auto const &cid : graphModel.allConnectionIds(n->nodeId())) {
-                connJsonArray.append(toJson(cid));
+    if (!selectedGroups.empty()) {
+        for (auto const &gid : selectedGroups) {
+            for (auto const nodeId : gid.nodeIds) {
+                selectedNodes.insert(nodeId);
             }
-
-            nodesJsonArray.append(graphModel.saveNode(n->nodeId()));
         }
+    }
+
+    for (auto const nodeId : selectedNodes) {
+        auto const conns = graphModel.allConnectionIds(nodeId);
+        selectedConnections.insert(conns.begin(), conns.end());
+    }
+
+    QJsonArray connJsonArray;
+    for (auto const &cid : selectedConnections) {
+        connJsonArray.append(toJson(cid));
+    }
+
+    QJsonArray groupsJsonArray;
+    for (auto const &gid : selectedGroups) {
+        groupsJsonArray.append(groupToJson(gid));
+    }
+
+    QJsonArray nodesJsonArray;
+    for (auto const nodeId : selectedNodes) {
+        nodesJsonArray.append(graphModel.saveNode(nodeId));
     }
 
     // If nothing is deleted, cancel this operation
-    if (connJsonArray.isEmpty() && nodesJsonArray.isEmpty()&&groupsJsonArray.isEmpty())
+    if (connJsonArray.isEmpty() && nodesJsonArray.isEmpty() && groupsJsonArray.isEmpty())
     {
         setObsolete(true);
         return;
     }
-
 
     _sceneJson["nodes"] = nodesJsonArray;
     _sceneJson["connections"] = connJsonArray;
@@ -407,16 +442,17 @@ QJsonObject PasteCommand::makeNewNodeIdsInScene(QJsonObject const &sceneJson)
     for (QJsonValueRef group : groupsJsonArray) {
         QJsonObject groupJson = group.toObject();
         GroupId oldGroupId = fromJsonToGroup(groupJson);
-        
-        // 创建新的组，更新组内节点的ID
-        GroupId newGroupId;
+
+        GroupId newGroupId = oldGroupId;
+        newGroupId.nodeIds.clear();
+
         for (const NodeId& oldNodeId : oldGroupId.nodeIds) {
             auto it = mapNodeIds.find(oldNodeId);
             if (it != mapNodeIds.end()) {
                 newGroupId.nodeIds.push_back(it->second);
             }
         }
-        
+
         // 只有当组内有节点时才添加组
         if (!newGroupId.nodeIds.empty()) {
             newGroupsJsonArray.append(groupToJson(newGroupId));
@@ -484,6 +520,15 @@ MoveNodeCommand::MoveNodeCommand(BasicGraphicsScene *scene, QPointF const &diff)
     }
 }
 
+MoveNodeCommand::MoveNodeCommand(BasicGraphicsScene *scene,
+                                 QPointF const &diff,
+                                 std::unordered_set<NodeId> selectedNodes)
+    : _scene(scene)
+    , _selectedNodes(std::move(selectedNodes))
+    , _diff(diff)
+{
+}
+
 void MoveNodeCommand::undo()
 {
     for (auto nodeId : _selectedNodes) {
@@ -538,6 +583,99 @@ CreateGroupCommand::CreateGroupCommand(BasicGraphicsScene *scene)
 
         setObsolete(true);  // 如果节点不足，标记命令为过时
         
+    }
+}
+
+RemoveFromGroupCommand::RemoveFromGroupCommand(BasicGraphicsScene *scene)
+    : _scene(scene)
+{
+    if (!_scene) {
+        setObsolete(true);
+        return;
+    }
+
+    auto &graphModel = _scene->graphModel();
+
+    std::vector<GroupId> selectedGroups;
+    std::unordered_set<NodeId> selectedNodes;
+
+    for (QGraphicsItem *item : _scene->selectedItems()) {
+        if (auto g = qgraphicsitem_cast<GroupGraphicsObject *>(item)) {
+            selectedGroups.push_back(g->groupId());
+        } else if (auto n = qgraphicsitem_cast<NodeGraphicsObject *>(item)) {
+            selectedNodes.insert(n->nodeId());
+        }
+    }
+
+    auto const allGroups = graphModel.allGroupIds();
+
+    if (!selectedGroups.empty()) {
+        for (auto const &gid : selectedGroups) {
+            GroupId after = gid;
+            after.nodeIds.clear();
+            _changes.push_back({gid, after, true});
+        }
+    } else if (!selectedNodes.empty()) {
+        for (auto const &gid : allGroups) {
+            GroupId after = gid;
+            auto &ids = after.nodeIds;
+
+            auto beforeSize = ids.size();
+            ids.erase(std::remove_if(ids.begin(),
+                                     ids.end(),
+                                     [&selectedNodes](NodeId nid) {
+                                         return selectedNodes.count(nid) > 0;
+                                     }),
+                      ids.end());
+
+            if (ids.size() != beforeSize) {
+                bool const deleted = ids.empty();
+                _changes.push_back({gid, after, deleted});
+            }
+        }
+    }
+
+    if (_changes.empty()) {
+        setObsolete(true);
+    }
+}
+
+void RemoveFromGroupCommand::redo()
+{
+    if (!_scene)
+        return;
+
+    auto &graphModel = _scene->graphModel();
+
+    for (auto const &ch : _changes) {
+        if (ch.deleted) {
+            graphModel.deleteGroup(ch.before);
+        } else {
+            if (auto *ggo = _scene->groupGraphicsObject(ch.before)) {
+                ggo->applyGroupId(ch.after);
+            }
+            graphModel.updateGroup(ch.before, ch.after);
+        }
+    }
+}
+
+void RemoveFromGroupCommand::undo()
+{
+    if (!_scene)
+        return;
+
+    auto &graphModel = _scene->graphModel();
+
+    for (auto it = _changes.rbegin(); it != _changes.rend(); ++it) {
+        auto const &ch = *it;
+        if (ch.deleted) {
+            graphModel.addGroup(ch.before);
+        } else {
+            if (auto *ggo = _scene->groupGraphicsObject(ch.after)) {
+                ggo->applyGroupId(ch.before);
+            }
+            graphModel.updateGroup(ch.after, ch.before);
+        }
     }
 }
 

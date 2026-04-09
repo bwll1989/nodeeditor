@@ -19,6 +19,7 @@ inline QJsonObject groupToJson(GroupId const &groupId)
 
     groupJson["nodeIds"] = nodesJsonArray;
     groupJson["remarks"] = groupId.groupRemarks;
+    groupJson["collapsed"] = groupId.collapsed;
     return groupJson;
 }
 
@@ -30,6 +31,7 @@ inline GroupId fromJsonToGroup(QJsonObject const &groupJson)
         groupId.nodeIds.push_back(static_cast<NodeId>(nid.toInt(InvalidNodeId)));
     }
     groupId.groupRemarks = groupJson["remarks"].toString();
+    groupId.collapsed = groupJson["collapsed"].toBool(false);
     return groupId;
 }
 

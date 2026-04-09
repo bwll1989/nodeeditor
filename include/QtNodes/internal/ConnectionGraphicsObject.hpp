@@ -81,6 +81,11 @@ private:
 
     void addGraphicsEffect();
 
+    void setLockedState();
+
+private Q_SLOTS:
+    void onLockedState(NodeId nodeId);
+
     std::pair<QPointF, QPointF> pointsC1C2Horizontal() const;
 
     std::pair<QPointF, QPointF> pointsC1C2Vertical() const;

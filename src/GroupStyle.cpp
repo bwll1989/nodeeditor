@@ -115,6 +115,9 @@ void GroupStyle::loadJson(QJsonObject const &json)
     GROUP_STYLE_READ_COLOR(obj, GradientColor2);
     GROUP_STYLE_READ_COLOR(obj, GradientColor3);
     GROUP_STYLE_READ_COLOR(obj, CaptionColor);
+    GROUP_STYLE_READ_COLOR(obj, PortColor);
+    GROUP_STYLE_READ_FLOAT(obj, PortHeight);
+    GROUP_STYLE_READ_FLOAT(obj, PortWidth);
     GROUP_STYLE_READ_FLOAT(obj, Opacity);
     GROUP_STYLE_READ_COLOR(obj, FontColor);
     GROUP_STYLE_READ_FLOAT(obj, PenWidth);
@@ -122,6 +125,7 @@ void GroupStyle::loadJson(QJsonObject const &json)
     GROUP_STYLE_READ_FLOAT(obj, BoundaryRadius);
     GROUP_STYLE_READ_BOOL(obj, UseDataDefinedColors);
     GROUP_STYLE_READ_FLOAT(obj,CaptionHeight)
+    GROUP_STYLE_READ_FLOAT(obj,CollapsedHeight)
 
 }
 
@@ -135,13 +139,17 @@ QJsonObject GroupStyle::toJson() const
     GROUP_STYLE_WRITE_COLOR(obj, GradientColor2);
     GROUP_STYLE_WRITE_COLOR(obj, GradientColor3);
     GROUP_STYLE_WRITE_COLOR(obj, CaptionColor);
+    GROUP_STYLE_WRITE_COLOR(obj, PortColor);
     GROUP_STYLE_WRITE_COLOR(obj, FontColor);
     GROUP_STYLE_WRITE_FLOAT(obj, PenWidth);
     GROUP_STYLE_WRITE_FLOAT(obj, HoveredPenWidth);
+    GROUP_STYLE_WRITE_FLOAT(obj, PortHeight);
+    GROUP_STYLE_WRITE_FLOAT(obj, PortWidth);
     GROUP_STYLE_WRITE_FLOAT(obj, BoundaryRadius);
     GROUP_STYLE_WRITE_BOOL(obj,  UseDataDefinedColors);
     GROUP_STYLE_WRITE_FLOAT(obj, Opacity);
     GROUP_STYLE_WRITE_FLOAT(obj,CaptionHeight)
+    GROUP_STYLE_WRITE_FLOAT(obj,CollapsedHeight)
 
     QJsonObject root;
     root["GroupStyle"] = obj;

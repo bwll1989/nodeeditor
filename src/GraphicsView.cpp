@@ -2,6 +2,7 @@
 
 #include "BasicGraphicsScene.hpp"
 #include "ConnectionGraphicsObject.hpp"
+#include "GroupGraphicsObject.hpp"
 #include "NodeGraphicsObject.hpp"
 #include "StyleCollection.hpp"
 #include "UndoCommands.hpp"
@@ -144,7 +145,7 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
 
     {
         delete _createGroupAction;
-        _createGroupAction = new QAction(QStringLiteral("Create Group"), this);
+        _createGroupAction = new QAction(QStringLiteral("Create/Remove Group"), this);
         _createGroupAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _createGroupAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_G));
         _createGroupAction->setAutoRepeat(false);
@@ -159,28 +160,34 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
         _alignTopAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _alignTopAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Up));
         connect(_alignTopAction, &QAction::triggered, this, &GraphicsView::onAlignTop);
-        addAction(_alignTopAction);
 
         delete _alignBottomAction;
         _alignBottomAction = new QAction(QStringLiteral("Align Bottom"), this);
         _alignBottomAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _alignBottomAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Down));
         connect(_alignBottomAction, &QAction::triggered, this, &GraphicsView::onAlignBottom);
-        addAction(_alignBottomAction);
 
         delete _alignLeftAction;
         _alignLeftAction = new QAction(QStringLiteral("Align Left"), this);
         _alignLeftAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _alignLeftAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Left));
         connect(_alignLeftAction, &QAction::triggered, this, &GraphicsView::onAlignLeft);
-        addAction(_alignLeftAction);
 
         delete _alignRightAction;
         _alignRightAction = new QAction(QStringLiteral("Align Right"), this);
         _alignRightAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _alignRightAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Right));
         connect(_alignRightAction, &QAction::triggered, this, &GraphicsView::onAlignRight);
-        addAction(_alignRightAction);
+
+        QMenu* layoutMenu = new QMenu(QStringLiteral("Layout"), this);
+        layoutMenu->addAction(_alignTopAction);
+        layoutMenu->addAction(_alignBottomAction);
+        layoutMenu->addAction(_alignLeftAction);
+        layoutMenu->addAction(_alignRightAction);
+
+        QAction* layoutMenuAction = new QAction(QStringLiteral("Layout"), this);
+        layoutMenuAction->setMenu(layoutMenu);
+        addAction(layoutMenuAction);
     }
     auto undoAction = scene->undoStack().createUndoAction(this, tr("&Undo"));
     undoAction->setShortcuts(QKeySequence::Undo);
@@ -209,6 +216,12 @@ void GraphicsView::centerScene()
 
 void GraphicsView::contextMenuEvent(QContextMenuEvent *event)
 {
+    auto* s = nodeScene();
+    if (s && s->graphModel().nodeFlags().testFlag(NodeFlag::Locked)) {
+        event->ignore();
+        return;
+    }
+
     if (itemAt(event->pos())) {
         QGraphicsView::contextMenuEvent(event);
         return;
@@ -216,7 +229,7 @@ void GraphicsView::contextMenuEvent(QContextMenuEvent *event)
 
     auto const scenePos = mapToScene(event->pos());
 
-    QMenu *menu = nodeScene()->createSceneMenu(scenePos);
+    QMenu *menu = s ? s->createSceneMenu(scenePos) : nullptr;
 
     if (menu) {
         menu->exec(event->globalPos());
@@ -347,8 +360,44 @@ void GraphicsView::onPasteObjects()
 
 void GraphicsView::onCreateGroup()
 {
+    auto* scene = nodeScene();
+    if (!scene)
+        return;
 
-    nodeScene()->undoStack().push(new CreateGroupCommand(nodeScene()));
+    bool hasGroupSelected = false;
+    std::unordered_set<NodeId> selectedNodes;
+    //选中分组，分组内节点自动选中
+    for (QGraphicsItem *item : scene->selectedItems()) {
+        if (auto g = qgraphicsitem_cast<GroupGraphicsObject *>(item)) {
+            Q_UNUSED(g);
+            hasGroupSelected = true;
+        } else if (auto n = qgraphicsitem_cast<NodeGraphicsObject *>(item)) {
+            selectedNodes.insert(n->nodeId());
+        }
+    }
+
+    bool hasNodeInGroup = false;
+    if (!selectedNodes.empty()) {
+        auto const allGroups = scene->graphModel().allGroupIds();
+        for (auto const &gid : allGroups) {
+            for (auto const nid : gid.nodeIds) {
+                if (selectedNodes.count(nid) > 0) {
+                    hasNodeInGroup = true;
+                    break;
+                }
+            }
+            if (hasNodeInGroup)
+                break;
+        }
+    }
+
+    if (hasGroupSelected || hasNodeInGroup) {
+        //有分组被选中，则解除分组
+        scene->undoStack().push(new RemoveFromGroupCommand(scene));
+    } else {
+        //否则创建分组
+        scene->undoStack().push(new CreateGroupCommand(scene));
+    }
 
 }
 

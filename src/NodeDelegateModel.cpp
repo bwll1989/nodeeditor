@@ -3,6 +3,9 @@
 #include <QCheckBox>
 #include <QClipboard>
 #include <QComboBox>
+#include <vector>
+#include <QMetaObject>
+#include <QMetaProperty>
 
 #include "StyleCollection.hpp"
 
@@ -24,6 +27,86 @@ NodeDelegateModel::NodeDelegateModel()
 {
     // Derived classes can initialize specific style here
     
+}
+
+/**
+ * @brief 析构函数
+ *
+ * 该类包含用于外部控制/反馈的连接，析构时保持默认行为即可。
+ * 连接会随 QObject 析构自动断开。
+ */
+NodeDelegateModel::~NodeDelegateModel(){
+    for (auto &pair : _externalBindingMapping) {
+        auto &record = pair.second;
+
+        if (record.control)
+            record.control->removeEventFilter(this);
+
+        if (record.notifyConnection)
+            QObject::disconnect(record.notifyConnection);
+        if (record.destroyedControlConnection)
+            QObject::disconnect(record.destroyedControlConnection);
+        if (record.destroyedTargetConnection)
+            QObject::disconnect(record.destroyedTargetConnection);
+    }
+    _externalBindingMapping.clear();
+}
+
+
+/**
+ * @brief 外部属性 NOTIFY 触发的统一回调
+ *
+ * 通过 sender() 找到触发对象，对已注册且开启 feedback 的属性绑定发送反馈。
+ * 1. 首先获取触发该槽函数的对象指针
+ * 2. 遍历所有外部命令映射，筛选出符合条件的记录：
+ *    - 目标对象有效且与触发对象一致
+ *    - 绑定类型为 Property
+ *    - 开启了 feedback 标志
+ *    - 属性名非空
+ * 3. 将符合条件的记录暂存到 pending 列表，避免遍历时修改映射表
+ * 4. 遍历 pending 列表，调用 stateFeedBack 发送属性当前值
+ */
+void NodeDelegateModel::onExternalCommandNotified()
+{
+    QObject *s = sender();
+    if (!s)
+        return;
+
+    int const sigIndex = this->senderSignalIndex();
+
+    struct Pending
+    {
+        QString oscAddress;
+        QPointer<QObject> target;
+        QString propertyName;
+    };
+
+    std::vector<Pending> pending;
+    pending.reserve(_externalBindingMapping.size());
+
+    for (auto const &pair : _externalBindingMapping) {
+        auto const &oscAddress = pair.first;
+        auto const &record = pair.second;
+
+        if (!record.target)
+            continue;
+        if (record.target.data() != s)
+            continue;
+        if (!record.feedback)
+            continue;
+        if (record.member.isEmpty())
+            continue;
+        if (sigIndex >= 0 && record.notifySignalIndex != sigIndex)
+            continue;
+
+        pending.push_back(Pending{oscAddress, record.target, record.member});
+    }
+
+    for (auto const &p : pending) {
+        if (!p.target)
+            continue;
+        this->stateFeedBack(p.oscAddress, p.target->property(p.propertyName.toUtf8().constData()));
+    }
 }
 
 QJsonObject NodeDelegateModel::save() const
@@ -119,13 +202,15 @@ NodeId NodeDelegateModel::getNodeID() const
 
 bool NodeDelegateModel::eventFilter(QObject* watched, QEvent* event)
 {
-    // 检查watched是否是_OscMapping中的控件
-    auto it = std::find_if(_OscMapping.begin(), _OscMapping.end(),
-        [watched](const auto& pair) { return pair.second == watched; });
-    
-    if (it != _OscMapping.end()) {
+    // 检查 watched 是否是外部绑定中的控件
+    auto it = std::find_if(_externalBindingMapping.begin(), _externalBindingMapping.end(),
+        [watched](const auto &pair) { return pair.second.control.data() == watched; });
 
-        QWidget* widget = it->second;
+    if (it != _externalBindingMapping.end()) {
+
+        QWidget *widget = it->second.control.data();
+        if (!widget)
+            return false;
         switch (event->type()) {
             case QEvent::MouseButtonPress: {
                 QMouseEvent* mouseEvent = static_cast<QMouseEvent*>(event);
@@ -164,8 +249,8 @@ bool NodeDelegateModel::eventFilter(QObject* watched, QEvent* event)
 void NodeDelegateModel::startDrag(QWidget* widget){
     // 找到对应的OSC地址
     QString oscAddress;
-    for (const auto& pair : _OscMapping) {
-        if (pair.second == widget) {
+    for (const auto &pair : _externalBindingMapping) {
+        if (pair.second.control.data() == widget) {
             oscAddress = pair.first;
             break;
         }
@@ -235,37 +320,191 @@ void NodeDelegateModel::startDrag(QWidget* widget){
 }
 
 /**
- * 注册OSC地址和控件
+ * @brief 注册外部绑定（唯一入口）
+ *
+ * 统一存入 _externalBindingMapping：
+ * - QWidget 放入 binding.control
+ * - target 与 property/method 信息放入 record.target / record.binding
  */
-void NodeDelegateModel::registerExternalControl(const QString& oscAddress, QWidget* control)
+void NodeDelegateModel::registerExternalBinding(const QString &oscAddress,
+                                               QObject *target,
+                                               ExternalBinding binding)
 {
-    // 如果oscAddress不以"/"开头，则不注册
-    if (!oscAddress.startsWith("/")) return;
-    // 构建完整的OSC地址，自动给OSC地址添加前缀，包括节点ID
-    if (!control) return;
-    // 如果已存在相同地址的映射，先移除旧的
-    auto it = _OscMapping.find(oscAddress);
-    if (it != _OscMapping.end()) {
-        _OscMapping.erase(it);
+    if (!oscAddress.startsWith("/"))
+        return;
+
+    auto it = _externalBindingMapping.find(oscAddress);
+    if (it == _externalBindingMapping.end()) {
+        _externalBindingMapping[oscAddress] = ExternalBinding{};
+        it = _externalBindingMapping.find(oscAddress);
     }
-    // 添加新的映射
-    control->installEventFilter(this);
-    // control->setMouseTracking(true);
-    _OscMapping[oscAddress] = control;
-    // registerOSCFeedBack(oscAddress,control);
-    // 绑定控件销毁时自动注销
-    QObject::connect(control, &QObject::destroyed, this, [this, oscAddress]() {
-        this->unregisterExternalControl(oscAddress);
-    });
+
+    auto &record = it->second;
+
+    /* ---------- 控件绑定（仅当传入 control 时更新；nullptr 表示不修改控件绑定） ---------- */
+    if (binding.control) {
+        if (record.control && record.control.data() != binding.control.data())
+            record.control->removeEventFilter(this);
+
+        if (record.destroyedControlConnection)
+            QObject::disconnect(record.destroyedControlConnection);
+        record.destroyedControlConnection = QMetaObject::Connection{};
+
+        record.control = binding.control;
+
+        QWidget *c = record.control.data();
+        if (c) {
+            c->installEventFilter(this);
+            record.destroyedControlConnection = QObject::connect(c,
+                                                                &QObject::destroyed,
+                                                                this,
+                                                                [this, oscAddress, destroyedObj = c]() {
+                auto it2 = _externalBindingMapping.find(oscAddress);
+                if (it2 == _externalBindingMapping.end())
+                    return;
+                auto &r = it2->second;
+            if (!r.control)
+                return;
+            if (r.control.data() != destroyedObj)
+                return;
+
+            if (r.control)
+                r.control->removeEventFilter(this);
+            if (r.destroyedControlConnection)
+                QObject::disconnect(r.destroyedControlConnection);
+
+            r.control = nullptr;
+            r.destroyedControlConnection = QMetaObject::Connection{};
+
+            if (!r.target)
+                _externalBindingMapping.erase(it2);
+            });
+        }
+    }
+
+    /* ---------- 目标/命令绑定（仅当传入 target 时更新；nullptr 表示不修改命令绑定） ---------- */
+    if (target) {
+        if (record.notifyConnection)
+            QObject::disconnect(record.notifyConnection);
+        if (record.destroyedTargetConnection)
+            QObject::disconnect(record.destroyedTargetConnection);
+
+        record.notifyConnection = QMetaObject::Connection{};
+        record.destroyedTargetConnection = QMetaObject::Connection{};
+
+        record.target = target;
+        record.member = std::move(binding.member);
+        record.notifySignal = std::move(binding.notifySignal);
+        record.feedback = binding.feedback;
+
+        QObject *t = record.target.data();
+
+        if (record.feedback && !record.member.isEmpty()) {
+
+            auto const *mo = t->metaObject();
+            int propIndex = mo ? mo->indexOfProperty(record.member.toUtf8().constData()) : -1;
+            if (propIndex >= 0) {
+                QMetaProperty prop = mo->property(propIndex);
+
+                QByteArray notifySig;
+                if (!record.notifySignal.isEmpty()) {
+                    notifySig = QMetaObject::normalizedSignature(record.notifySignal.toUtf8().constData());
+                } else if (prop.hasNotifySignal()) {
+                    notifySig = prop.notifySignal().methodSignature();
+                }
+
+                if (!notifySig.isEmpty()) {
+                    int signalIndex = -1;
+                    if (!record.notifySignal.isEmpty()) {
+                        signalIndex = mo->indexOfSignal(notifySig.constData());
+                    } else {
+                        signalIndex = prop.notifySignalIndex();
+                    }
+
+                    record.notifySignalIndex = signalIndex;
+
+                    int const slotIndex = this->metaObject()->indexOfSlot("onExternalCommandNotified()");
+
+                    if (signalIndex >= 0 && slotIndex >= 0) {
+                        record.notifyConnection = QMetaObject::connect(t,
+                                                                      signalIndex,
+                                                                      this,
+                                                                      slotIndex,
+                                                                      Qt::AutoConnection);
+                    }
+
+                    if (!record.notifyConnection) {
+                        QByteArray sig = "2" + notifySig;
+                        record.notifyConnection = QObject::connect(t,
+                                                                  sig.constData(),
+                                                                  this,
+                                                                  SLOT(onExternalCommandNotified()));
+                    }
+
+                    if (!record.notifyConnection) {
+                        qDebug() << "ExternalBinding notify connect failed" << t->metaObject()->className() << notifySig;
+                    }
+                }
+            }
+        }
+
+        record.destroyedTargetConnection = QObject::connect(t, &QObject::destroyed, this, [this, oscAddress, destroyedObj = t]() {
+            auto it2 = _externalBindingMapping.find(oscAddress);
+            if (it2 == _externalBindingMapping.end())
+                return;
+            auto &r = it2->second;
+            if (!r.target)
+                return;
+            if (r.target.data() != destroyedObj)
+                return;
+
+            if (r.notifyConnection)
+                QObject::disconnect(r.notifyConnection);
+            if (r.destroyedTargetConnection)
+                QObject::disconnect(r.destroyedTargetConnection);
+
+            r.notifyConnection = QMetaObject::Connection{};
+            r.destroyedTargetConnection = QMetaObject::Connection{};
+            r.target = nullptr;
+            r.member.clear();
+            r.notifySignal.clear();
+            r.feedback = true;
+            r.notifySignalIndex = -1;
+
+            if (!r.control)
+                _externalBindingMapping.erase(it2);
+        });
+    }
+
+    if (!record.control && !record.target)
+        _externalBindingMapping.erase(it);
 }
 
-void NodeDelegateModel::unregisterExternalControl(const QString& oscAddress)
+/**
+ * @brief 注销外部绑定（唯一入口）
+ */
+void NodeDelegateModel::unregisterExternalBinding(const QString &oscAddress)
 {
-    if (!oscAddress.startsWith("/")) return;
-    auto it = _OscMapping.find(oscAddress);
-    if (it != _OscMapping.end()) {
-        _OscMapping.erase(it);
-    }
+    if (!oscAddress.startsWith("/"))
+        return;
+
+    auto it = _externalBindingMapping.find(oscAddress);
+    if (it == _externalBindingMapping.end())
+        return;
+
+    auto &record = it->second;
+
+    if (record.control)
+        record.control->removeEventFilter(this);
+
+    if (record.notifyConnection)
+        QObject::disconnect(record.notifyConnection);
+    if (record.destroyedControlConnection)
+        QObject::disconnect(record.destroyedControlConnection);
+    if (record.destroyedTargetConnection)
+        QObject::disconnect(record.destroyedTargetConnection);
+
+    _externalBindingMapping.erase(it);
 }
 
 /**
@@ -273,16 +512,32 @@ void NodeDelegateModel::unregisterExternalControl(const QString& oscAddress)
  */
 QWidget* NodeDelegateModel::getWidgetFromAddress(const QString& oscAddress) const
 {
-    auto it = _OscMapping.find(oscAddress);
-    return it != _OscMapping.end() ? it->second : nullptr;
+    auto it = _externalBindingMapping.find(oscAddress);
+    return it != _externalBindingMapping.end() ? it->second.control.data() : nullptr;
 }
 
 /**
  * 获取OSC地址和控件的映射
  */
-std::unordered_map<QString, QWidget*> NodeDelegateModel::getExternalControlAddressMapping() const
+std::unordered_map<QString, NodeDelegateModel::ExternalBinding> NodeDelegateModel::getExternalControlAddressMapping() const
 {
-    return _OscMapping;
+    std::unordered_map<QString, NodeDelegateModel::ExternalBinding> out;
+    out.reserve(_externalBindingMapping.size());
+
+    for (auto const &pair : _externalBindingMapping) {
+        // if (!pair.second.control)
+        //     continue;
+
+        NodeDelegateModel::ExternalBinding copy = pair.second;
+        copy.notifyConnection = QMetaObject::Connection{};
+        copy.destroyedControlConnection = QMetaObject::Connection{};
+        copy.destroyedTargetConnection = QMetaObject::Connection{};
+        copy.notifySignalIndex = -1;
+
+        out[pair.first] = std::move(copy);
+    }
+
+    return out;
 }
 
 void NodeDelegateModel::setRemarks(const QString& remarks){

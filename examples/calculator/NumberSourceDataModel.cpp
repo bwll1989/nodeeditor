@@ -7,10 +7,10 @@
 #include <QtCore/QJsonValue>
 #include <QtGui/QDoubleValidator>
 #include <QtWidgets/QLineEdit>
+#include <QDebug>
 
 NumberSourceDataModel::NumberSourceDataModel()
-    : _lineEdit{nullptr}
-    , _number(std::make_shared<DecimalData>(0.0)) {
+    : _number(std::make_shared<DecimalData>(0.0)) {
     InPortCount =0;
     OutPortCount=1;
     CaptionVisible=true;
@@ -18,7 +18,11 @@ NumberSourceDataModel::NumberSourceDataModel()
     WidgetEmbeddable= true;
     Resizable=false;
     PortEditable= true;
-    registerExternalControl("/number",_lineEdit);
+
+    NodeDelegateModel::ExternalBinding binding;
+    binding.member = "number";
+    binding.feedback = true;
+    registerExternalBinding("/number", this, binding);
 }
 
 QJsonObject NumberSourceDataModel::save() const
@@ -40,10 +44,14 @@ void NumberSourceDataModel::load(QJsonObject const &p)
         bool ok;
         double d = strNum.toDouble(&ok);
         if (ok) {
-            _number = std::make_shared<DecimalData>(d);
-
-            if (_lineEdit)
-                _lineEdit->setText(strNum);
+            // _number = std::make_shared<DecimalData>(d);
+            setNumber(d);
+            // if (_lineEdit) {
+            //     bool const old = _lineEdit->blockSignals(true);
+            //     _lineEdit->setText(strNum);
+            //     _lineEdit->blockSignals(old);
+            // }
+            this->printHello();
         }
     }
 }
@@ -54,12 +62,13 @@ void NumberSourceDataModel::onTextEdited(QString const &str)
 {
     bool ok = false;
 
-    double number = str.toDouble(&ok);
+    double n = str.toDouble(&ok);
 
     if (ok) {
-        _number = std::make_shared<DecimalData>(number);
-
-        Q_EMIT dataUpdated(0);
+        // _number = std::make_shared<DecimalData>(n);
+        setNumber(n);
+        // Q_EMIT numberChanged(n);
+        // Q_EMIT dataUpdated(0);
 
     } else {
         Q_EMIT dataInvalidated(0);
@@ -82,25 +91,50 @@ QWidget *NumberSourceDataModel::embeddedWidget()
     if (!_lineEdit) {
         _lineEdit = new QLineEdit();
 
-
         _lineEdit->setValidator(new QDoubleValidator());
         _lineEdit->setMaximumSize(_lineEdit->sizeHint());
 
-        connect(_lineEdit, &QLineEdit::textChanged, this, &NumberSourceDataModel::onTextEdited);
-
+        bool const old = _lineEdit->blockSignals(true);
         _lineEdit->setText(QString::number(_number->number()));
+        _lineEdit->blockSignals(old);
 
+        NodeDelegateModel::ExternalBinding ui;
+        ui.control = _lineEdit;
+        registerExternalBinding("/number", nullptr, ui);
     }
+
+    QObject::connect(_lineEdit, &QLineEdit::textChanged, this, &NumberSourceDataModel::onTextEdited, Qt::UniqueConnection);
 
     return _lineEdit;
 }
 
+double NumberSourceDataModel::number() const
+{
+    return _number ? _number->number() : 0.0;
+}
+
 void NumberSourceDataModel::setNumber(double n)
 {
+    if (_number && _number->number() == n)
+        return;
+
     _number = std::make_shared<DecimalData>(n);
 
+    Q_EMIT numberChanged(n);
     Q_EMIT dataUpdated(0);
 
-    if (_lineEdit)
+    if (_lineEdit) {
+        bool const old = _lineEdit->blockSignals(true);
         _lineEdit->setText(QString::number(_number->number()));
+        _lineEdit->blockSignals(old);
+
+    }
+}
+
+void NumberSourceDataModel::printHello()
+{
+    this->stateFeedBack("/number/hello", true);
+            
+    qDebug() << "NumberSourceDataModel::printHello";
+    this->stateFeedBack("/number/hello", false);
 }

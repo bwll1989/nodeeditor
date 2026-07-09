@@ -106,7 +106,5 @@ private:
     QGraphicsProxyWidget *_proxyWidget;
 
     QLineEdit* _remarksEditor = nullptr;
-
-    bool _pressedOnCaption = false;
 };
 } // namespace QtNodes

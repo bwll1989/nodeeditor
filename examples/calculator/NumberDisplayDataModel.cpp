@@ -5,6 +5,8 @@
 NumberDisplayDataModel::NumberDisplayDataModel()
     : _label{nullptr}
 {
+    qDebug() << "NumberDisplayDataModel::NumberDisplayDataModel()";
+    WidgetEmbeddable= true;
 }
 
 unsigned int NumberDisplayDataModel::nPorts(PortType portType) const
@@ -56,7 +58,9 @@ QWidget *NumberDisplayDataModel::embeddedWidget()
 {
     if (!_label) {
         _label = new QLineEdit();
-        registerExternalControl("/number",_label);
+        NodeDelegateModel::ExternalBinding ui;
+        ui.control = _label;
+        registerExternalBinding("/number", nullptr, ui);
     }
 
     return _label;

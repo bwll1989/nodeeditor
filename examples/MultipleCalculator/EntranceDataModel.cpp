@@ -18,7 +18,9 @@ EntranceDataModel::EntranceDataModel()
     WidgetEmbeddable= true;
     Resizable=false;
     PortEditable= true;
-    registerExternalControl("/number",_inputSelector);
+    NodeDelegateModel::ExternalBinding ui;
+    ui.control = _inputSelector;
+    registerExternalBinding("/number", nullptr, ui);
     setRemarks("Out");
     ModelDataBridge::instance().registerEntranceDelegate(this);
     connect(_inputSelector,&QComboBox::currentTextChanged,this,&EntranceDataModel::setRemarks);

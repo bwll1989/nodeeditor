@@ -1,5 +1,4 @@
 #include "DefaultNodePainter.hpp"
-#include "DefaultNodePainter.hpp"
 
 #include <cmath>
 
@@ -10,6 +9,7 @@
 #include "BasicGraphicsScene.hpp"
 #include "ConnectionGraphicsObject.hpp"
 #include "ConnectionIdUtils.hpp"
+#include "DefaultHorizontalNodeGeometry.hpp"
 #include "NodeDelegateModel.hpp"
 #include "NodeGraphicsObject.hpp"
 #include "NodeState.hpp"

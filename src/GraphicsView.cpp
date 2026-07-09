@@ -50,7 +50,7 @@ GraphicsView::GraphicsView(QWidget *parent)
     setCacheMode(QGraphicsView::CacheBackground);
     setViewportUpdateMode(QGraphicsView::BoundingRectViewportUpdate);
 
-    setScaleRange(0.3, 2);
+    setScaleRange(0.1, 2);
 
     // Sets the scene rect to its maximum possible ranges to avoid autu scene range
     // re-calculation when expanding the all QGraphicsItems common rect.
@@ -627,6 +627,24 @@ void GraphicsView::drawBackground(QPainter *painter, const QRectF &r)
 
     painter->setPen(p);
     drawGrid(150);
+
+    QRect windowRect = rect();
+    QPointF tl = mapToScene(windowRect.topLeft());
+    QPointF br = mapToScene(windowRect.bottomRight());
+
+    double xMin = std::min(tl.x(), br.x());
+    double xMax = std::max(tl.x(), br.x());
+    double yMin = std::min(tl.y(), br.y());
+    double yMax = std::max(tl.y(), br.y());
+
+    QPen axisPen(flowViewStyle.CoarseGridColor, 4.0);
+    painter->setPen(axisPen);
+
+    if (xMin <= 0.0 && xMax >= 0.0)
+        painter->drawLine(QLineF(0.0, yMin, 0.0, yMax));
+
+    if (yMin <= 0.0 && yMax >= 0.0)
+        painter->drawLine(QLineF(xMin, 0.0, xMax, 0.0));
 }
 
 void GraphicsView::showEvent(QShowEvent *event)

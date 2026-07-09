@@ -49,8 +49,10 @@ std::shared_ptr<NodeData> TextSourceDataModel::outData(PortIndex const portIndex
 QWidget *TextSourceDataModel::embeddedWidget()
 {
     if (!_lineEdit) {
-        _lineEdit = new QLineEdit("Default Text"),
-        NodeDelegateModel::registerExternalControl("/text",_lineEdit);
+        _lineEdit = new QLineEdit("Default Text");
+        NodeDelegateModel::ExternalBinding ui;
+        ui.control = _lineEdit;
+        registerExternalBinding("/text", nullptr, ui);
         connect(_lineEdit, &QLineEdit::textEdited, this, &TextSourceDataModel::onTextEdited);
     }
 

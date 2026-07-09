@@ -18,7 +18,9 @@ NumberSourceDataModel::NumberSourceDataModel()
     WidgetEmbeddable= true;
     Resizable=false;
     PortEditable= true;
-    registerExternalControl("/number",_lineEdit);
+    NodeDelegateModel::ExternalBinding ui;
+    ui.control = _lineEdit;
+    registerExternalBinding("/number", nullptr, ui);
 }
 
 QJsonObject NumberSourceDataModel::save() const
@@ -85,7 +87,9 @@ QWidget *NumberSourceDataModel::embeddedWidget()
 
         _lineEdit->setValidator(new QDoubleValidator());
         _lineEdit->setMaximumSize(_lineEdit->sizeHint());
-        NodeDelegateModel::registerExternalControl("/number",_lineEdit);
+        NodeDelegateModel::ExternalBinding ui;
+        ui.control = _lineEdit;
+        registerExternalBinding("/number", nullptr, ui);
         connect(_lineEdit, &QLineEdit::textChanged, this, &NumberSourceDataModel::onTextEdited);
 
         _lineEdit->setText(QString::number(_number->number()));

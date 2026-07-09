@@ -132,7 +132,6 @@ QPointF DefaultVerticalNodeGeometry::portPosition(NodeId const nodeId,
     default:
         break;
     }
-
     return result;
 }
 

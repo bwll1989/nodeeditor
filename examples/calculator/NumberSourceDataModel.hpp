@@ -21,6 +21,7 @@ class QLineEdit;
 class NumberSourceDataModel : public NodeDelegateModel
 {
     Q_OBJECT
+    Q_PROPERTY(double number READ number WRITE setNumber NOTIFY numberChanged)
 
 public:
     NumberSourceDataModel();
@@ -43,7 +44,14 @@ public:
     QWidget *embeddedWidget() override;
 
 public:
+    double number() const;
+
     void setNumber(double number);
+
+    Q_INVOKABLE void printHello();
+
+Q_SIGNALS:
+    void numberChanged(double number);
 
 private Q_SLOTS:
 
@@ -52,5 +60,5 @@ private Q_SLOTS:
 private:
     std::shared_ptr<DecimalData> _number;
 
-    QLineEdit *_lineEdit;
+    QLineEdit *_lineEdit=nullptr;
 };

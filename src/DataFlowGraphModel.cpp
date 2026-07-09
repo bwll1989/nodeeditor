@@ -321,9 +321,6 @@ QVariant DataFlowGraphModel::nodeData(NodeId nodeId, NodeRole role) const
     case NodeRole::PortEditable:
         result = model->PortEditable;
         break;
-    case NodeRole::EmbeddWidgetType:
-        result=static_cast<int>(model->getWidgetType());
-        break;
     case NodeRole::ModelAlias:
         result= modelAlias();
     default:

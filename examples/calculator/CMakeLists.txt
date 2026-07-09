@@ -37,5 +37,5 @@ add_executable(headless_calculator
   ${HEADLESS_CALC_SOURCE_FILES}
   ${CALC_HEAEDR_FILES}
 )
-
+set(CMAKE_WIN32_EXECUTABLE OFF)
 target_link_libraries(headless_calculator QtNodes)

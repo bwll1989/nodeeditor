@@ -8,7 +8,9 @@ TextModel::TextModel()
     //
     PortEditable=true;
     Resizable=true;
-    registerExternalControl("/text", _textEdit);
+    NodeDelegateModel::ExternalBinding ui;
+    ui.control = _textEdit;
+    registerExternalBinding("/text", nullptr, ui);
 }
 
 unsigned int TextModel::nPorts(PortType portType) const

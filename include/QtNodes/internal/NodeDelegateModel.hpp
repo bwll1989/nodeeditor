@@ -1,9 +1,12 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
 
+#include <QMetaObject>
 #include <QMetaType>
 #include <QPixmap>
+#include <QPointer>
 #include <QtGui/QColor>
 #include <QtWidgets/QWidget>
 
@@ -61,7 +64,7 @@ class NODE_EDITOR_PUBLIC NodeDelegateModel : public QObject, public Serializable
 public:
     bool CaptionVisible=true;
     QString Caption="Default Node";
-    bool WidgetEmbeddable=false;
+    bool WidgetEmbeddable=true;
     bool Resizable=false;
     unsigned int InPortCount=1;
     unsigned int OutPortCount=1;
@@ -69,7 +72,7 @@ public:
     NodeWidgetType WidgetType= NodeWidgetType::InternalWidget;
     NodeDelegateModel();
 
-    virtual ~NodeDelegateModel() = default;
+    virtual ~NodeDelegateModel() override;
 
     /// It is possible to hide caption in GUI
     virtual bool captionVisible() const { return CaptionVisible; }
@@ -165,21 +168,76 @@ public:
      */
     QString getParentAlias() const{return _parentAlias;};
     /**
-     * 注册控件OSC地址和Widget指针
+     * @brief 外部属性绑定描述（OSC 地址 -> Qt 属性）
+     *
+     * 仅用于属性：将 OSC 值写入 QObject 的属性（setProperty），并可选监听属性的 NOTIFY 信号用于反馈。
      */
-    virtual void registerExternalControl(const QString &oscAddress, QWidget *control);
+    struct ExternalBinding
+    {
+        /**
+         * @brief 控件（可选）
+         */
+        QPointer<QWidget> control;
+
+        /**
+         * @brief 目标对象（可选）
+         */
+        QPointer<QObject> target;
+
+        /**
+         * @brief 属性名
+         */
+        QString member;
+
+        /**
+         * @brief 属性变化通知信号（可选）
+         *
+         * 仅在 feedback==true 时使用。
+         * - 为空：优先使用该属性的 NOTIFY 信号（如果存在）
+         * - 非空：使用指定信号名/签名，例如 "valueChanged(int)"、"textChanged(QString)"
+         */
+        QString notifySignal;
+
+        /**
+         * @brief 是否启用反馈
+         *
+         * - 监听 notifySignal/NOTIFY，并在变化时调用 stateFeedBack
+         */
+        bool feedback = true;
+
+        int notifySignalIndex = -1;
+
+        /// 属性变化通知连接（用于反馈）
+        QMetaObject::Connection notifyConnection;
+        /// 控件销毁连接（自动清理）
+        QMetaObject::Connection destroyedControlConnection;
+        /// 目标对象销毁连接（自动清理）
+        QMetaObject::Connection destroyedTargetConnection;
+    };
+
+
+
     /**
-     * 注销控件OSC地址和Widget指针
+     * @brief 注册外部绑定（仅控件）
+     * @param oscAddress 以 "/" 开头的 OSC 地址
+     * @param control    控件（可为空）
      */
-    virtual void unregisterExternalControl(const QString& oscAddress);
+    virtual void registerExternalBinding(const QString &oscAddress, QObject *target, ExternalBinding binding);
+
+    /**
+     * @brief 注销外部绑定（同时移除控件与属性/方法）
+     * @param oscAddress 以 "/" 开头的 OSC 地址
+     */
+    virtual void unregisterExternalBinding(const QString &oscAddress);
+
     /**
      * 获取控件OSC地址和Widget指针
      */
     virtual QWidget* getWidgetFromAddress(const QString& oscAddress) const;
     /**
-     * 获取OSC地址和控件的映射
+     * 获取OSC地址和外部绑定的映射
      */
-    virtual std::unordered_map<QString, QWidget*> getExternalControlAddressMapping() const;
+    virtual std::unordered_map<QString, ExternalBinding> getExternalControlAddressMapping() const;
     /**
      * 设置备注
      */
@@ -205,6 +263,9 @@ public Q_SLOTS:
     virtual void outputConnectionDeleted(ConnectionId const &) {}
 
     virtual void stateFeedBack(const QString& oscAddress,QVariant value);
+
+private Q_SLOTS:
+    void onExternalCommandNotified();
 Q_SIGNALS:
 
     /// Triggers the updates in the nodes downstream.
@@ -245,10 +306,8 @@ protected:
 private:
     void startDrag(QWidget* widget);
     NodeStyle _nodeStyle;
-    /**
-     * 存储OSC地址和控件的映射
-     */
-    std::unordered_map<QString, QWidget*> _OscMapping;
+
+    std::unordered_map<QString, ExternalBinding> _externalBindingMapping;
     /**
      * 节点ID
      */
@@ -272,3 +331,4 @@ private:
 };
 
 } // namespace QtNodes
+

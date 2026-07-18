@@ -37,6 +37,13 @@ public:
     QRect resizeHandleRect(NodeId const nodeId) const override;
 
     int portSpacing(NodeId const nodeId) const override;
+
+    unsigned int minimumEmbeddedWidgetHeight(NodeId const nodeId) const override;
+
+    unsigned int embeddedWidgetTopOffset(NodeId const nodeId) const override;
+
+    unsigned int embeddedWidgetBottomGap(NodeId const nodeId) const override;
+
 private:
     QRectF portTextRect(NodeId const nodeId,
                         PortType const portType,

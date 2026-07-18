@@ -114,6 +114,7 @@ void NodeStyle::loadJson(QJsonObject const &json)
     NODE_STYLE_READ_BOOL(obj, ShadowEnabled);
     NODE_STYLE_READ_COLOR(obj, FontColor);
     NODE_STYLE_READ_COLOR(obj, FontColorFaded);
+    NODE_STYLE_READ_COLOR(obj, TitleColor);
     NODE_STYLE_READ_COLOR(obj, ConnectionPointColor);
     NODE_STYLE_READ_COLOR(obj, FilledConnectionPointColor);
     NODE_STYLE_READ_COLOR(obj, WarningColor);
@@ -140,6 +141,7 @@ QJsonObject NodeStyle::toJson() const
     NODE_STYLE_WRITE_BOOL(obj, ShadowEnabled);
     NODE_STYLE_WRITE_COLOR(obj, FontColor);
     NODE_STYLE_WRITE_COLOR(obj, FontColorFaded);
+    NODE_STYLE_WRITE_COLOR(obj, TitleColor);
     NODE_STYLE_WRITE_COLOR(obj, ConnectionPointColor);
     NODE_STYLE_WRITE_COLOR(obj, FilledConnectionPointColor);
     NODE_STYLE_WRITE_COLOR(obj, WarningColor);

@@ -6,6 +6,7 @@
 #include "NodeState.hpp"
 
 class QGraphicsProxyWidget;
+class QMenu;
 
 namespace QtNodes {
 
@@ -91,6 +92,9 @@ private:
     void initRemarksEditor();
     void startEditingRemarks();
     void finishEditingRemarks();
+
+    void addTitleColorMenu(QMenu &menu);
+    void openNodeHelp() const;
 
 private Q_SLOTS:
     void onLockedState(NodeId);

@@ -231,6 +231,7 @@ void DefaultNodePainter::drawNodeCaption(QPainter *painter, NodeGraphicsObject &
     auto offset=ngo.nodeState().hovered() || ngo.isSelected() ? nodeStyle.HoveredPenWidth : nodeStyle.PenWidth;
     // draw caption color
     painter->setPen(Qt::NoPen);
+    painter->setBrush(nodeStyle.TitleColor);
     painter->drawRoundedRect(offset,
         offset,
         geometry.size(nodeId).width()-2*offset,

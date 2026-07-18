@@ -7,6 +7,8 @@
 #include <QRect>
 #include <QWidget>
 
+#include <algorithm>
+
 namespace QtNodes {
 
 DefaultHorizontalNodeGeometry::DefaultHorizontalNodeGeometry(AbstractGraphModel &graphModel)
@@ -53,10 +55,9 @@ void DefaultHorizontalNodeGeometry::recomputeSize(NodeId const nodeId) const
 
     QRectF const capRect = captionRect(nodeId);
 
-    height += capRect.height();
-
-    height += _portSpasing; // space above caption
-    height += _portSpasing; // space below caption
+    // contentTop (caption + one port) + bottom gap (one port)
+    height += embeddedWidgetTopOffset(nodeId);
+    height += embeddedWidgetBottomGap(nodeId);
 
     unsigned int inPortWidth = maxPortsTextAdvance(nodeId, PortType::In);
     unsigned int outPortWidth = maxPortsTextAdvance(nodeId, PortType::Out);
@@ -173,20 +174,20 @@ QPointF DefaultHorizontalNodeGeometry::widgetPosition(NodeId const nodeId) const
 {
     QSize size = _graphModel.nodeData<QSize>(nodeId, NodeRole::Size);
 
-    unsigned int captionHeight = captionRect(nodeId).height()*2;
+    qreal const contentTop = embeddedWidgetTopOffset(nodeId);
+    qreal const bottomGap = embeddedWidgetBottomGap(nodeId);
+    qreal const widgetX = 2.0 * _portSpasing + maxPortsTextAdvance(nodeId, PortType::In);
 
     bool isEmbeded = _graphModel.nodeData(nodeId, NodeRole::WidgetEmbeddable).value<bool>();
     auto w = _graphModel.nodeData<QWidget *>(nodeId, NodeRole::Widget);
 
     if (isEmbeded && w) {
-        // If the widget wants to use as much vertical space as possible,
-        // place it immediately after the caption.
+        // Expand: fill between contentTop and bottomGap. Otherwise center in that area.
         if (w->sizePolicy().verticalPolicy() & QSizePolicy::ExpandFlag) {
-            return QPointF(2.0 * _portSpasing + maxPortsTextAdvance(nodeId, PortType::In),
-                           captionHeight);
+            return QPointF(widgetX, contentTop);
         } else {
-            return QPointF(2.0 * _portSpasing + maxPortsTextAdvance(nodeId, PortType::In),
-                           (captionHeight + size.height() - w->height()) / 2.0);
+            qreal const available = size.height() - contentTop - bottomGap;
+            return QPointF(widgetX, contentTop + (available - w->height()) / 2.0);
         }
     }
     return QPointF();
@@ -203,6 +204,23 @@ QRect DefaultHorizontalNodeGeometry::resizeHandleRect(NodeId const nodeId) const
 
 int DefaultHorizontalNodeGeometry::portSpacing(NodeId const nodeId) const {
     return _portSpasing;
+}
+
+unsigned int DefaultHorizontalNodeGeometry::minimumEmbeddedWidgetHeight(NodeId const nodeId) const
+{
+    return maxVerticalPortsExtent(nodeId);
+}
+
+unsigned int DefaultHorizontalNodeGeometry::embeddedWidgetTopOffset(NodeId const nodeId) const
+{
+    // Caption + one port height
+    return static_cast<unsigned int>(captionRect(nodeId).height()) + _portSize;
+}
+
+unsigned int DefaultHorizontalNodeGeometry::embeddedWidgetBottomGap(NodeId const) const
+{
+    // Fixed gap below the last port / widget
+    return _portSize/2.0;
 }
 
 QRectF DefaultHorizontalNodeGeometry::portTextRect(NodeId const nodeId,

@@ -1,10 +1,18 @@
 #include "NodeGraphicsObject.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 
 #include <QtWidgets/QGraphicsEffect>
 #include <QtWidgets/QtWidgets>
+#include <QtCore/QJsonDocument>
+#include <QtCore/QCoreApplication>
+#include <QtCore/QDir>
+#include <QtCore/QFileInfo>
+#include <QtCore/QRegularExpression>
+#include <QtGui/QDesktopServices>
+#include <QtCore/QUrl>
 
 #include "AbstractGraphModel.hpp"
 #include "AbstractNodeGeometry.hpp"
@@ -14,10 +22,60 @@
 #include "ConnectionIdUtils.hpp"
 #include "NodeConnectionInteraction.hpp"
 #include "NodeDelegateModel.hpp"
+#include "NodeStyle.hpp"
 #include "StyleCollection.hpp"
 #include "UndoCommands.hpp"
 
 namespace QtNodes {
+
+namespace {
+
+QList<QColor> titleColorPresets()
+{
+    return {
+        QColor(255, 140, 0),   // orange
+        QColor(0, 170, 255),   // bright blue
+        QColor(255, 105, 180), // pink
+        QColor(160, 120, 220), // purple
+        QColor(0, 180, 170),   // teal
+        QColor(220, 50, 60),   // red
+        QColor(240, 190, 40),  // yellow
+        QColor(100, 180, 70),  // green
+    };
+}
+
+QStringList titleColorNames()
+{
+    return {
+        QStringLiteral("Orange"),
+        QStringLiteral("Blue"),
+        QStringLiteral("Pink"),
+        QStringLiteral("Purple"),
+        QStringLiteral("Teal"),
+        QStringLiteral("Red"),
+        QStringLiteral("Yellow"),
+        QStringLiteral("Green"),
+    };
+}
+
+QIcon colorSwatchIcon(QColor const &color)
+{
+    QPixmap pixmap(16, 16);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setPen(QPen(QColor(0, 0, 0, 60), 1));
+    painter.setBrush(color);
+    painter.drawRoundedRect(1, 1, 14, 14, 3, 3);
+    return QIcon(pixmap);
+}
+
+bool sameRgb(QColor const &a, QColor const &b)
+{
+    return a.red() == b.red() && a.green() == b.green() && a.blue() == b.blue();
+}
+
+} // namespace
 
 NodeGraphicsObject::NodeGraphicsObject(BasicGraphicsScene &scene, NodeId nodeId)
     : _nodeId(nodeId)
@@ -134,14 +192,30 @@ void NodeGraphicsObject::embedQWidget()
         _proxyWidget->setPreferredWidth(5);
 
         geometry.recomputeSize(_nodeId);
-        //需要考虑节点尺寸上预留的两个端口间隙的控件
-        if (w->sizePolicy().verticalPolicy() & QSizePolicy::ExpandFlag) {
-            unsigned int widgetHeight = geometry.size(_nodeId).height() -
-                                        geometry.captionRect(_nodeId).height()-geometry.portSpacing(_nodeId)*2;
 
-            // If the widget wants to use as much vertical space as possible, set
-            // it to have the geom's equivalentWidgetHeight.
+        // Port stack sets a floor on the real QWidget (proxy min alone is not enough).
+        unsigned int const minWidgetH = geometry.minimumEmbeddedWidgetHeight(_nodeId);
+        if (minWidgetH > 0) {
+            w->setMinimumHeight(static_cast<int>(minWidgetH));
+            if (w->height() < static_cast<int>(minWidgetH)) {
+                w->resize(w->width(), static_cast<int>(minWidgetH));
+                geometry.recomputeSize(_nodeId);
+            }
+        }
+
+        // Available height = nodeHeight - topOffset - bottomGap (same as widgetPosition).
+        if (w->sizePolicy().verticalPolicy() & QSizePolicy::ExpandFlag) {
+            auto const nodeH = geometry.size(_nodeId).height();
+            auto const overhead = static_cast<int>(geometry.embeddedWidgetTopOffset(_nodeId)
+                                                   + geometry.embeddedWidgetBottomGap(_nodeId));
+            unsigned int widgetHeight = nodeH > overhead ? static_cast<unsigned int>(nodeH - overhead)
+                                                         : minWidgetH;
+            widgetHeight = std::max(widgetHeight, minWidgetH);
+
+            w->setMinimumHeight(static_cast<int>(minWidgetH));
+            w->resize(w->width(), static_cast<int>(widgetHeight));
             _proxyWidget->setMinimumHeight(widgetHeight);
+            geometry.recomputeSize(_nodeId);
         }
 
         _proxyWidget->setPos(geometry.widgetPosition(_nodeId));
@@ -323,12 +397,35 @@ void NodeGraphicsObject::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 
             oldSize += QSize(diff.x(), diff.y());
 
-            w->resize(oldSize);
-
             AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
+
+            // Cannot shrink below the port-driven content height (applies to QWidget, not only proxy).
+            unsigned int const minWidgetH = geometry.minimumEmbeddedWidgetHeight(_nodeId);
+            oldSize.setWidth(std::max(1, oldSize.width()));
+            oldSize.setHeight(std::max(static_cast<int>(minWidgetH), oldSize.height()));
+
+            w->setMinimumHeight(static_cast<int>(minWidgetH));
+            w->resize(oldSize);
 
             // Passes the new size to the model.
             geometry.recomputeSize(_nodeId);
+
+            if (_proxyWidget) {
+                if (w->sizePolicy().verticalPolicy() & QSizePolicy::ExpandFlag) {
+                    auto const nodeH = geometry.size(_nodeId).height();
+                    auto const overhead = static_cast<int>(geometry.embeddedWidgetTopOffset(_nodeId)
+                                                           + geometry.embeddedWidgetBottomGap(_nodeId));
+                    unsigned int widgetHeight = nodeH > overhead
+                                                    ? static_cast<unsigned int>(nodeH - overhead)
+                                                    : minWidgetH;
+                    widgetHeight = std::max(widgetHeight, minWidgetH);
+
+                    w->resize(w->width(), static_cast<int>(widgetHeight));
+                    _proxyWidget->setMinimumHeight(widgetHeight);
+                    geometry.recomputeSize(_nodeId);
+                }
+                _proxyWidget->setPos(geometry.widgetPosition(_nodeId));
+            }
 
             update();
 
@@ -434,21 +531,15 @@ void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
         return;
     }
 
+    // Keep multi-selection when right-clicking an already selected node;
+    // otherwise select only this node.
+    if (!isSelected()) {
+        if (scene()) {
+            scene()->clearSelection();
+        }
+        setSelected(true);
+    }
 
-
-    // NodeFlags flags = _graphModel.nodeFlags(_nodeId);
-
-    // bool const locked = flags.testFlag(NodeFlag::Locked);
-    // QAction* lockAction = menu.addAction(locked?"Unlock Node":"Lock Node");
-    // lockAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_L));  // 添加快捷键
-    // 连接菜单项信号
-
-    // connect(lockAction, &QAction::triggered, [this]() {
-    //     setLockedState();
-    // });
-    // ====== 补充：显示view的actions ======
-    // 获取 view
-    // 添加菜单项（示例动作，可根据需要扩展）
     QMenu m_Menu;
     QAction* renameAction = m_Menu.addAction( "Edit Remarks");
     renameAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));  // 添加快捷键
@@ -468,8 +559,12 @@ void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
     QAction* helpAction = m_Menu.addAction( "Node Help");
     helpAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_H));  // 添加快捷键
     connect(helpAction, &QAction::triggered, [this]() {
-        qDebug()<<"Node type: "<<_graphModel.nodeData(_nodeId,NodeRole::Type).toString()<<" help function not realize";
+        openNodeHelp();
     });
+
+    m_Menu.addSeparator();
+    addTitleColorMenu(m_Menu);
+
     auto* scene = this->scene();
     auto views = scene ? scene->views() : QList<QGraphicsView*>();
     if (!views.isEmpty()) {
@@ -483,12 +578,102 @@ void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
     // 显示菜单并等待用户选择
      m_Menu.exec(event->screenPos());
 
-    // 如果用户没有选择任何项，仍然传递信号给scene
-    // if (!selectedAction) {
-    //     Q_EMIT nodeScene()->nodeContextMenu(_nodeId, mapToScene(event->pos()));
-    // }
-
     event->accept(); // 确保事件被处理
+}
+
+void NodeGraphicsObject::addTitleColorMenu(QMenu &menu)
+{
+    // Collect all selected nodes; fall back to the node under the cursor.
+    QList<NodeId> targetNodeIds;
+    if (auto *sc = scene()) {
+        for (QGraphicsItem *item : sc->selectedItems()) {
+            if (auto *ngo = qgraphicsitem_cast<NodeGraphicsObject *>(item)) {
+                targetNodeIds.append(ngo->nodeId());
+            }
+        }
+    }
+    if (!targetNodeIds.contains(_nodeId)) {
+        targetNodeIds.prepend(_nodeId);
+    }
+
+    // Checkmark: only if every selected node shares the same title color.
+    QColor sharedColor;
+    bool allSame = true;
+    {
+        NodeStyle firstStyle(
+            QJsonDocument::fromVariant(_graphModel.nodeData(targetNodeIds.first(), NodeRole::Style))
+                .object());
+        sharedColor = firstStyle.TitleColor;
+        for (int i = 1; i < targetNodeIds.size(); ++i) {
+            NodeStyle style(
+                QJsonDocument::fromVariant(_graphModel.nodeData(targetNodeIds.at(i), NodeRole::Style))
+                    .object());
+            if (!sameRgb(style.TitleColor, sharedColor)) {
+                allSame = false;
+                break;
+            }
+        }
+    }
+
+    QMenu *colorMenu = menu.addMenu(QStringLiteral("Color"));
+    QActionGroup *group = new QActionGroup(colorMenu);
+    group->setExclusive(true);
+
+    QList<QColor> const colors = titleColorPresets();
+    QStringList const names = titleColorNames();
+
+    for (int i = 0; i < colors.size(); ++i) {
+        QColor const color = colors.at(i);
+        QAction *action = colorMenu->addAction(colorSwatchIcon(color), names.at(i));
+        action->setCheckable(true);
+        action->setChecked(allSame && sameRgb(sharedColor, color));
+        group->addAction(action);
+
+        QObject::connect(action, &QAction::triggered, &menu, [this, &menu, color, targetNodeIds]() {
+            for (NodeId const nodeId : targetNodeIds) {
+                NodeStyle style(
+                    QJsonDocument::fromVariant(_graphModel.nodeData(nodeId, NodeRole::Style))
+                        .object());
+                style.TitleColor = color;
+                style.SelectedBoundaryColor = color;
+                _graphModel.setNodeData(nodeId, NodeRole::Style, style.toJson().toVariantMap());
+
+                if (auto *ngo = nodeScene()->nodeGraphicsObject(nodeId)) {
+                    ngo->update();
+                }
+            }
+            menu.close();
+        });
+    }
+}
+
+void NodeGraphicsObject::openNodeHelp() const
+{
+    // "Audio Analysis" -> "AudioAnalysis.html" under <exe>/html/nodes/
+    QString typeName = _graphModel.nodeData(_nodeId, NodeRole::Type).toString().trimmed();
+    if (typeName.isEmpty()) {
+        qDebug() << "Node Help: empty node type";
+        return;
+    }
+
+    // 文件名去掉所有空白字符（空格、制表符等）
+    QString fileStem = typeName;
+    fileStem.remove(QRegularExpression(QStringLiteral("\\s+")));
+    fileStem.remove(QLatin1Char('/'));
+    fileStem.remove(QLatin1Char('\\'));
+
+    QString const helpPath = QDir(QCoreApplication::applicationDirPath())
+                                 .filePath(QStringLiteral("html/nodes/%1.html").arg(fileStem));
+
+    QFileInfo const info(helpPath);
+    if (!info.exists() || !info.isFile()) {
+        qDebug() << "Node Help: page not found for type" << typeName << "expected" << helpPath;
+        return;
+    }
+
+    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(info.absoluteFilePath()))) {
+        qDebug() << "Node Help: failed to open" << info.absoluteFilePath();
+    }
 }
 
 void NodeGraphicsObject::keyPressEvent(QKeyEvent* event)

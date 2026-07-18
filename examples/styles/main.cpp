@@ -55,6 +55,7 @@ static void setStyle()
       "ShadowEnabled": false,
       "FontColor": [10, 10, 10],
       "FontColorFaded": [100, 100, 100],
+      "TitleColor": [180, 200, 80],
       "ConnectionPointColor": "white",
       "PenWidth": 2.0,
       "HoveredPenWidth": 2.5,

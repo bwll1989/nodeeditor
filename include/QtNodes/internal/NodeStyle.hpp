@@ -37,6 +37,7 @@ public:
     bool ShadowEnabled;
     QColor FontColor;
     QColor FontColorFaded;
+    QColor TitleColor;
 
     QColor ConnectionPointColor;
     QColor FilledConnectionPointColor;

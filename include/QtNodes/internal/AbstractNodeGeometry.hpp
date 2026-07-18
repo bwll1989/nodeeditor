@@ -74,6 +74,18 @@ public:
 
     virtual int portSpacing(NodeId const nodeId) const = 0;
 
+    /**
+     * Minimum height of an embedded widget so it cannot shrink below the
+     * port-driven content area (Horizontal layout). Default is 0.
+     */
+    virtual unsigned int minimumEmbeddedWidgetHeight(NodeId const nodeId) const;
+
+    /// Y where the embedded widget starts. Default: caption + 2 * portSpacing.
+    virtual unsigned int embeddedWidgetTopOffset(NodeId const nodeId) const;
+
+    /// Reserved space below the embedded widget / last port. Default: 0.
+    virtual unsigned int embeddedWidgetBottomGap(NodeId const nodeId) const;
+
 protected:
     AbstractGraphModel &_graphModel;
 };

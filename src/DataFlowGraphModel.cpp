@@ -265,8 +265,7 @@ QVariant DataFlowGraphModel::nodeData(NodeId nodeId, NodeRole role) const
         break;
 
     case NodeRole::Style: {
-        auto style = StyleCollection::nodeStyle();
-        result = style.toJson().toVariantMap();
+        result = model->nodeStyle().toJson().toVariantMap();
     } break;
 
     case NodeRole::InternalData: {
@@ -370,8 +369,20 @@ bool DataFlowGraphModel::setNodeData(NodeId nodeId, NodeRole role, QVariant valu
     case NodeRole::Caption:
         break;
 
-    case NodeRole::Style:
-        break;
+    case NodeRole::Style: {
+        auto it = _models.find(nodeId);
+        if (it != _models.end() && it->second) {
+            QJsonObject styleJson;
+            if (value.canConvert<QVariantMap>()) {
+                styleJson = QJsonObject::fromVariantMap(value.toMap());
+            } else {
+                styleJson = value.toJsonObject();
+            }
+            it->second->setNodeStyle(NodeStyle(styleJson));
+            Q_EMIT nodeUpdated(nodeId);
+            result = true;
+        }
+    } break;
 
     case NodeRole::InternalData:
         break;
@@ -599,6 +610,7 @@ QJsonObject DataFlowGraphModel::saveNode(NodeId const nodeId) const
     nodeJson["input-count"] = nodeData(nodeId, NodeRole::InPortCount).toInt();
     nodeJson["output-count"] = nodeData(nodeId, NodeRole::OutPortCount).toInt();
     nodeJson["port-editable"] = nodeData(nodeId, NodeRole::PortEditable).toBool();
+    nodeJson["title-color"] = _models.at(nodeId)->nodeStyle().TitleColor.name(QColor::HexRgb);
     
     {
         QPointF const pos = nodeData(nodeId, NodeRole::Position).value<QPointF>();
@@ -673,6 +685,12 @@ void DataFlowGraphModel::loadNode(QJsonObject const &nodeJson)
         setNodeData(restoredNodeId, NodeRole::PortEditable, nodeJson["port-editable"].toBool());
         setNodeData(restoredNodeId, NodeRole::InPortCount, nodeJson["input-count"].toInt());
         setNodeData(restoredNodeId, NodeRole::OutPortCount, nodeJson["output-count"].toInt());
+        if (nodeJson.contains(QStringLiteral("title-color"))) {
+            NodeStyle style = _models[restoredNodeId]->nodeStyle();
+            style.TitleColor = QColor(nodeJson.value(QStringLiteral("title-color")).toString());
+            style.SelectedBoundaryColor = style.TitleColor;
+            _models[restoredNodeId]->setNodeStyle(style);
+        }
         _models[restoredNodeId]->load(internalDataJson);
         // 加载备注
        

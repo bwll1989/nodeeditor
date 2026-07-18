@@ -58,4 +58,20 @@ PortIndex AbstractNodeGeometry::checkPortHit(NodeId const nodeId,
     return result;
 }
 
+unsigned int AbstractNodeGeometry::minimumEmbeddedWidgetHeight(NodeId const) const
+{
+    return 0;
+}
+
+unsigned int AbstractNodeGeometry::embeddedWidgetTopOffset(NodeId const nodeId) const
+{
+    return static_cast<unsigned int>(captionRect(nodeId).height())
+           + 2u * static_cast<unsigned int>(portSpacing(nodeId));
+}
+
+unsigned int AbstractNodeGeometry::embeddedWidgetBottomGap(NodeId const) const
+{
+    return 0;
+}
+
 } // namespace QtNodes

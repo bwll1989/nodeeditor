@@ -25,9 +25,19 @@
 #include <QtCore/QJsonArray>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
+#include <QtCore/QEvent>
+#include <QtCore/QTimer>
 #include <QtCore/QtGlobal>
+#include <QtGui/QMouseEvent>
+#include <QtWidgets/QApplication>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QGraphicsSceneMoveEvent>
+#include <QtWidgets/QHBoxLayout>
+#include <QtWidgets/QLabel>
+#include <QtWidgets/QLineEdit>
+#include <QtWidgets/QToolButton>
+#include <algorithm>
+#include <memory>
 #include <queue>
 
 namespace QtNodes {
@@ -416,6 +426,209 @@ void BasicGraphicsScene::centerOnNode(NodeId nodeId) {
     if (nodeItem) {
         views().first()->centerOn(nodeItem);
     }
+}
+
+void BasicGraphicsScene::selectAndCenterNode(NodeId nodeId)
+{
+    if (!_graphModel.nodeExists(nodeId)) {
+        return;
+    }
+
+    clearSelection();
+    if (auto *nodeObj = nodeGraphicsObject(nodeId)) {
+        nodeObj->setSelected(true);
+    }
+    if (!views().isEmpty()) {
+        centerOnNode(nodeId);
+    }
+}
+
+void BasicGraphicsScene::showSearchNodeBar()
+{
+    // 延迟激活并聚焦输入框，避免快捷键事件抢焦点失败
+    const auto focusSearchEdit = [](QDialog *dialog) {
+        if (!dialog) {
+            return;
+        }
+        QPointer<QDialog> dialogPtr(dialog);
+        QTimer::singleShot(0, dialog, [dialogPtr]() {
+            if (!dialogPtr) {
+                return;
+            }
+            dialogPtr->raise();
+            dialogPtr->activateWindow();
+            if (auto *edit = dialogPtr->findChild<QLineEdit *>(QStringLiteral("searchNodeEdit"))) {
+                edit->setFocus(Qt::ShortcutFocusReason);
+                edit->selectAll();
+            }
+        });
+    };
+
+    // 本场景已有搜索条则复用
+    if (_searchNodeBar) {
+        _searchNodeBar->show();
+        focusSearchEdit(_searchNodeBar);
+        return;
+    }
+
+    QWidget *parentWidget = views().isEmpty() ? nullptr : views().first();
+
+    auto *dialog = new QDialog(parentWidget);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    // Dialog（非 Tool）才能在 Windows 上稳定抢到键盘焦点；无边框隐藏标题栏
+    dialog->setWindowFlags(Qt::Dialog | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    dialog->setFixedHeight(40);
+    dialog->resize(520, 40);
+    _searchNodeBar = dialog;
+
+    auto *layout = new QHBoxLayout(dialog);
+    layout->setContentsMargins(8, 4, 8, 4);
+    layout->setSpacing(6);
+
+    auto *searchEdit = new QLineEdit(dialog);
+    searchEdit->setObjectName(QStringLiteral("searchNodeEdit"));
+    searchEdit->setFocusPolicy(Qt::StrongFocus);
+    searchEdit->setPlaceholderText(tr("Search by name, type or id..."));
+    dialog->setFocusProxy(searchEdit);
+
+    auto *prevBtn = new QToolButton(dialog);
+    prevBtn->setArrowType(Qt::LeftArrow);
+    prevBtn->setToolTip(tr("Previous match"));
+    prevBtn->setAutoRaise(true);
+    prevBtn->setEnabled(false);
+
+    auto *nextBtn = new QToolButton(dialog);
+    nextBtn->setArrowType(Qt::RightArrow);
+    nextBtn->setToolTip(tr("Next match"));
+    nextBtn->setAutoRaise(true);
+    nextBtn->setEnabled(false);
+
+    auto *countLabel = new QLabel(tr("0/0"), dialog);
+    countLabel->setMinimumWidth(72);
+    countLabel->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
+
+    layout->addWidget(searchEdit, 1);
+    layout->addWidget(prevBtn);
+    layout->addWidget(nextBtn);
+    layout->addWidget(countLabel);
+
+    struct Entry {
+        NodeId id;
+        QString haystack;
+    };
+
+    auto entries = std::make_shared<QVector<Entry>>();
+    auto matches = std::make_shared<QVector<NodeId>>();
+    auto matchIndex = std::make_shared<int>(-1);
+
+    entries->reserve(static_cast<int>(_graphModel.allNodeIds().size()));
+    for (NodeId id : _graphModel.allNodeIds()) {
+        const QString remarks = _graphModel.nodeData(id, NodeRole::Remarks).toString();
+        const QString type = _graphModel.nodeData(id, NodeRole::Type).toString();
+        const QString caption = _graphModel.nodeData(id, NodeRole::Caption).toString();
+        const QString idText = QString::number(id);
+        Entry entry;
+        entry.id = id;
+        entry.haystack = (idText + QLatin1Char(' ') + remarks + QLatin1Char(' ') + caption
+                          + QLatin1Char(' ') + type)
+                             .toLower();
+        entries->push_back(std::move(entry));
+    }
+    std::sort(entries->begin(), entries->end(), [](Entry const &a, Entry const &b) {
+        return a.id < b.id;
+    });
+
+    const auto updateStatus = [prevBtn, nextBtn, countLabel, matches, matchIndex]() {
+        bool const hasMatches = !matches->isEmpty();
+        prevBtn->setEnabled(hasMatches);
+        nextBtn->setEnabled(hasMatches);
+        if (!hasMatches || *matchIndex < 0) {
+            countLabel->setText(QObject::tr("0/%1").arg(matches->size()));
+            return;
+        }
+        countLabel->setText(QObject::tr("%1/%2").arg(*matchIndex + 1).arg(matches->size()));
+    };
+
+    const auto focusMatchAt = [this, dialog, searchEdit, matches, matchIndex, updateStatus](int index) {
+        if (matches->isEmpty()) {
+            *matchIndex = -1;
+            updateStatus();
+            return;
+        }
+        int const count = matches->size();
+        *matchIndex = ((index % count) + count) % count;
+        selectAndCenterNode(matches->at(*matchIndex));
+        updateStatus();
+        dialog->raise();
+        searchEdit->setFocus(Qt::OtherFocusReason);
+    };
+
+    const auto refill = [entries, matches, matchIndex, focusMatchAt, updateStatus](QString const &filter) {
+        matches->clear();
+        *matchIndex = -1;
+        QString const needle = filter.trimmed().toLower();
+        if (!needle.isEmpty()) {
+            for (Entry const &entry : *entries) {
+                if (entry.haystack.contains(needle)) {
+                    matches->push_back(entry.id);
+                }
+            }
+        }
+        updateStatus();
+        if (!matches->isEmpty()) {
+            focusMatchAt(0);
+        }
+    };
+
+    // 点击搜索条外空白区域时自动关闭
+    class OutsideCloseFilter : public QObject
+    {
+    public:
+        explicit OutsideCloseFilter(QDialog *dlg)
+            : QObject(dlg)
+            , _dialog(dlg)
+        {
+        }
+
+        bool eventFilter(QObject *, QEvent *event) override
+        {
+            if (!_dialog || !_dialog->isVisible()) {
+                return false;
+            }
+            if (event->type() != QEvent::MouseButtonPress) {
+                return false;
+            }
+            QPoint const globalPos = static_cast<QMouseEvent *>(event)->globalPosition().toPoint();
+            if (!_dialog->frameGeometry().contains(globalPos)) {
+                _dialog->reject();
+            }
+            return false;
+        }
+
+    private:
+        QPointer<QDialog> _dialog;
+    };
+
+    qApp->installEventFilter(new OutsideCloseFilter(dialog));
+
+    QObject::connect(searchEdit, &QLineEdit::textChanged, dialog, refill);
+    QObject::connect(prevBtn, &QToolButton::clicked, dialog, [focusMatchAt, matchIndex]() {
+        focusMatchAt(*matchIndex < 0 ? 0 : *matchIndex - 1);
+    });
+    QObject::connect(nextBtn, &QToolButton::clicked, dialog, [focusMatchAt, matchIndex]() {
+        focusMatchAt(*matchIndex < 0 ? 0 : *matchIndex + 1);
+    });
+    QObject::connect(searchEdit, &QLineEdit::returnPressed, dialog, [focusMatchAt, matchIndex]() {
+        focusMatchAt(*matchIndex < 0 ? 0 : *matchIndex + 1);
+    });
+
+    if (parentWidget) {
+        QPoint const topCenter = parentWidget->mapToGlobal(QPoint(parentWidget->width() / 2, 12));
+        dialog->move(topCenter.x() - dialog->width() / 2, topCenter.y());
+    }
+
+    dialog->show();
+    focusSearchEdit(dialog);
 }
 
 void BasicGraphicsScene::onNodeWidgetUpdated(NodeId const nodeId) {

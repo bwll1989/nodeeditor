@@ -41,6 +41,7 @@ Q_NAMESPACE_EXPORT(NODE_EDITOR_PUBLIC)
         Remarks=16,         ///< `QString` for node remarks
         EmbeddWidgetType=17, ///< `NodeWidgetType` for embeddable widget
         ModelAlias=18,           ///< `QString` for node Model alias
+        Muted=19,                ///< Mute Input: `bool`, or map {muted, sync} for Unmute & Sync
     };
 Q_ENUM_NS(NodeRole)
 
@@ -50,7 +51,8 @@ Q_ENUM_NS(NodeRole)
 enum NodeFlag {
     NoFlags = 0x0,   ///< Default NodeFlag
     Resizable = 0x1, ///< Lets the node be resizable
-    Locked = 0x2
+    Locked = 0x2,    ///< Locks node interaction
+    Muted = 0x4      ///< Mute Input: skip setInData, keep current state
 };
 
 Q_DECLARE_FLAGS(NodeFlags, NodeFlag)
@@ -142,6 +144,10 @@ struct GroupId
     std::vector<NodeId> nodeIds;
     QString groupRemarks="Untitled group";
     bool collapsed = false;
+    /// 标题颜色（对应节点 TitleColor；空则使用 GroupStyle::CaptionColor）
+    QString titleColor;
+    /// 选中边框颜色（对应节点 SelectedBoundaryColor；空则跟随 titleColor / 默认样式）
+    QString selectedBoundaryColor;
 //    std::vector<ConnectionId> connectionIds;
 };
 

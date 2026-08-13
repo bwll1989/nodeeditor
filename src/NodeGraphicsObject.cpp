@@ -5,6 +5,8 @@
 #include <iostream>
 
 #include <QtWidgets/QGraphicsEffect>
+#include <QtWidgets/QGraphicsProxyWidget>
+#include <QtWidgets/QLineEdit>
 #include <QtWidgets/QtWidgets>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QCoreApplication>
@@ -25,6 +27,7 @@
 #include "NodeStyle.hpp"
 #include "StyleCollection.hpp"
 #include "UndoCommands.hpp"
+#include "GroupGraphicsObject.hpp"
 
 namespace QtNodes {
 
@@ -88,8 +91,6 @@ NodeGraphicsObject::NodeGraphicsObject(BasicGraphicsScene &scene, NodeId nodeId)
     setFlag(QGraphicsItem::ItemDoesntPropagateOpacityToChildren, true);
     setFlag(QGraphicsItem::ItemIsFocusable, true);
 
-    setLockedState();
-
     setCacheMode(QGraphicsItem::DeviceCoordinateCache);
 
     QJsonObject nodeStyleJson = _graphModel.nodeData(_nodeId, NodeRole::Style).toJsonObject();
@@ -106,7 +107,8 @@ NodeGraphicsObject::NodeGraphicsObject(BasicGraphicsScene &scene, NodeId nodeId)
          setGraphicsEffect(effect);
      }
 
-    setOpacity(nodeStyle.Opacity);
+    // Applies Locked / Mute Input interaction + opacity.
+    setLockedState();
 
     setAcceptHoverEvents(true);
 
@@ -145,11 +147,49 @@ BasicGraphicsScene *NodeGraphicsObject::nodeScene() const
     return dynamic_cast<BasicGraphicsScene *>(scene());
 }
 
+void NodeGraphicsObject::syncEmbeddedWidgetSize(QWidget *w)
+{
+    if (!w || !_proxyWidget)
+        return;
+
+    AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
+
+    // Port stack sets a floor on the real QWidget (proxy min alone is not enough).
+    unsigned int const minWidgetH = geometry.minimumEmbeddedWidgetHeight(_nodeId);
+    if (minWidgetH > 0) {
+        w->setMinimumHeight(static_cast<int>(minWidgetH));
+        if (w->height() < static_cast<int>(minWidgetH)) {
+            w->resize(w->width(), static_cast<int>(minWidgetH));
+            geometry.recomputeSize(_nodeId);
+        }
+    }
+
+    // Available height = nodeHeight - topOffset - bottomGap (same as widgetPosition).
+    if (w->sizePolicy().verticalPolicy() & QSizePolicy::ExpandFlag) {
+        auto const nodeH = geometry.size(_nodeId).height();
+        auto const overhead = static_cast<int>(geometry.embeddedWidgetTopOffset(_nodeId)
+                                               + geometry.embeddedWidgetBottomGap(_nodeId));
+        unsigned int widgetHeight = nodeH > overhead ? static_cast<unsigned int>(nodeH - overhead)
+                                                     : minWidgetH;
+        widgetHeight = std::max(widgetHeight, minWidgetH);
+
+        w->setMinimumHeight(static_cast<int>(minWidgetH));
+        w->resize(w->width(), static_cast<int>(widgetHeight));
+        _proxyWidget->setMinimumHeight(widgetHeight);
+        geometry.recomputeSize(_nodeId);
+    }
+}
+
 void NodeGraphicsObject::updateQWidgetEmbedPos()
 {
   if (_proxyWidget) {
       if(_graphModel.nodeData(_nodeId, NodeRole::WidgetEmbeddable).value<bool>()) {
           AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
+          // 端口增减后节点已 recomputeSize，这里必须同步拉高/压矮嵌入控件
+          if (auto w = _proxyWidget->widget()) {
+              prepareGeometryChange();
+              syncEmbeddedWidgetSize(w);
+          }
           _proxyWidget->setPos(geometry.widgetPosition(_nodeId));
       }else {
 
@@ -193,30 +233,7 @@ void NodeGraphicsObject::embedQWidget()
 
         geometry.recomputeSize(_nodeId);
 
-        // Port stack sets a floor on the real QWidget (proxy min alone is not enough).
-        unsigned int const minWidgetH = geometry.minimumEmbeddedWidgetHeight(_nodeId);
-        if (minWidgetH > 0) {
-            w->setMinimumHeight(static_cast<int>(minWidgetH));
-            if (w->height() < static_cast<int>(minWidgetH)) {
-                w->resize(w->width(), static_cast<int>(minWidgetH));
-                geometry.recomputeSize(_nodeId);
-            }
-        }
-
-        // Available height = nodeHeight - topOffset - bottomGap (same as widgetPosition).
-        if (w->sizePolicy().verticalPolicy() & QSizePolicy::ExpandFlag) {
-            auto const nodeH = geometry.size(_nodeId).height();
-            auto const overhead = static_cast<int>(geometry.embeddedWidgetTopOffset(_nodeId)
-                                                   + geometry.embeddedWidgetBottomGap(_nodeId));
-            unsigned int widgetHeight = nodeH > overhead ? static_cast<unsigned int>(nodeH - overhead)
-                                                         : minWidgetH;
-            widgetHeight = std::max(widgetHeight, minWidgetH);
-
-            w->setMinimumHeight(static_cast<int>(minWidgetH));
-            w->resize(w->width(), static_cast<int>(widgetHeight));
-            _proxyWidget->setMinimumHeight(widgetHeight);
-            geometry.recomputeSize(_nodeId);
-        }
+        syncEmbeddedWidgetSize(w);
 
         _proxyWidget->setPos(geometry.widgetPosition(_nodeId));
 
@@ -232,10 +249,21 @@ void NodeGraphicsObject::setLockedState()
     NodeFlags flags = _graphModel.nodeFlags(_nodeId);
 
     bool const locked = flags.testFlag(NodeFlag::Locked);
+    bool const muted = flags.testFlag(NodeFlag::Muted);
+    // 选中 / hover 时不降低透明度，保持原来的高亮观感
+    bool const highlighted = isSelected() || _nodeState.hovered();
 
     setFlag(QGraphicsItem::ItemIsMovable, !locked);
     setFlag(QGraphicsItem::ItemIsSelectable, !locked);
     setFlag(QGraphicsItem::ItemSendsScenePositionChanges, !locked);
+
+    QJsonObject nodeStyleJson = _graphModel.nodeData(_nodeId, NodeRole::Style).toJsonObject();
+    NodeStyle nodeStyle(nodeStyleJson);
+    double const baseOpacity = nodeStyle.Opacity;
+    setOpacity((muted && !highlighted) ? baseOpacity * 0.4 : baseOpacity);
+    if (_proxyWidget) {
+        _proxyWidget->setOpacity((muted && !highlighted) ? 0.45 : 1.0);
+    }
 }
 
 void NodeGraphicsObject::onLockedState(NodeId id)
@@ -244,6 +272,7 @@ void NodeGraphicsObject::onLockedState(NodeId id)
         return;
     }
     setLockedState();
+    update();
 }
 
 QRectF NodeGraphicsObject::boundingRect() const
@@ -274,7 +303,74 @@ void NodeGraphicsObject::reactToConnection(ConnectionGraphicsObject const *cgo)
 {
     _nodeState.storeConnectionForReaction(cgo);
 
+    // 拖线靠近本节点时：找最近的可连接端口，用 QToolTip 显示端口名
+    PortType requiredPort = cgo->connectionState().requiredPort();
+    AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
+    QPointF local = mapFromScene(cgo->sceneTransform().map(cgo->endPoint(requiredPort)));
+
+    PortIndex bestIndex = InvalidPortIndex;
+    double bestDist = 40.0; // 与绘制端端口吸附阈值一致
+    unsigned int n = _graphModel
+                         .nodeData(_nodeId,
+                                   (requiredPort == PortType::Out) ? NodeRole::OutPortCount
+                                                                   : NodeRole::InPortCount)
+                         .toUInt();
+    for (PortIndex i = 0; i < n; ++i) {
+        ConnectionId id = makeCompleteConnectionId(cgo->connectionId(), _nodeId, i);
+        if (!_graphModel.connectionPossible(id))
+            continue;
+        QPointF d = local - geometry.portPosition(_nodeId, requiredPort, i);
+        double dist = std::sqrt(QPointF::dotProduct(d, d));
+        if (dist < bestDist) {
+            bestDist = dist;
+            bestIndex = i;
+        }
+    }
+
+    if (bestIndex != InvalidPortIndex && scene() && !scene()->views().isEmpty()) {
+        // 以目标端口的场景位置换算为屏幕坐标，再弹出 tip
+        QPointF scenePos = mapToScene(geometry.portPosition(_nodeId, requiredPort, bestIndex));
+        QPoint globalPos = scene()->views().first()->mapToGlobal(
+            scene()->views().first()->mapFromScene(scenePos));
+        showCompactPortToolTip(requiredPort, bestIndex, globalPos);
+    } else {
+        hideCompactPortToolTip();
+    }
+
     update();
+}
+
+void NodeGraphicsObject::showCompactPortToolTip(PortType portType,
+                                                PortIndex portIndex,
+                                                QPoint globalPos)
+{
+    // 展开模式已常驻绘制端口名，无需 tip
+    if (_graphModel.portData<bool>(_nodeId, portType, portIndex, PortRole::CaptionVisible))
+        return;
+
+    if (!scene() || scene()->views().isEmpty())
+        return;
+
+    QString text = _graphModel.portData<QString>(_nodeId, portType, portIndex, PortRole::Caption);
+    if (text.isEmpty()) {
+        text = (portType == PortType::In) ? QStringLiteral("IN %1").arg(portIndex)
+                                          : QStringLiteral("OUT %1").arg(portIndex);
+    }
+
+    // 输入口向左/上偏移，输出口向右/下偏移，减少与节点本体重叠
+    constexpr int gap = 10;
+    if (nodeScene()->orientation() == Qt::Vertical) {
+        globalPos += (portType == PortType::In) ? QPoint(0, -gap) : QPoint(0, gap);
+    } else {
+        globalPos += (portType == PortType::In) ? QPoint(-gap, 0) : QPoint(gap, 0);
+    }
+
+    QToolTip::showText(globalPos, text, scene()->views().first());
+}
+
+void NodeGraphicsObject::hideCompactPortToolTip()
+{
+    QToolTip::hideText();
 }
 
 void NodeGraphicsObject::paint(QPainter *painter, QStyleOptionGraphicsItem const *option, QWidget *)
@@ -298,6 +394,8 @@ QVariant NodeGraphicsObject::itemChange(GraphicsItemChange change, const QVarian
 {
     if (change == ItemScenePositionHasChanged && scene()) {
         moveConnections();
+    } else if (change == ItemSelectedHasChanged) {
+        setLockedState();
     }
 
     return QGraphicsObject::itemChange(change, value);
@@ -477,6 +575,7 @@ void NodeGraphicsObject::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
     setZValue(1.0);
 
     _nodeState.setHovered(true);
+    setLockedState();
 
     update();
 
@@ -488,8 +587,11 @@ void NodeGraphicsObject::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 void NodeGraphicsObject::hoverLeaveEvent(QGraphicsSceneHoverEvent *event)
 {
     _nodeState.setHovered(false);
+    _nodeState.clearHoveredPort();
+    hideCompactPortToolTip(); // 离开节点时收起端口 tip
 
     setZValue(0.0);
+    setLockedState();
 
     update();
 
@@ -502,8 +604,33 @@ void NodeGraphicsObject::hoverMoveEvent(QGraphicsSceneHoverEvent *event)
 {
     auto pos = event->pos();
 
-    //NodeGeometry geometry(_nodeId, _graphModel, nodeScene());
     AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
+
+    // 检测鼠标下是否命中端口
+    PortType hoveredType = PortType::None;
+    PortIndex hoveredIndex = InvalidPortIndex;
+
+    for (PortType portToCheck : {PortType::In, PortType::Out}) {
+        PortIndex const portIndex = geometry.checkPortHit(_nodeId, portToCheck, pos);
+        if (portIndex != InvalidPortIndex) {
+            hoveredType = portToCheck;
+            hoveredIndex = portIndex;
+            break;
+        }
+    }
+
+    // 悬停端口变化时刷新绘制（端口圆点高亮）
+    if (hoveredType != _nodeState.hoveredPortType()
+        || hoveredIndex != _nodeState.hoveredPortIndex()) {
+        _nodeState.setHoveredPort(hoveredType, hoveredIndex);
+        update();
+    }
+
+    // 收起模式下用 QToolTip 显示端口名；未命中端口则隐藏
+    if (hoveredType != PortType::None)
+        showCompactPortToolTip(hoveredType, hoveredIndex, event->screenPos());
+    else
+        hideCompactPortToolTip();
 
     if ((_graphModel.nodeFlags(_nodeId) | NodeFlag::Resizable)
         && geometry.resizeHandleRect(_nodeId).contains(QPoint(pos.x(), pos.y()))) {
@@ -561,6 +688,62 @@ void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
     connect(helpAction, &QAction::triggered, [this]() {
         openNodeHelp();
     });
+
+    // Search Node 由下方 view->actions() 注入（GraphicsView 已注册 Ctrl+F），勿再重复添加
+
+    // Collect selected nodes for Mute Input toggle (same selection set as Color menu).
+    QList<NodeId> muteTargetIds;
+    if (auto *sc = scene()) {
+        for (QGraphicsItem *item : sc->selectedItems()) {
+            if (auto *ngo = qgraphicsitem_cast<NodeGraphicsObject *>(item)) {
+                muteTargetIds.append(ngo->nodeId());
+            }
+        }
+    }
+    if (!muteTargetIds.contains(_nodeId)) {
+        muteTargetIds.prepend(_nodeId);
+    }
+
+    bool allMuted = true;
+    for (NodeId const id : muteTargetIds) {
+        if (!_graphModel.nodeFlags(id).testFlag(NodeFlag::Muted)) {
+            allMuted = false;
+            break;
+        }
+    }
+
+    auto setMuted = [this](QList<NodeId> const &ids, bool muted, bool sync) {
+        if (sync) {
+            QVariantMap payload;
+            payload.insert(QStringLiteral("muted"), muted);
+            payload.insert(QStringLiteral("sync"), true);
+            for (NodeId const id : ids)
+                _graphModel.setNodeData(id, NodeRole::Muted, payload);
+        } else {
+            for (NodeId const id : ids)
+                _graphModel.setNodeData(id, NodeRole::Muted, muted);
+        }
+    };
+
+    if (allMuted) {
+        QAction *unmuteAction = m_Menu.addAction(QStringLiteral("Unmute Input"));
+        unmuteAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
+        connect(unmuteAction, &QAction::triggered, [setMuted, muteTargetIds]() {
+            setMuted(muteTargetIds, false, false);
+        });
+
+        QAction *unmuteSyncAction = m_Menu.addAction(QStringLiteral("Unmute Input & Sync"));
+        unmuteSyncAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M));
+        connect(unmuteSyncAction, &QAction::triggered, [setMuted, muteTargetIds]() {
+            setMuted(muteTargetIds, false, true);
+        });
+    } else {
+        QAction *muteAction = m_Menu.addAction(QStringLiteral("Mute Input"));
+        muteAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
+        connect(muteAction, &QAction::triggered, [setMuted, muteTargetIds]() {
+            setMuted(muteTargetIds, true, false);
+        });
+    }
 
     m_Menu.addSeparator();
     addTitleColorMenu(m_Menu);
@@ -694,75 +877,167 @@ void NodeGraphicsObject::keyPressEvent(QKeyEvent* event)
         // embedQWidget();
         return;
     }
+    if ((event->key() == Qt::Key_M) && (event->modifiers() & Qt::ControlModifier)) {
+        QList<NodeId> targetIds;
+        if (auto *sc = scene()) {
+            for (QGraphicsItem *item : sc->selectedItems()) {
+                if (auto *ngo = qgraphicsitem_cast<NodeGraphicsObject *>(item)) {
+                    targetIds.append(ngo->nodeId());
+                }
+            }
+        }
+        if (!targetIds.contains(_nodeId)) {
+            targetIds.prepend(_nodeId);
+        }
+
+        bool allMuted = true;
+        for (NodeId const id : targetIds) {
+            if (!_graphModel.nodeFlags(id).testFlag(NodeFlag::Muted)) {
+                allMuted = false;
+                break;
+            }
+        }
+
+        bool const sync = (event->modifiers() & Qt::ShiftModifier) && allMuted;
+        if (allMuted) {
+            if (sync) {
+                QVariantMap payload;
+                payload.insert(QStringLiteral("muted"), false);
+                payload.insert(QStringLiteral("sync"), true);
+                for (NodeId const id : targetIds)
+                    _graphModel.setNodeData(id, NodeRole::Muted, payload);
+            } else {
+                for (NodeId const id : targetIds)
+                    _graphModel.setNodeData(id, NodeRole::Muted, false);
+            }
+        } else {
+            for (NodeId const id : targetIds)
+                _graphModel.setNodeData(id, NodeRole::Muted, true);
+        }
+        event->accept();
+        return;
+    }
     QGraphicsObject::keyPressEvent(event);
 
 }
 
+bool NodeGraphicsObject::isEditingRemarks() const
+{
+    return _remarksProxy && _remarksProxy->isVisible();
+}
+
 void NodeGraphicsObject::initRemarksEditor()
 {
-    QJsonObject nodeStyleJson = _graphModel.nodeData(_nodeId, NodeRole::Style).toJsonObject();
+    if (_remarksProxy)
+        return;
 
-    NodeStyle nodeStyle(nodeStyleJson);
-    auto fontColor= nodeStyle.FontColor;
-    if (!_remarksEditor) {
-        _remarksEditor = new QLineEdit();
-        
-        connect(_remarksEditor, &QLineEdit::editingFinished,
-                this, &NodeGraphicsObject::finishEditingRemarks);
-                
-        // 按ESC取消编辑
-        _remarksEditor->installEventFilter(this);
-    }
+    _remarksEditor = new QLineEdit();
+    _remarksEditor->setFrame(false);
+    _remarksEditor->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    _remarksEditor->setAttribute(Qt::WA_TranslucentBackground, false);
+
+    connect(_remarksEditor, &QLineEdit::editingFinished, this, [this]() {
+        finishEditingRemarks();
+    });
+    _remarksEditor->installEventFilter(this);
+
+    _remarksProxy = new QGraphicsProxyWidget(this);
+    _remarksProxy->setWidget(_remarksEditor);
+    _remarksProxy->setZValue(10.0);
+    _remarksProxy->setFlag(QGraphicsItem::ItemIgnoresParentOpacity, true);
+    _remarksProxy->hide();
+}
+
+void NodeGraphicsObject::syncRemarksEditorGeometry()
+{
+    if (!_remarksProxy || !_remarksEditor || !nodeScene())
+        return;
+
+    AbstractNodeGeometry &geometry = nodeScene()->nodeGeometry();
+    NodeStyle nodeStyle(
+        QJsonDocument::fromVariant(_graphModel.nodeData(_nodeId, NodeRole::Style)).object());
+
+    qreal const offset = (_nodeState.hovered() || isSelected()) ? nodeStyle.HoveredPenWidth
+                                                               : nodeStyle.PenWidth;
+    qreal const titleH = geometry.captionPosition(_nodeId).y() * 2.0
+                         - geometry.captionRect(_nodeId).height() - offset;
+    QRectF const captionRect(offset,
+                             offset,
+                             qMax<qreal>(1.0, geometry.size(_nodeId).width() - 2.0 * offset),
+                             qMax<qreal>(1.0, titleH));
+
+    _remarksProxy->setPos(captionRect.topLeft());
+    _remarksProxy->resize(captionRect.size());
+    _remarksEditor->resize(captionRect.size().toSize());
 }
 
 void NodeGraphicsObject::startEditingRemarks()
 {
     initRemarksEditor();
-    
-    // 获取当前remarks
-    auto currentRemarks = _graphModel.nodeData(_nodeId, NodeRole::Remarks).toString();
-    
-    // 设置编辑器位置和大小
-    auto* scene = static_cast<BasicGraphicsScene*>(this->scene());
-    auto& geometry = scene->nodeGeometry();
-    QJsonObject nodeStyleJson = _graphModel.nodeData(_nodeId, NodeRole::Style).toJsonObject();
 
-    NodeStyle nodeStyle(nodeStyleJson);
-    // QRectF captionRect = QRectF(0,0,geometry.size(_nodeId).width()-20, geometry.captionPosition(_nodeId).y()*2-geometry.captionRect(_nodeId).height());
-    // QRectF captionRect=QRectF(10,
-    //     nodeStyle.HoveredPenWidth,
-    //     geometry.size(_nodeId).width()-20,
-    //     geometry.captionPosition(_nodeId).y()*2-geometry.captionRect(_nodeId).height()-nodeStyle.HoveredPenWidth*2);
-    QRectF captionRect = QRectF(0,-geometry.captionRect(_nodeId).height()*2,geometry.size(_nodeId).width(), geometry.captionRect(_nodeId).height()*2);
-    QRectF sceneRect = mapToScene(captionRect).boundingRect();
-    
-    _remarksEditor->setText(currentRemarks);
-    _remarksEditor->setGeometry(
-        scene->views().first()->mapFromScene(sceneRect).boundingRect()
-    );
-    
-    // 显示编辑器
-    _remarksEditor->setParent(scene->views().first()->viewport());
-    _remarksEditor->show();
-    _remarksEditor->setFocus();
+    NodeStyle nodeStyle(
+        QJsonDocument::fromVariant(_graphModel.nodeData(_nodeId, NodeRole::Style)).object());
+
+    QString const bg = nodeStyle.TitleColor.name(QColor::HexRgb);
+    QString const fg = nodeStyle.FontColor.name(QColor::HexRgb);
+    _remarksEditor->setStyleSheet(
+        QStringLiteral(
+            "QLineEdit {"
+            "  background-color: %1;"
+            "  color: %2;"
+            "  border: 1px solid rgba(255,255,255,0.35);"
+            "  border-radius: 3px;"
+            "  font-weight: bold;"
+            "  padding: 0px 4px;"
+            "  selection-background-color: rgba(0,0,0,0.35);"
+            "}")
+            .arg(bg, fg));
+
+    syncRemarksEditorGeometry();
+    _remarksEditor->setText(_graphModel.nodeData(_nodeId, NodeRole::Remarks).toString());
+    _remarksProxy->show();
+    _remarksEditor->setFocus(Qt::OtherFocusReason);
     _remarksEditor->selectAll();
+    update();
 }
 
 void NodeGraphicsObject::finishEditingRemarks()
 {
-    if (!_remarksEditor) return;
-    
-    // 保存新的remarks
-    QString newRemarks = _remarksEditor->text();
-    _graphModel.setNodeData(_nodeId, NodeRole::Remarks, newRemarks);
-    
-    // 隐藏编辑器
-    _remarksEditor->hide();
-    _remarksEditor->setParent(nullptr);
-    this->setFocus();
+    if (!_remarksEditor || !_remarksProxy || _finishingRemarksEdit)
+        return;
+    if (!_remarksProxy->isVisible())
+        return;
 
+    _finishingRemarksEdit = true;
+
+    bool const discard = _discardRemarksEdit;
+    _discardRemarksEdit = false;
+
+    QString const newRemarks = _remarksEditor->text();
+    _remarksProxy->hide();
+
+    if (!discard)
+        _graphModel.setNodeData(_nodeId, NodeRole::Remarks, newRemarks);
+
+    setFocus();
     update();
+
+    _finishingRemarksEdit = false;
 }
 
+bool NodeGraphicsObject::eventFilter(QObject *watched, QEvent *event)
+{
+    if (watched == _remarksEditor) {
+        if (event->type() == QEvent::KeyPress) {
+            auto *keyEvent = static_cast<QKeyEvent *>(event);
+            if (keyEvent->key() == Qt::Key_Escape) {
+                _discardRemarksEdit = true;
+                finishEditingRemarks();
+                return true;
+            }
+        }
+    }
+    return QGraphicsObject::eventFilter(watched, event);
+}
 
 } // namespace QtNodes

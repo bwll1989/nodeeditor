@@ -105,6 +105,7 @@ private:
     QAction *_alignBottomAction = nullptr;
     QAction *_alignLeftAction = nullptr;
     QAction *_alignRightAction = nullptr;
+    QAction *_searchNodeAction = nullptr;
     QPointF _clickPos;
     ScaleRange _scaleRange;
 };

@@ -40,6 +40,7 @@ public:
     float HoveredPenWidth;
     float BoundaryRadius;
     bool UseDataDefinedColors;
+    /// 分组主体填充透明度 [0,1]；标题栏始终不透明
     float Opacity;
     float CaptionHeight;
     float CollapsedHeight;

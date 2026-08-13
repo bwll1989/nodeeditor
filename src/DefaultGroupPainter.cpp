@@ -35,7 +35,8 @@ void DefaultGroupPainter::drawGroupRect(QPainter *painter, GroupGraphicsObject c
 
     auto const &groupStyle = QtNodes::StyleCollection::groupStyle();
 
-     auto color = ggo.isSelected() ? groupStyle.SelectedColor : groupStyle.NormalColor;
+    // 与节点一致：选中时用 SelectedBoundaryColor，否则用 NormalBoundaryColor
+    auto color = ggo.isSelected() ? ggo.selectedBoundaryColor() : groupStyle.NormalColor;
 
      if (ggo.isUnderMouse()) {
          QPen p(color, groupStyle.HoveredPenWidth);
@@ -47,14 +48,13 @@ void DefaultGroupPainter::drawGroupRect(QPainter *painter, GroupGraphicsObject c
 
     QRectF boundary(0, 0, rect.width(), rect.height());
 
-    QLinearGradient gradient(QPointF(0.0, 0.0), QPointF(2.0, rect.height()));
-
-    gradient.setColorAt(0.0, groupStyle.GradientColor0);
-    gradient.setColorAt(0.10, groupStyle.GradientColor1);
-    gradient.setColorAt(0.90, groupStyle.GradientColor2);
-    gradient.setColorAt(1.0, groupStyle.GradientColor3);
-
-    painter->setBrush(gradient);
+    // 展开：Opacity 控制主体透明度；折叠：整体不透明
+    qreal const bodyOpacity = ggo.isCollapsed()
+                                  ? 0.7
+                                  : qBound(0.0, static_cast<qreal>(groupStyle.Opacity), 1.0);
+    QColor fill = ggo.isSelected() ? ggo.selectedBoundaryColor() : groupStyle.GradientColor2;
+    fill.setAlphaF(bodyOpacity);
+    painter->setBrush(fill);
     painter->drawRoundedRect(boundary, groupStyle.BoundaryRadius, groupStyle.BoundaryRadius);
 
 }
@@ -65,16 +65,29 @@ void DefaultGroupPainter::drawGroupCaption(QPainter *painter, GroupGraphicsObjec
     QFont f = painter->font();
     f.setBold(true);
     auto const &groupStyle = QtNodes::StyleCollection::groupStyle();
-    QRectF captionRect = QRectF(0, 0, ggo.contentRect().width(), groupStyle.CaptionHeight);
-    painter->setBrush(groupStyle.CaptionColor);
+    // 与节点一致：标题栏相对外边框内缩，露出边线
+    QRectF const captionRect = ggo.captionBarRect();
+    QColor titleFill = ggo.titleColor();
+    titleFill.setAlpha(255);
+    painter->setBrush(titleFill);
+    painter->setPen(Qt::NoPen);
 
-    painter->drawRoundedRect(captionRect,
-                             2.0,
-                             2.0);
-    painter->setFont(f);
-    painter->setPen(groupStyle.FontColor);
-    QRectF textRect = captionRect.adjusted(6, 5, -6, -5);
-    painter->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, ggo.remarks());
+    qreal const inset = ggo.captionInset();
+    qreal const radius = qMax<qreal>(0.0, static_cast<qreal>(groupStyle.BoundaryRadius) - inset);
+    painter->drawRoundedRect(captionRect, radius, radius);
+
+    // 编辑中由场景内 editor 显示文字，避免叠字
+    if (!ggo.isEditingRemarks()) {
+        painter->setFont(f);
+        QColor fontColor = groupStyle.FontColor;
+        fontColor.setAlpha(255);
+        painter->setPen(fontColor);
+        QRectF textRect = captionRect.adjusted(6, 5, -6, -5);
+        int const flags = ggo.isCollapsed()
+                              ? (Qt::AlignLeft | Qt::AlignVCenter | Qt::TextWordWrap)
+                              : (Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap);
+        painter->drawText(textRect, flags, ggo.remarks());
+    }
     f.setBold(false);
     painter->setFont(f);
 
@@ -90,7 +103,7 @@ void DefaultGroupPainter::drawGroupPorts(QPainter *painter, GroupGraphicsObject 
     auto const &nodeStyle = QtNodes::StyleCollection::nodeStyle();
 
     qreal const w = ggo.contentRect().width();
-    qreal const collapsedHeight = (groupStyle.CollapsedHeight > 0 ? groupStyle.CollapsedHeight : groupStyle.CaptionHeight);
+    qreal const headerH = ggo.headerHeight();
 
     bool hasIn = false;
     bool hasOut = false;
@@ -121,9 +134,9 @@ void DefaultGroupPainter::drawGroupPorts(QPainter *painter, GroupGraphicsObject 
     dividerColor.setAlphaF(0.35);
     dividerPen.setColor(dividerColor);
     painter->setPen(dividerPen);
-    painter->drawLine(QPointF(0.0, groupStyle.CaptionHeight), QPointF(w, groupStyle.CaptionHeight));
+    painter->drawLine(QPointF(0.0, headerH), QPointF(w, headerH));
 
-    qreal const bodyHeight = std::max<qreal>(0.0, ggo.contentRect().height() - groupStyle.CaptionHeight);
+    qreal const bodyHeight = std::max<qreal>(0.0, ggo.contentRect().height() - headerH);
 
     float ratio = groupStyle.PortHeight;
     if (ratio <= 0.0f) ratio = 0.6f;
@@ -133,14 +146,14 @@ void DefaultGroupPainter::drawGroupPorts(QPainter *painter, GroupGraphicsObject 
     if (barWidth <= 0.0f) barWidth = nodeStyle.ConnectionPointDiameter;
 
     qreal const barHeight = bodyHeight * ratio;
-    qreal const barY = groupStyle.CaptionHeight + (bodyHeight - barHeight) * 0.5;
+    qreal const barY = headerH + (bodyHeight - barHeight) * 0.5;
 
     qreal const halfW = barWidth * 0.5;
 
     QRectF inBar(-halfW, barY, barWidth, barHeight);
     QRectF outBar(w - halfW, barY, barWidth, barHeight);
 
-    auto const borderColor = ggo.isSelected() ? groupStyle.SelectedColor : groupStyle.NormalColor;
+    auto const borderColor = ggo.isSelected() ? ggo.selectedBoundaryColor() : groupStyle.NormalColor;
     qreal const borderWidth = ggo.isUnderMouse() ? groupStyle.HoveredPenWidth : groupStyle.PenWidth;
 
     QPen portPen(borderColor, borderWidth);

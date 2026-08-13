@@ -20,6 +20,7 @@
 #include <QtWidgets/QGraphicsSceneMouseEvent>
 #include <QtWidgets/QGraphicsView>
 #include <QtWidgets/QStyleOptionGraphicsItem>
+#include <QtWidgets/QToolTip>
 
 #include <QtCore/QDebug>
 
@@ -313,6 +314,7 @@ void ConnectionGraphicsObject::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
         _connectionState.setLastHoveredNode(ngo->nodeId());
     } else {
         _connectionState.resetLastHoveredNode();
+        QToolTip::hideText(); // 拖线离开节点时收起端口 tip
     }
 
     //-------------------
@@ -336,6 +338,8 @@ void ConnectionGraphicsObject::mouseReleaseEvent(QGraphicsSceneMouseEvent *event
 
     ungrabMouse();
     event->accept();
+
+    QToolTip::hideText(); // 结束拖线，收起端口 tip
 
     auto view = static_cast<QGraphicsView *>(event->widget());
 
@@ -420,7 +424,7 @@ std::pair<QPointF, QPointF> ConnectionGraphicsObject::pointsC1C2Horizontal() con
 
     double verticalOffset = 0;
 
-    double ratioX = 0.5;
+    double ratioX = 1.0;
 
     if (xDistance <= 0) {
         double yDistance = _in.y() - _out.y() + 20;

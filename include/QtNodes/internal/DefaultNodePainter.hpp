@@ -34,6 +34,8 @@ public:
 
     void drawValidationIcon(QPainter *painter, NodeGraphicsObject &ngo) const;
 
+    void drawMutedOverlay(QPainter *painter, NodeGraphicsObject &ngo) const;
+
 private:
     QIcon _toolTipIcon{"://info-tooltip.svg"};
 };

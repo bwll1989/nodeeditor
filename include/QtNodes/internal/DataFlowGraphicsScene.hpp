@@ -30,6 +30,9 @@ public Q_SLOTS:
 
     bool load();
 
+    /// @see BasicGraphicsScene::showSearchNodeBar
+    void showSearchNodeBar() { BasicGraphicsScene::showSearchNodeBar(); }
+
 Q_SIGNALS:
     void sceneLoaded();
 

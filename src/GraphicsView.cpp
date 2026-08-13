@@ -154,6 +154,17 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
         addAction(_createGroupAction);
 
     }
+
+    {
+        // Ctrl+F：弹出节点搜索条（右键菜单里的 Shortcut 仅作展示，必须挂到 View 上才生效）
+        delete _searchNodeAction;
+        _searchNodeAction = new QAction(QStringLiteral("Search Node"), this);
+        _searchNodeAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+        _searchNodeAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_F));
+        _searchNodeAction->setAutoRepeat(false);
+        connect(_searchNodeAction, &QAction::triggered, scene, &BasicGraphicsScene::showSearchNodeBar);
+        addAction(_searchNodeAction);
+    }
     {
         delete _alignTopAction;
         _alignTopAction = new QAction(QStringLiteral("Align Top"), this);

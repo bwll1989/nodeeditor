@@ -8,7 +8,9 @@
 
 #include "QUuidStdHash.hpp"
 
+#include <QtCore/QPointer>
 #include <QtCore/QUuid>
+#include <QtWidgets/QDialog>
 #include <QtWidgets/QGraphicsScene>
 #include <QtWidgets/QMenu>
 
@@ -181,7 +183,19 @@ public Q_SLOTS:
     void onModelReset();
 
     void centerOnNode(NodeId nodeId);
+
+    /**
+     * @brief 弹出节点搜索条（横向：搜索框 | ← → | 当前索引/总数）
+     *
+     * 按 Remarks / Type / Caption / NodeId 过滤；←→ 与 Enter 在匹配结果间
+     * 选中并 centerOnNode。每个场景最多一个搜索条；重复调用会复用并聚焦输入框。
+     */
+    void showSearchNodeBar();
+
 private:
+    /// 选中节点并居中到视图
+    void selectAndCenterNode(NodeId nodeId);
+
     AbstractGraphModel &_graphModel;
 
     using UniqueNodeGraphicsObject = std::unique_ptr<NodeGraphicsObject>;
@@ -213,6 +227,9 @@ private:
     QUndoStack *_undoStack;
 
     Qt::Orientation _orientation;
+
+    /// 当前场景的节点搜索条（无边框浮动条；关闭后指针自动清空）
+    QPointer<QDialog> _searchNodeBar;
 };
 
 } // namespace QtNodes

@@ -2,10 +2,10 @@
 
 #include <QtCore/QUuid>
 #include <QtWidgets/QGraphicsObject>
-#include <QtWidgets/QLineEdit>
 #include "NodeState.hpp"
 
 class QGraphicsProxyWidget;
+class QLineEdit;
 class QMenu;
 
 namespace QtNodes {
@@ -56,6 +56,9 @@ public:
     void onEmbedWidgetChanged() {
         embedQWidget();
     }
+
+    bool isEditingRemarks() const;
+
 protected:
     void paint(QPainter *painter,
                QStyleOptionGraphicsItem const *option,
@@ -81,20 +84,32 @@ protected:
 
     void keyPressEvent(QKeyEvent *event) override;
 
-
-
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
     void embedQWidget();
+
+    /// 按当前端口高度同步嵌入控件尺寸（端口增删后需调用，否则只涨节点框不涨控件）
+    void syncEmbeddedWidgetSize(QWidget *w);
 
     void setLockedState();
 
     void initRemarksEditor();
     void startEditingRemarks();
     void finishEditingRemarks();
+    void syncRemarksEditorGeometry();
 
     void addTitleColorMenu(QMenu &menu);
     void openNodeHelp() const;
+
+    /**
+     * 收起模式（CaptionVisible=false）下用系统 QToolTip 显示端口名。
+     * 不进入场景图元，避免放大节点命中区域、干扰邻近节点连线。
+     * 输入口向左偏移、输出口向右偏移（垂直布局则上下偏移）。
+     */
+    void showCompactPortToolTip(PortType portType, PortIndex portIndex, QPoint globalPos);
+    /// 隐藏端口名 QToolTip
+    void hideCompactPortToolTip();
 
 private Q_SLOTS:
     void onLockedState(NodeId);
@@ -109,6 +124,10 @@ private:
     // either nullptr or owned by parent QGraphicsItem
     QGraphicsProxyWidget *_proxyWidget;
 
-    QLineEdit* _remarksEditor = nullptr;
+    /// Scene-local remarks editor (follows zoom/pan with the node).
+    QGraphicsProxyWidget *_remarksProxy = nullptr;
+    QLineEdit *_remarksEditor = nullptr;
+    bool _finishingRemarksEdit = false;
+    bool _discardRemarksEdit = false;
 };
 } // namespace QtNodes

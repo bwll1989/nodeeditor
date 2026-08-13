@@ -134,6 +134,9 @@ private Q_SLOTS:
     /// Function is called after detaching a connection.
     void propagateEmptyDataTo(NodeId const nodeId, PortIndex const portIndex);
 
+    /// Pull current upstream data into all In ports (used by Unmute Input & Sync).
+    void pullCurrentInputs(NodeId const nodeId);
+
 private:
     std::shared_ptr<NodeDelegateModelRegistry> _registry;
 
@@ -146,6 +149,8 @@ private:
     std::unordered_set<ConnectionId> _connectivity;
 
     std::unordered_set<GroupId> _groups;
+
+    std::unordered_set<NodeId> _mutedNodes;
 
     mutable std::unordered_map<NodeId, NodeGeometryData> _nodeGeometryData;
 };

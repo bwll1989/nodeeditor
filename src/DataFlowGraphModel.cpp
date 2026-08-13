@@ -86,7 +86,10 @@ NodeId DataFlowGraphModel::addNode(QString const nodeType)
         connect(model.get(),
                 &NodeDelegateModel::portsDeleted,
                 this,
-                &DataFlowGraphModel::portsDeleted);
+                [newId, this]() {
+                    portsDeleted();
+                    Q_EMIT nodeUpdated(newId);
+                });
 
         connect(model.get(),
                 &NodeDelegateModel::portsAboutToBeInserted,
@@ -98,7 +101,10 @@ NodeId DataFlowGraphModel::addNode(QString const nodeType)
         connect(model.get(),
                 &NodeDelegateModel::portsInserted,
                 this,
-                &DataFlowGraphModel::portsInserted);
+                [newId, this]() {
+                    portsInserted();
+                    Q_EMIT nodeUpdated(newId);
+                });
 
         _models[newId] = std::move(model);
 
@@ -322,6 +328,10 @@ QVariant DataFlowGraphModel::nodeData(NodeId nodeId, NodeRole role) const
         break;
     case NodeRole::ModelAlias:
         result= modelAlias();
+        break;
+    case NodeRole::Muted:
+        result = (_mutedNodes.find(nodeId) != _mutedNodes.end());
+        break;
     default:
         break;
     }
@@ -331,12 +341,17 @@ QVariant DataFlowGraphModel::nodeData(NodeId nodeId, NodeRole role) const
 
 NodeFlags DataFlowGraphModel::nodeFlags(NodeId nodeId) const
 {
+    NodeFlags flags = NodeFlag::NoFlags;
+
     auto it = _models.find(nodeId);
 
     if (it != _models.end() && it->second->widgetEmbeddable() && it->second->resizable())
-        return NodeFlag::Resizable;
+        flags |= NodeFlag::Resizable;
 
-    return NodeFlag::NoFlags;
+    if (_mutedNodes.find(nodeId) != _mutedNodes.end())
+        flags |= NodeFlag::Muted;
+
+    return flags;
 }
 
 bool DataFlowGraphModel::setNodeData(NodeId nodeId, NodeRole role, QVariant value)
@@ -454,6 +469,44 @@ bool DataFlowGraphModel::setNodeData(NodeId nodeId, NodeRole role, QVariant valu
         model->setParentAlias(this->modelAlias());
     }
         break;
+    case NodeRole::Muted: {
+        if (!nodeExists(nodeId))
+            break;
+
+        // Accept bool, or map: { "muted": bool, "sync": bool }.
+        // sync=true with muted=false => Unmute Input & Sync (pull all upstream ports).
+        bool muted = false;
+        bool sync = false;
+        if (value.canConvert<QVariantMap>()) {
+            QVariantMap const map = value.toMap();
+            muted = map.value(QStringLiteral("muted")).toBool();
+            sync = map.value(QStringLiteral("sync")).toBool();
+        } else {
+            muted = value.toBool();
+        }
+
+        bool const wasMuted = _mutedNodes.find(nodeId) != _mutedNodes.end();
+        if (muted == wasMuted) {
+            // Already unmuted: Sync alone can still refresh inputs.
+            if (!muted && sync) {
+                pullCurrentInputs(nodeId);
+                result = true;
+            }
+            break;
+        }
+
+        if (muted) {
+            _mutedNodes.insert(nodeId);
+        } else {
+            _mutedNodes.erase(nodeId);
+            if (sync)
+                pullCurrentInputs(nodeId);
+        }
+
+        Q_EMIT nodeFlagsUpdated(nodeId);
+        Q_EMIT nodeUpdated(nodeId);
+        result = true;
+    } break;
     default:
         break;
     }
@@ -520,6 +573,10 @@ bool DataFlowGraphModel::setPortData(
     switch (role) {
     case PortRole::Data:
         if (portType == PortType::In) {
+            // Mute Input: ignore incoming data, preserve current state.
+            if (_mutedNodes.find(nodeId) != _mutedNodes.end())
+                return false;
+
             model->setInData(value.value<std::shared_ptr<NodeData>>(), portIndex);
 
             // Triggers repainting on the scene.
@@ -565,6 +622,7 @@ bool DataFlowGraphModel::deleteNode(NodeId const nodeId)
     }
 
     _nodeGeometryData.erase(nodeId);
+    _mutedNodes.erase(nodeId);
     _models.erase(nodeId);
 
     Q_EMIT nodeDeleted(nodeId);
@@ -610,6 +668,7 @@ QJsonObject DataFlowGraphModel::saveNode(NodeId const nodeId) const
     nodeJson["input-count"] = nodeData(nodeId, NodeRole::InPortCount).toInt();
     nodeJson["output-count"] = nodeData(nodeId, NodeRole::OutPortCount).toInt();
     nodeJson["port-editable"] = nodeData(nodeId, NodeRole::PortEditable).toBool();
+    nodeJson["muted"] = (_mutedNodes.find(nodeId) != _mutedNodes.end());
     nodeJson["title-color"] = _models.at(nodeId)->nodeStyle().TitleColor.name(QColor::HexRgb);
     
     {
@@ -692,8 +751,12 @@ void DataFlowGraphModel::loadNode(QJsonObject const &nodeJson)
             _models[restoredNodeId]->setNodeStyle(style);
         }
         _models[restoredNodeId]->load(internalDataJson);
-        // 加载备注
-       
+
+        // Apply mute after load so subsequent connection restores skip setInData.
+        if (nodeJson.value(QStringLiteral("muted")).toBool()) {
+            _mutedNodes.insert(restoredNodeId);
+            Q_EMIT nodeFlagsUpdated(restoredNodeId);
+        }
 
     } else {
         throw std::logic_error(std::string("No registered model with name ")
@@ -757,6 +820,21 @@ void DataFlowGraphModel::propagateEmptyDataTo(NodeId const nodeId, PortIndex con
     QVariant emptyData{};
 
     setPortData(nodeId, PortType::In, portIndex, emptyData, PortRole::Data);
+}
+
+void DataFlowGraphModel::pullCurrentInputs(NodeId const nodeId)
+{
+    unsigned int const inCount = nodeData(nodeId, NodeRole::InPortCount).toUInt();
+    for (PortIndex portIndex = 0; portIndex < inCount; ++portIndex) {
+        auto const connected = connections(nodeId, PortType::In, portIndex);
+        for (auto const &cid : connected) {
+            QVariant const upstream = portData(cid.outNodeId,
+                                               PortType::Out,
+                                               cid.outPortIndex,
+                                               PortRole::Data);
+            setPortData(nodeId, PortType::In, portIndex, upstream, PortRole::Data);
+        }
+    }
 }
 
 } // namespace QtNodes

@@ -15,6 +15,7 @@
 #include "NodeState.hpp"
 #include "StyleCollection.hpp"
 #include <QLineEdit>
+#include <QPainterPath>
 namespace QtNodes {
 
 void DefaultNodePainter::paint(QPainter *painter, NodeGraphicsObject &ngo) const
@@ -36,6 +37,8 @@ void DefaultNodePainter::paint(QPainter *painter, NodeGraphicsObject &ngo) const
     drawResizeRect(painter, ngo);
 
     drawValidationIcon(painter, ngo);
+
+    drawMutedOverlay(painter, ngo);
 }
 
 void DefaultNodePainter::drawNodeRect(QPainter *painter, NodeGraphicsObject &ngo) const
@@ -79,7 +82,15 @@ void DefaultNodePainter::drawNodeRect(QPainter *painter, NodeGraphicsObject &ngo
         penWidth *= factor;
     }
 
+    bool const muted = model.nodeFlags(nodeId).testFlag(NodeFlag::Muted);
+    bool const highlighted = ngo.isSelected() || ngo.nodeState().hovered();
+
     QPen p(color, penWidth);
+    // Mute 仅在未选中/未悬停时用虚线灰边；选中与 hover 保持原样式
+    if (muted && !highlighted) {
+        p.setStyle(Qt::DashLine);
+        p.setColor(QColor(160, 160, 160));
+    }
     painter->setPen(p);
 
 
@@ -127,6 +138,12 @@ void DefaultNodePainter::drawConnectionPoints(QPainter *painter, NodeGraphicsObj
 
             NodeState const &state = ngo.nodeState();
 
+            // 鼠标悬停的端口略微放大，便于辨认
+            if (state.hoveredPortType() == portType
+                && state.hoveredPortIndex() == portIndex) {
+                r = 1.35;
+            }
+
             if (auto const *cgo = state.connectionForReaction()) {
                 PortType requiredPort = cgo->connectionState().requiredPort();
 
@@ -144,8 +161,8 @@ void DefaultNodePainter::drawConnectionPoints(QPainter *painter, NodeGraphicsObj
                     double dist = std::sqrt(QPointF::dotProduct(diff, diff));
 
                     if (possible) {
-                        double const thres = 20.0;
-                        r = (dist < thres) ? (2.0 - dist / thres) : 1.0;
+                        double const thres = 40.0;
+                        r = (dist < thres) ? (2.0 - dist / thres) : 1.15;
                     } else {
                         double const thres = 40.0;
                         r = (dist < thres) ? (dist / thres) : 1.0;
@@ -238,9 +255,13 @@ void DefaultNodePainter::drawNodeCaption(QPainter *painter, NodeGraphicsObject &
         geometry.captionPosition(nodeId).y()*2-geometry.captionRect(nodeId).height()-offset,
         nodeStyle.BoundaryRadius-offset,
         nodeStyle.BoundaryRadius-offset);
-    painter->setFont(f);
-    painter->setPen(nodeStyle.FontColor);
-    painter->drawText(position, name);
+
+    // 编辑中由场景内 editor 显示文字，避免叠字
+    if (!ngo.isEditingRemarks()) {
+        painter->setFont(f);
+        painter->setPen(nodeStyle.FontColor);
+        painter->drawText(position, name);
+    }
 
     f.setBold(false);
     painter->setFont(f);
@@ -276,13 +297,7 @@ void DefaultNodePainter::drawEntryLabels(QPainter *painter, NodeGraphicsObject &
             if (model.portData<bool>(nodeId, portType, portIndex, PortRole::CaptionVisible)) {
                 s = model.portData<QString>(nodeId, portType, portIndex, PortRole::Caption);
             }
-
-            // else {
-            //     auto portData = model.portData(nodeId, portType, portIndex, PortRole::DataType);
-            //
-            //     s = portData.value<NodeDataType>().name;
-            // }
-            //PortRole::CaptionVisible 为false时不显示端口标题
+            // CaptionVisible=false（收起）时不画常驻端口名，改由悬停/拖线时的 QToolTip 显示
 
             painter->drawText(p, s);
         }
@@ -356,6 +371,37 @@ void DefaultNodePainter::drawValidationIcon(QPainter *painter, NodeGraphicsObjec
 
     painter->drawPixmap(center.toPoint() - QPoint(iconSize.width() / 2, iconSize.height() / 2),
                         pixmap);
+
+    painter->restore();
+}
+
+void DefaultNodePainter::drawMutedOverlay(QPainter *painter, NodeGraphicsObject &ngo) const
+{
+    AbstractGraphModel &model = ngo.graphModel();
+    NodeId const nodeId = ngo.nodeId();
+    if (!model.nodeFlags(nodeId).testFlag(NodeFlag::Muted))
+        return;
+
+    AbstractNodeGeometry &geometry = ngo.nodeScene()->nodeGeometry();
+    QSize size = geometry.size(nodeId);
+    QJsonDocument json = QJsonDocument::fromVariant(model.nodeData(nodeId, NodeRole::Style));
+    NodeStyle nodeStyle(json.object());
+    QRectF boundary(0, 0, size.width(), size.height());
+
+    painter->save();
+    painter->setClipPath([&] {
+        QPainterPath path;
+        path.addRoundedRect(boundary, nodeStyle.BoundaryRadius, nodeStyle.BoundaryRadius);
+        return path;
+    }());
+
+    // Light hatch is enough; no badge (would cover remarks).
+    QPen hatchPen(QColor(180, 180, 180, 90), 1.0);
+    painter->setPen(hatchPen);
+    qreal const step = 8.0;
+    for (qreal x = -size.height(); x < size.width(); x += step) {
+        painter->drawLine(QPointF(x, 0), QPointF(x + size.height(), size.height()));
+    }
 
     painter->restore();
 }

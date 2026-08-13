@@ -16,13 +16,93 @@
 #include "ConnectionGraphicsObject.hpp"
 #include <QtCore/QDebug>
 #include <QtCore/QTimer>
+#include <QtGui/QFontMetrics>
+#include <QtGui/QPainter>
+#include <QActionGroup>
 #include <QtWidgets/QGraphicsBlurEffect>
 #include <QtWidgets/QGraphicsDropShadowEffect>
+#include <QtWidgets/QGraphicsProxyWidget>
 #include <QtWidgets/QGraphicsSceneMouseEvent>
 #include <QtWidgets/QGraphicsView>
+#include <QtWidgets/QMenu>
+#include <QtWidgets/QPlainTextEdit>
 #include <QtWidgets/QStyleOptionGraphicsItem>
 
 namespace QtNodes {
+
+namespace {
+
+/// QPlainTextEdit 默认 minimumSizeHint 很高，会把 QGraphicsProxyWidget 撑破标题栏
+class GroupRemarksEdit : public QPlainTextEdit
+{
+public:
+    QSize sizeHint() const override
+    {
+        return _fixed.isValid() ? _fixed : QPlainTextEdit::sizeHint();
+    }
+
+    QSize minimumSizeHint() const override
+    {
+        return _fixed.isValid() ? _fixed : QSize(0, 0);
+    }
+
+    void setCaptionSize(QSize const &size)
+    {
+        _fixed = size;
+        setFixedSize(size);
+        updateGeometry();
+    }
+
+private:
+    QSize _fixed;
+};
+
+QList<QColor> titleColorPresets()
+{
+    return {
+        QColor(255, 140, 0),   // orange
+        QColor(0, 170, 255),   // bright blue
+        QColor(255, 105, 180), // pink
+        QColor(160, 120, 220), // purple
+        QColor(0, 180, 170),   // teal
+        QColor(220, 50, 60),   // red
+        QColor(240, 190, 40),  // yellow
+        QColor(100, 180, 70),  // green
+    };
+}
+
+QStringList titleColorNames()
+{
+    return {
+        QStringLiteral("Orange"),
+        QStringLiteral("Blue"),
+        QStringLiteral("Pink"),
+        QStringLiteral("Purple"),
+        QStringLiteral("Teal"),
+        QStringLiteral("Red"),
+        QStringLiteral("Yellow"),
+        QStringLiteral("Green"),
+    };
+}
+
+QIcon colorSwatchIcon(QColor const &color)
+{
+    QPixmap pixmap(16, 16);
+    pixmap.fill(Qt::transparent);
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing, true);
+    painter.setPen(QPen(QColor(0, 0, 0, 60), 1));
+    painter.setBrush(color);
+    painter.drawRoundedRect(1, 1, 14, 14, 3, 3);
+    return QIcon(pixmap);
+}
+
+bool sameRgb(QColor const &a, QColor const &b)
+{
+    return a.red() == b.red() && a.green() == b.green() && a.blue() == b.blue();
+}
+
+} // namespace
 
 GroupGraphicsObject::GroupGraphicsObject(BasicGraphicsScene &scene,
                                           GroupId const groupId)
@@ -40,8 +120,8 @@ GroupGraphicsObject::GroupGraphicsObject(BasicGraphicsScene &scene,
     // addGraphicsEffect();
     setCacheMode(QGraphicsItem::DeviceCoordinateCache);
     setZValue(-2.0);
-    GroupStyle Style=StyleCollection::groupStyle();
-    setOpacity(Style.Opacity);
+    // Opacity 仅作用于主体填充（见 DefaultGroupPainter），整图元保持不透明以免标题变淡
+    setOpacity(1.0);
 
     _boundsUpdateTimer = new QTimer(this);
     _boundsUpdateTimer->setSingleShot(true);
@@ -109,17 +189,9 @@ void GroupGraphicsObject::setCollapsed(bool collapsed, bool updateModel)
 
     if (collapsed) {
         setZValue(-0.5);
-
-        auto const &groupStyle = QtNodes::StyleCollection::groupStyle();
-
-        qreal const collapsedHeight = groupStyle.CollapsedHeight > 0 ? groupStyle.CollapsedHeight : groupStyle.CaptionHeight;5.0;
-
-        prepareGeometryChange();
-        _rect = QRectF(0, 0, _rect.width(), collapsedHeight);
-        update();
+        applyCollapsedGeometry();
     } else {
         setZValue(-2.0);
-
         updateGroupBounds();
     }
 
@@ -142,18 +214,20 @@ void GroupGraphicsObject::setCollapsed(bool collapsed, bool updateModel)
     if (updateModel) {
         graphModel().updateGroup(oldGroupId, _groupId);
     }
+
+    // 折叠时隐藏节点会取消其选中；展开后若分组仍选中则补全选
+    if (isSelected())
+        selectMemberNodes();
 }
 //折叠后代理端口显示位置
 QPointF GroupGraphicsObject::collapsedPortScenePosition(PortType portType) const
 {
-    auto const &groupStyle = QtNodes::StyleCollection::groupStyle();
-
     QRectF const r = _rect;
 
     qreal const x = (portType == PortType::In) ? 0.0 : r.width();
 
-    qreal const collapsedHeight = groupStyle.CollapsedHeight > 0 ? groupStyle.CollapsedHeight : groupStyle.CaptionHeight;
-    qreal const y = groupStyle.CaptionHeight + (collapsedHeight - groupStyle.CaptionHeight) * 0.5;
+    qreal const headerH = headerHeight();
+    qreal const y = headerH + (r.height() - headerH) * 0.5;
 
     return mapToScene(QPointF(x, y));
 }
@@ -213,6 +287,164 @@ BasicGraphicsScene *GroupGraphicsObject::nodeScene() const
     return dynamic_cast<BasicGraphicsScene *>(scene());
 }
 
+QColor GroupGraphicsObject::titleColor() const
+{
+    if (!_groupId.titleColor.isEmpty()) {
+        QColor const c(_groupId.titleColor);
+        if (c.isValid())
+            return c;
+    }
+    return StyleCollection::groupStyle().CaptionColor;
+}
+
+QColor GroupGraphicsObject::selectedBoundaryColor() const
+{
+    if (!_groupId.selectedBoundaryColor.isEmpty()) {
+        QColor const c(_groupId.selectedBoundaryColor);
+        if (c.isValid())
+            return c;
+    }
+    // 与节点一致：未单独设置时跟随 TitleColor
+    if (!_groupId.titleColor.isEmpty()) {
+        QColor const c(_groupId.titleColor);
+        if (c.isValid())
+            return c;
+    }
+    return StyleCollection::groupStyle().SelectedColor;
+}
+
+void GroupGraphicsObject::setTitleColor(QColor const &color)
+{
+    if (!color.isValid())
+        return;
+
+    QString const hex = color.name(QColor::HexRgb);
+    if (_groupId.titleColor == hex && _groupId.selectedBoundaryColor == hex)
+        return;
+
+    GroupId const oldGroupId = _groupId;
+    _groupId.titleColor = hex;
+    _groupId.selectedBoundaryColor = hex; // 对应节点 SelectedBoundaryColor = TitleColor
+    graphModel().updateGroup(oldGroupId, _groupId);
+    update();
+}
+
+qreal GroupGraphicsObject::captionHeightForText(qreal width, QString const &text) const
+{
+    auto const &style = StyleCollection::groupStyle();
+    qreal const minH = style.CaptionHeight > 0.0f ? style.CaptionHeight : 20.0;
+    // 布局用稳定 PenWidth，避免 hover 时文字换行抖动
+    qreal const inset = style.PenWidth;
+    qreal const textWidth = width - 2.0 * inset - 12.0;
+
+    if (text.isEmpty() || textWidth <= 1.0)
+        return minH;
+
+    QFont f;
+    f.setBold(true);
+    QFontMetricsF const fm(f);
+    QRectF const bound = fm.boundingRect(QRectF(0, 0, textWidth, 10000.0),
+                                         Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
+                                         text);
+    constexpr qreal vPad = 10.0; // 与绘制 textRect.adjusted(..., 5, ..., -5) 一致
+    return qMax(minH, bound.height() + vPad);
+}
+
+qreal GroupGraphicsObject::captionHeightForWidth(qreal width) const
+{
+    return captionHeightForText(width, _groupId.groupRemarks);
+}
+
+qreal GroupGraphicsObject::captionHeight() const
+{
+    // 编辑中标题高度跟随草稿，避免绘制高度与编辑框不一致
+    if (isEditingRemarks() && _remarksEditor)
+        return captionHeightForText(_rect.width(), _remarksEditor->toPlainText());
+    return captionHeightForWidth(_rect.width());
+}
+
+qreal GroupGraphicsObject::captionInset() const
+{
+    auto const &style = StyleCollection::groupStyle();
+    return (isUnderMouse() || isSelected()) ? style.HoveredPenWidth : style.PenWidth;
+}
+
+QRectF GroupGraphicsObject::captionBarRect() const
+{
+    qreal const o = captionInset();
+    qreal const w = _rect.width();
+    qreal const h = captionHeight();
+    return QRectF(o, o, qMax<qreal>(0.0, w - 2.0 * o), h);
+}
+
+qreal GroupGraphicsObject::headerHeight() const
+{
+    return captionInset() + captionHeight();
+}
+
+qreal GroupGraphicsObject::collapsedWidthForRemarks(QString const &text) const
+{
+    QString measure = text;
+    if (measure.isEmpty())
+        measure = QStringLiteral("Group");
+
+    QFont f;
+    f.setBold(true);
+    QFontMetricsF const fm(f);
+
+    qreal textW = 0.0;
+    for (QString const &line : measure.split(QChar(u'\n')))
+        textW = qMax(textW, fm.horizontalAdvance(line));
+
+    // 与 drawGroupCaption 的 textRect.adjusted(6, ..., -6, ...) 一致
+    constexpr qreal hPad = 12.0;
+    // 左右代理端口各占一点内侧空间，避免文字贴边
+    auto const &style = StyleCollection::groupStyle();
+    qreal portPad = style.PortWidth > 0.0f ? static_cast<qreal>(style.PortWidth) : 8.0;
+    constexpr qreal minW = 72.0;
+
+    return qMax(minW, textW + hPad + portPad);
+}
+
+void GroupGraphicsObject::applyCollapsedGeometry(QString const &remarksText)
+{
+    QString const text = remarksText.isNull() ? _groupId.groupRemarks : remarksText;
+    qreal const w = collapsedWidthForRemarks(text);
+    auto const &style = StyleCollection::groupStyle();
+    qreal const inset = style.PenWidth;
+    qreal const h = inset + captionHeightForText(w, text) + collapsedBodyHeight();
+
+    prepareGeometryChange();
+    _rect = QRectF(0, 0, w, h);
+    update();
+
+    if (auto *scene = nodeScene()) {
+        std::unordered_set<ConnectionId> affectedConnections;
+        for (NodeId const nodeId : _groupId.nodeIds) {
+            auto const conns = _graphModel.allConnectionIds(nodeId);
+            affectedConnections.insert(conns.begin(), conns.end());
+        }
+        for (auto const &connId : affectedConnections) {
+            if (auto *connItem = scene->connectionGraphicsObject(connId))
+                connItem->move();
+        }
+    }
+}
+
+qreal GroupGraphicsObject::collapsedBodyHeight() const
+{
+    auto const &style = StyleCollection::groupStyle();
+    qreal const baseCap = style.CaptionHeight > 0.0f ? style.CaptionHeight : 20.0;
+    if (style.CollapsedHeight > baseCap)
+        return style.CollapsedHeight - baseCap;
+    return 0.0;
+}
+
+qreal GroupGraphicsObject::collapsedTotalHeight() const
+{
+    return headerHeight() + collapsedBodyHeight();
+}
+
 QRectF GroupGraphicsObject::boundingRect() const
 {
     if (_collapsed) {
@@ -258,36 +490,30 @@ void GroupGraphicsObject::mousePressEvent(QGraphicsSceneMouseEvent *event)
         return;
     }
 
-    auto const &groupStyle = QtNodes::StyleCollection::groupStyle();
-    QRectF const captionRect(0, 0, _rect.width(), groupStyle.CaptionHeight);
+    QRectF const captionRect(0, 0, _rect.width(), headerHeight());
 
     if (!captionRect.contains(event->pos())) {
         event->ignore();
         return;
     }
 
-    QGraphicsItem::mousePressEvent(event);
-
-    if (!isSelected()) {
-        //分组没有被选中，事件忽略
-        event->accept();
-        return;
-    }
-
-    _pressedOnCaption = true;
-
-    auto* scene = nodeScene();
+    auto *scene = nodeScene();
     if (!scene) {
         event->ignore();
         return;
     }
 
-    for (const NodeId& nodeId : _groupId.nodeIds) {
-        if (auto* nodeItem = scene->nodeGraphicsObject(nodeId)) {
-            nodeItem->setSelected(true);
-        }
-    }
+    // 点击标题栏：选中分组，并选中组内全部节点。
+    // 注意：不要只依赖 QGraphicsItem::mousePressEvent 的选中结果——
+    // 松开时场景可能 clearSelection 再只选中分组，会触发 itemChange 清掉节点。
+    bool const ctrl = event->modifiers() & Qt::ControlModifier;
+    if (!ctrl)
+        scene->clearSelection();
 
+    setSelected(true);
+    selectMemberNodes();
+
+    _pressedOnCaption = true;
     event->accept();
 }
 
@@ -336,8 +562,7 @@ void GroupGraphicsObject::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
         return;
     }
 
-    auto const &groupStyle = QtNodes::StyleCollection::groupStyle();
-    QRectF const captionRect(0, 0, _rect.width(), groupStyle.CaptionHeight);
+    QRectF const captionRect(0, 0, _rect.width(), headerHeight());
 
     if (!captionRect.contains(event->pos())) {
         event->ignore();
@@ -351,7 +576,21 @@ void GroupGraphicsObject::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 void GroupGraphicsObject::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 {
     _pressedOnCaption = false;
+
     QGraphicsItem::mouseReleaseEvent(event);
+
+    // 单击/双击松开时，Qt 常会 clearSelection 再只选中分组，导致组内节点被清掉。
+    // 约定：分组选中时可见成员必须保持全选。
+    // 双击场景下，视图可能在本函数返回后才完成选中重置，故再延迟一拍同步。
+    if (isSelected()) {
+        selectMemberNodes();
+        QTimer::singleShot(0, this, [this]() {
+            if (isSelected())
+                selectMemberNodes();
+        });
+    }
+
+    event->accept();
 }
 
 void GroupGraphicsObject::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
@@ -397,92 +636,208 @@ void GroupGraphicsObject::keyPressEvent(QKeyEvent *event)
     }
     QGraphicsObject::keyPressEvent(event);
 }
+bool GroupGraphicsObject::isEditingRemarks() const
+{
+    return _remarksProxy && _remarksProxy->isVisible();
+}
+
 void GroupGraphicsObject::initRemarksEditor()
 {
-    if (!_remarksEditor) {
-        _remarksEditor = new QLineEdit();
-        _remarksEditor->setStyleSheet(
-            "QLineEdit {"
-            "  background-color: #2D2D2D;"
-            "  border: 1px solid #4D4D4D;"
-            "  border-radius: 3px;"
-            "  color: white;"
-            "  padding: 2px 6px;"
-            "}"
-            "QLineEdit:focus {"
-            "  border: 1px solid #6D6D6D;"
-            "}"
-        );
+    if (_remarksProxy)
+        return;
 
-        connect(_remarksEditor, &QLineEdit::editingFinished,
-                this, &GroupGraphicsObject::finishEditingRemarks);
+    auto *edit = new GroupRemarksEdit();
+    edit->setTabChangesFocus(false);
+    edit->setLineWrapMode(QPlainTextEdit::WidgetWidth);
+    edit->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    edit->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    edit->setFrameShape(QFrame::NoFrame);
+    edit->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    if (edit->document())
+        edit->document()->setDocumentMargin(0);
 
-        // 按ESC取消编辑
-        _remarksEditor->installEventFilter(this);
+    _remarksEditor = edit;
+
+    connect(_remarksEditor, &QPlainTextEdit::textChanged, this, [this]() {
+        if (_remarksProxy && _remarksProxy->isVisible())
+            syncRemarksEditorGeometry();
+    });
+    _remarksEditor->installEventFilter(this);
+
+    _remarksProxy = new QGraphicsProxyWidget(this);
+    _remarksProxy->setWidget(_remarksEditor);
+    _remarksProxy->setZValue(10.0);
+    _remarksProxy->setMinimumSize(0.0, 0.0);
+    _remarksProxy->hide();
+}
+
+void GroupGraphicsObject::syncRemarksEditorGeometry()
+{
+    if (!_remarksProxy || !_remarksEditor || !_remarksProxy->isVisible())
+        return;
+
+    QString const draft = _remarksEditor->toPlainText();
+
+    // 折叠编辑时随草稿文字伸缩宽度
+    if (_collapsed)
+        applyCollapsedGeometry(draft);
+
+    QFont f;
+    f.setBold(true);
+    _remarksEditor->setFont(f);
+    if (_remarksEditor->document())
+        _remarksEditor->document()->setDocumentMargin(0);
+
+    QFontMetricsF const fm(f);
+    qreal const width = qMax<qreal>(1.0, _rect.width());
+    qreal const height = captionHeightForText(width, draft);
+    qreal const inset = captionInset();
+    QRectF const barRect(inset,
+                         inset,
+                         qMax<qreal>(1.0, width - 2.0 * inset),
+                         height);
+
+    // 展开态：标题高度随草稿变化时向上伸缩，避免盖住组内节点
+    if (!_collapsed) {
+        if (_editingCaptionHeight <= 0.0)
+            _editingCaptionHeight = height;
+        qreal const delta = height - _editingCaptionHeight;
+        if (!qFuzzyIsNull(delta)) {
+            prepareGeometryChange();
+            setPos(pos() + QPointF(0.0, -delta));
+            _rect.setHeight(_rect.height() + delta);
+            _editingCaptionHeight = height;
+        }
     }
+
+    // 单行（含折叠）垂直居中；多行顶对齐 + 上边距 5
+    constexpr int hPad = 6;
+    int topPad = 5;
+    QRectF const bound = fm.boundingRect(QRectF(0, 0, qMax<qreal>(1.0, barRect.width() - 12.0), 10000.0),
+                                         Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap,
+                                         draft.isEmpty() ? QStringLiteral(" ") : draft);
+    bool const singleLine = !draft.contains(QChar(u'\n'))
+                            && bound.height() <= fm.lineSpacing() * 1.5;
+    if (_collapsed || singleLine) {
+        qreal const contentH = fm.height();
+        topPad = qMax(0, qRound((height - contentH) * 0.5));
+    }
+
+    auto const &style = StyleCollection::groupStyle();
+    QColor const bg = titleColor();
+    QString const fg = style.FontColor.name(QColor::HexRgb);
+    qreal const radius = qMax<qreal>(0.0, style.BoundaryRadius - inset);
+    _remarksEditor->setStyleSheet(
+        QStringLiteral(
+            "QPlainTextEdit {"
+            "  background-color: %1;"
+            "  color: %2;"
+            "  border: none;"
+            "  border-radius: %5px;"
+            "  font-weight: bold;"
+            "  padding: %3px %4px 0px %4px;"
+            "  selection-background-color: rgba(0,0,0,0.35);"
+            "}")
+            .arg(bg.name(QColor::HexRgb), fg)
+            .arg(topPad)
+            .arg(hPad)
+            .arg(radius, 0, 'f', 1));
+
+    QSize const fixed(qMax(1, qRound(barRect.width())), qMax(1, qRound(barRect.height())));
+    // GroupRemarksEdit 无 Q_OBJECT，不能 qobject_cast
+    static_cast<GroupRemarksEdit *>(_remarksEditor)->setCaptionSize(fixed);
+
+    _remarksProxy->setMinimumSize(0.0, 0.0);
+    _remarksProxy->setMaximumSize(fixed.width(), fixed.height());
+    _remarksProxy->setPos(barRect.topLeft());
+    _remarksProxy->resize(fixed.width(), fixed.height());
+    update();
 }
 
 void GroupGraphicsObject::startEditingRemarks()
 {
     initRemarksEditor();
 
-//    // 设置编辑器位置和大小
-    auto* scene = static_cast<BasicGraphicsScene*>(this->scene());
-//    auto& geometry = scene->nodeGeometry();
-    GroupStyle Style=StyleCollection::groupStyle();
-    QRectF captionRect =QRectF(0, 0, _rect.width()-1, Style.CaptionHeight-1);
-    QRectF sceneRect = mapToScene(captionRect).boundingRect();
-//
-    _remarksEditor->setText(_groupId.groupRemarks);
-    _remarksEditor->setGeometry(
-        scene->views().first()->mapFromScene(sceneRect).boundingRect()
-    );
-//
-    // 显示编辑器
-    _remarksEditor->setParent(scene->views().first()->viewport());
-    _remarksEditor->show();
-    _remarksEditor->setFocus();
+    if (_remarksEditor->document())
+        _remarksEditor->document()->setDocumentMargin(0);
+
+    _editingCaptionHeight = captionHeightForWidth(_rect.width());
+    _remarksEditor->setPlainText(_groupId.groupRemarks);
+    _remarksProxy->show();
+    syncRemarksEditorGeometry();
+    _remarksEditor->setFocus(Qt::OtherFocusReason);
     _remarksEditor->selectAll();
+    update();
 }
 
 void GroupGraphicsObject::finishEditingRemarks()
 {
-    if (!_remarksEditor) return;
-    // 隐藏编辑器
-    _remarksEditor->hide();
-    _remarksEditor->setParent(nullptr);
-    // 更新组的remarks
-    if (_groupId.groupRemarks != _remarksEditor->text()) {
-        setRemarks(_remarksEditor->text());
-        //更新模型，由于groupId不匹配remarks，所以原地更新
-        graphModel().updateGroup(_groupId,_groupId);
+    if (!_remarksEditor || !_remarksProxy || _finishingRemarksEdit)
+        return;
+    if (!_remarksProxy->isVisible())
+        return;
+
+    _finishingRemarksEdit = true;
+
+    bool const discard = _discardRemarksEdit;
+    _discardRemarksEdit = false;
+
+    QString const newRemarks = _remarksEditor->toPlainText();
+    _remarksProxy->hide();
+    _editingCaptionHeight = 0.0;
+
+    if (!discard && _groupId.groupRemarks != newRemarks) {
+        setRemarks(newRemarks);
+        graphModel().updateGroup(_groupId, _groupId);
+        if (_collapsed)
+            applyCollapsedGeometry();
+        else
+            updateGroupBounds();
+    } else if (_collapsed) {
+        applyCollapsedGeometry();
+    } else {
+        // 放弃编辑或未改动时，按节点包围盒恢复展开几何
+        updateGroupBounds();
     }
-    this->setFocus();
+
+    setFocus();
     update();
+
+    _finishingRemarksEdit = false;
 }
 
-// bool GroupGraphicsObject::eventFilter(QObject* watched, QEvent* event)
-// {
-//     if (watched == _remarksEditor) {
-//         if (event->type() == QEvent::KeyPress) {
-//             QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
-//             if (keyEvent->key() == Qt::Key_Escape) {
-//                 _remarksEditor->hide();
-//                 _remarksEditor->setParent(nullptr);
-//                 this->setFocus();
-//                 return true;
-//             }
-//         }
-//     }
-//     return QGraphicsObject::eventFilter(watched, event);
-// }
+bool GroupGraphicsObject::eventFilter(QObject *watched, QEvent *event)
+{
+    if (watched == _remarksEditor) {
+        if (event->type() == QEvent::KeyPress) {
+            auto *keyEvent = static_cast<QKeyEvent *>(event);
+            if (keyEvent->key() == Qt::Key_Escape) {
+                _discardRemarksEdit = true;
+                finishEditingRemarks();
+                return true;
+            }
+            // 与节点一致：Enter 保存；Ctrl+Enter 换行
+            if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
+                if (keyEvent->modifiers() & Qt::ControlModifier) {
+                    _remarksEditor->insertPlainText(QStringLiteral("\n"));
+                    return true;
+                }
+                finishEditingRemarks();
+                return true;
+            }
+        } else if (event->type() == QEvent::FocusOut) {
+            finishEditingRemarks();
+            return false;
+        }
+    }
+    return QGraphicsObject::eventFilter(watched, event);
+}
 
-// 当组被取消选中时，也取消组内节点的选中状态
+// 分组选中 ⇔ 组内可见节点全选；取消选中则清空成员选中
 QVariant GroupGraphicsObject::itemChange(GraphicsItemChange change, const QVariant &value)
 {
     if (change == QGraphicsItem::ItemSelectedChange) {
         bool newSelected = value.toBool();
-        // 如果组被取消选中，同时取消组内节点的选中状态
         if (!newSelected) {
             auto* scene = nodeScene();
             if (scene) {
@@ -493,9 +848,27 @@ QVariant GroupGraphicsObject::itemChange(GraphicsItemChange change, const QVaria
                 }
             }
         }
+    } else if (change == QGraphicsItem::ItemSelectedHasChanged) {
+        if (isSelected())
+            selectMemberNodes();
     }
     
     return QGraphicsItem::itemChange(change, value);
+}
+
+void GroupGraphicsObject::selectMemberNodes()
+{
+    auto *scene = nodeScene();
+    if (!scene)
+        return;
+
+    for (NodeId const nodeId : _groupId.nodeIds) {
+        if (auto *nodeItem = scene->nodeGraphicsObject(nodeId)) {
+            // Qt：不可见图元无法保持 selected，折叠隐藏时跳过
+            if (nodeItem->isVisible())
+                nodeItem->setSelected(true);
+        }
+    }
 }
 
 void GroupGraphicsObject::scheduleGroupBoundsUpdate()
@@ -573,47 +946,60 @@ void GroupGraphicsObject::updateGroupBounds()
         maxY = qMax(maxY, pos.y() + size.height());
     }
 
-    // 添加边距
-    const qreal margin = 50;
+    // 顶边 = 动态标题高度 + 与节点间距（避免贴住标题栏）
+    constexpr qreal margin = 50;
+    constexpr qreal belowCaption = 30;
+
+    auto const &groupStyle = StyleCollection::groupStyle();
+    qreal const layoutInset = groupStyle.PenWidth;
+
+    // 折叠：宽度贴合备注；位置仍锚定节点包围盒左上，便于与成员同步拖拽
+    if (_collapsed) {
+        qreal const w = collapsedWidthForRemarks();
+        qreal const capH = captionHeightForWidth(w);
+        qreal const h = layoutInset + capH + collapsedBodyHeight();
+        qreal const topMargin = layoutInset + capH + belowCaption;
+
+        prepareGeometryChange();
+        setPos(QPointF(minX - margin, minY - topMargin));
+        _rect = QRectF(0, 0, w, h);
+
+        if (oldPos != pos() || oldRect != _rect) {
+            update();
+
+            auto *scene = nodeScene();
+            if (scene) {
+                std::unordered_set<ConnectionId> affectedConnections;
+                for (NodeId const nodeId : _groupId.nodeIds) {
+                    auto const conns = _graphModel.allConnectionIds(nodeId);
+                    affectedConnections.insert(conns.begin(), conns.end());
+                }
+                for (auto const &connId : affectedConnections) {
+                    if (auto *connItem = scene->connectionGraphicsObject(connId))
+                        connItem->move();
+                }
+            }
+        }
+        return;
+    }
+
+    qreal const width = (maxX - minX) + 2 * margin;
+    qreal const capH = captionHeightForWidth(width);
+    qreal const topMargin = layoutInset + capH + belowCaption;
     QRectF newBounds(minX - margin,
-                     minY - margin,
-                     (maxX - minX) + 2 * margin,
-                     (maxY - minY) + 2 * margin);
+                     minY - topMargin,
+                     width,
+                     (maxY - minY) + topMargin + margin);
 
     // 设置新的位置和大小
     prepareGeometryChange(); // 通知Qt即将改变图形项的几何形状
     setPos(newBounds.topLeft());
 
-    auto const &groupStyle = QtNodes::StyleCollection::groupStyle();
-
-    qreal height = newBounds.height();
-    if (_collapsed) {
-        height = groupStyle.CollapsedHeight > 0 ? groupStyle.CollapsedHeight : groupStyle.CaptionHeight;
-    }
-
-    _rect = QRectF(0, 0, newBounds.width(), height);
+    _rect = QRectF(0, 0, newBounds.width(), newBounds.height());
 
     // 如果大小或位置发生变化，触发更新
     if (oldPos != pos() || oldRect != _rect) {
         update();
-
-        if (_collapsed) {
-            auto* scene = nodeScene();
-            if (scene) {
-                std::unordered_set<ConnectionId> affectedConnections;
-
-                for (const NodeId& nodeId : _groupId.nodeIds) {
-                    auto const conns = _graphModel.allConnectionIds(nodeId);
-                    affectedConnections.insert(conns.begin(), conns.end());
-                }
-
-                for (auto const &connId : affectedConnections) {
-                    if (auto* connItem = scene->connectionGraphicsObject(connId)) {
-                        connItem->move();
-                    }
-                }
-            }
-        }
     }
 }
 void GroupGraphicsObject::setLockedState() {
@@ -621,21 +1007,6 @@ void GroupGraphicsObject::setLockedState() {
     NodeFlags flags = _graphModel.nodeFlags();
 
     bool const locked = flags.testFlag(NodeFlag::Locked);
-
-    if (locked) {
-        if (!_lockForcesCollapse) {
-            _lockForcesCollapse = true;
-            _collapsedBeforeLock = _groupId.collapsed;
-        }
-
-        setCollapsed(true, false);
-        _groupId.collapsed = _collapsedBeforeLock;
-    } else {
-        if (_lockForcesCollapse) {
-            _lockForcesCollapse = false;
-            setCollapsed(_groupId.collapsed, false);
-        }
-    }
 
     setFlag(QGraphicsItem::ItemIsMovable, !locked);
     setFlag(QGraphicsItem::ItemIsSelectable, !locked);
@@ -661,6 +1032,10 @@ void GroupGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event
     connect(renameAction, &QAction::triggered, [this]() {
         startEditingRemarks(); // 假设这是重命名功能
     });
+
+    m_Menu.addSeparator();
+    addTitleColorMenu(m_Menu);
+
     auto* scene = this->scene();
     auto views = scene ? scene->views() : QList<QGraphicsView*>();
     if (!views.isEmpty()) {
@@ -674,11 +1049,53 @@ void GroupGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event
     // 显示菜单并等待用户选择
      m_Menu.exec(event->screenPos());
 
-    // 如果用户没有选择任何项，仍然传递信号给scene
-    // if (!selectedAction) {
-    //     Q_EMIT nodeScene()->nodeContextMenu(_nodeId, mapToScene(event->pos()));
-    // }
-
     event->accept(); // 确保事件被处理
 }
+
+void GroupGraphicsObject::addTitleColorMenu(QMenu &menu)
+{
+    // 收集所有选中的分组；若当前分组不在选中集中则补上
+    QList<GroupGraphicsObject *> targetGroups;
+    if (auto *sc = scene()) {
+        for (QGraphicsItem *item : sc->selectedItems()) {
+            if (auto *ggo = qgraphicsitem_cast<GroupGraphicsObject *>(item))
+                targetGroups.append(ggo);
+        }
+    }
+    if (!targetGroups.contains(this))
+        targetGroups.prepend(this);
+
+    QColor sharedColor = targetGroups.first()->titleColor();
+    bool allSame = true;
+    for (int i = 1; i < targetGroups.size(); ++i) {
+        if (!sameRgb(targetGroups.at(i)->titleColor(), sharedColor)) {
+            allSame = false;
+            break;
+        }
+    }
+
+    QMenu *colorMenu = menu.addMenu(QStringLiteral("Color"));
+    QActionGroup *group = new QActionGroup(colorMenu);
+    group->setExclusive(true);
+
+    QList<QColor> const colors = titleColorPresets();
+    QStringList const names = titleColorNames();
+
+    for (int i = 0; i < colors.size(); ++i) {
+        QColor const color = colors.at(i);
+        QAction *action = colorMenu->addAction(colorSwatchIcon(color), names.at(i));
+        action->setCheckable(true);
+        action->setChecked(allSame && sameRgb(sharedColor, color));
+        group->addAction(action);
+
+        QObject::connect(action, &QAction::triggered, &menu, [color, targetGroups, &menu]() {
+            for (GroupGraphicsObject *ggo : targetGroups) {
+                if (ggo)
+                    ggo->setTitleColor(color);
+            }
+            menu.close();
+        });
+    }
+}
+
 } // namespace QtNodes

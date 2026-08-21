@@ -66,6 +66,11 @@ BasicGraphicsScene::BasicGraphicsScene(AbstractGraphModel &graphModel, QObject *
             &BasicGraphicsScene::onConnectionDeleted);
 
     connect(&_graphModel,
+            &AbstractGraphModel::connectionUpdated,
+            this,
+            &BasicGraphicsScene::onConnectionUpdated);
+
+    connect(&_graphModel,
             &AbstractGraphModel::nodeCreated,
             this,
             &BasicGraphicsScene::onNodeCreated);
@@ -240,6 +245,24 @@ QMenu *BasicGraphicsScene::createSceneMenu(QPointF const scenePos)
     return nullptr;
 }
 
+void BasicGraphicsScene::appendContextMenuActions(QMenu &menu, ContextMenuKind kind)
+{
+    // Blank canvas: leave empty so GraphicsView can fall back to createSceneMenu
+    // (examples keep right-click → create node).
+    if (kind == ContextMenuKind::Scene)
+        return;
+
+    // Node / Connection / Group: dump all view actions (examples / library demos).
+    if (views().isEmpty())
+        return;
+
+    menu.addSeparator();
+    for (QAction *act : views().first()->actions()) {
+        if (act)
+            menu.addAction(act);
+    }
+}
+
 void BasicGraphicsScene::traverseGraphAndPopulateGraphicsObjects()
 {
     auto allNodeIds = _graphModel.allNodeIds();
@@ -300,6 +323,14 @@ void BasicGraphicsScene::onConnectionCreated(ConnectionId const connectionId)
     updateAttachedNodes(connectionId, PortType::Out);
     updateAttachedNodes(connectionId, PortType::In);
 
+    Q_EMIT modified(this);
+}
+
+void BasicGraphicsScene::onConnectionUpdated(ConnectionId const connectionId)
+{
+    if (auto *cgo = connectionGraphicsObject(connectionId)) {
+        cgo->move();
+    }
     Q_EMIT modified(this);
 }
 
@@ -443,6 +474,19 @@ void BasicGraphicsScene::selectAndCenterNode(NodeId nodeId)
     }
 }
 
+void BasicGraphicsScene::selectAndCenterConnection(ConnectionId connectionId)
+{
+    clearSelection();
+    auto *cgo = connectionGraphicsObject(connectionId);
+    if (!cgo) {
+        return;
+    }
+    cgo->setSelected(true);
+    if (!views().isEmpty()) {
+        views().first()->centerOn(cgo);
+    }
+}
+
 void BasicGraphicsScene::showSearchNodeBar()
 {
     // 延迟激活并聚焦输入框，避免快捷键事件抢焦点失败
@@ -488,7 +532,7 @@ void BasicGraphicsScene::showSearchNodeBar()
     auto *searchEdit = new QLineEdit(dialog);
     searchEdit->setObjectName(QStringLiteral("searchNodeEdit"));
     searchEdit->setFocusPolicy(Qt::StrongFocus);
-    searchEdit->setPlaceholderText(tr("Search by name, type or id..."));
+    searchEdit->setPlaceholderText(tr("Search by name, type, id or virtual tag..."));
     dialog->setFocusProxy(searchEdit);
 
     auto *prevBtn = new QToolButton(dialog);
@@ -512,13 +556,16 @@ void BasicGraphicsScene::showSearchNodeBar()
     layout->addWidget(nextBtn);
     layout->addWidget(countLabel);
 
+    enum class MatchKind { Node, Connection };
     struct Entry {
-        NodeId id;
+        MatchKind kind = MatchKind::Node;
+        NodeId nodeId = InvalidNodeId;
+        ConnectionId connectionId{};
         QString haystack;
     };
 
     auto entries = std::make_shared<QVector<Entry>>();
-    auto matches = std::make_shared<QVector<NodeId>>();
+    auto matches = std::make_shared<QVector<Entry>>();
     auto matchIndex = std::make_shared<int>(-1);
 
     entries->reserve(static_cast<int>(_graphModel.allNodeIds().size()));
@@ -528,14 +575,55 @@ void BasicGraphicsScene::showSearchNodeBar()
         const QString caption = _graphModel.nodeData(id, NodeRole::Caption).toString();
         const QString idText = QString::number(id);
         Entry entry;
-        entry.id = id;
+        entry.kind = MatchKind::Node;
+        entry.nodeId = id;
         entry.haystack = (idText + QLatin1Char(' ') + remarks + QLatin1Char(' ') + caption
                           + QLatin1Char(' ') + type)
                              .toLower();
         entries->push_back(std::move(entry));
     }
+
+    {
+        std::unordered_set<ConnectionId> seenConnections;
+        for (NodeId id : _graphModel.allNodeIds()) {
+            for (ConnectionId const &cid : _graphModel.allConnectionIds(id)) {
+                if (!seenConnections.insert(cid).second) {
+                    continue;
+                }
+                if (!_graphModel.connectionData(cid, ConnectionRole::Virtual).toBool()) {
+                    continue;
+                }
+                QString label = _graphModel.connectionData(cid, ConnectionRole::VirtualLabel)
+                                    .toString();
+                if (label.isEmpty()) {
+                    label = QStringLiteral("untitled");
+                }
+                Entry entry;
+                entry.kind = MatchKind::Connection;
+                entry.connectionId = cid;
+                entry.haystack = label.toLower();
+                entries->push_back(std::move(entry));
+            }
+        }
+    }
+
     std::sort(entries->begin(), entries->end(), [](Entry const &a, Entry const &b) {
-        return a.id < b.id;
+        if (a.kind != b.kind) {
+            return a.kind == MatchKind::Node;
+        }
+        if (a.kind == MatchKind::Node) {
+            return a.nodeId < b.nodeId;
+        }
+        if (a.connectionId.outNodeId != b.connectionId.outNodeId) {
+            return a.connectionId.outNodeId < b.connectionId.outNodeId;
+        }
+        if (a.connectionId.outPortIndex != b.connectionId.outPortIndex) {
+            return a.connectionId.outPortIndex < b.connectionId.outPortIndex;
+        }
+        if (a.connectionId.inNodeId != b.connectionId.inNodeId) {
+            return a.connectionId.inNodeId < b.connectionId.inNodeId;
+        }
+        return a.connectionId.inPortIndex < b.connectionId.inPortIndex;
     });
 
     const auto updateStatus = [prevBtn, nextBtn, countLabel, matches, matchIndex]() {
@@ -557,7 +645,12 @@ void BasicGraphicsScene::showSearchNodeBar()
         }
         int const count = matches->size();
         *matchIndex = ((index % count) + count) % count;
-        selectAndCenterNode(matches->at(*matchIndex));
+        Entry const &match = matches->at(*matchIndex);
+        if (match.kind == MatchKind::Node) {
+            selectAndCenterNode(match.nodeId);
+        } else {
+            selectAndCenterConnection(match.connectionId);
+        }
         updateStatus();
         dialog->raise();
         searchEdit->setFocus(Qt::OtherFocusReason);
@@ -570,7 +663,7 @@ void BasicGraphicsScene::showSearchNodeBar()
         if (!needle.isEmpty()) {
             for (Entry const &entry : *entries) {
                 if (entry.haystack.contains(needle)) {
-                    matches->push_back(entry.id);
+                    matches->push_back(entry);
                 }
             }
         }

@@ -92,6 +92,9 @@ private:
     /// 按当前端口高度同步嵌入控件尺寸（端口增删后需调用，否则只涨节点框不涨控件）
     void syncEmbeddedWidgetSize(QWidget *w);
 
+    /// 开启/关闭端口编辑：开启时自动展开；关闭时恢复进入前的展开/折叠状态
+    void setPortEditing(bool enabled);
+
     void setLockedState();
 
     void initRemarksEditor();
@@ -123,6 +126,11 @@ private:
 
     // either nullptr or owned by parent QGraphicsItem
     QGraphicsProxyWidget *_proxyWidget;
+
+    /// 进入端口编辑前是否已记录展开状态
+    bool _hasEmbeddableBeforePortEdit = false;
+    /// 进入端口编辑前的 WidgetEmbeddable（展开/折叠）
+    bool _embeddableBeforePortEdit = false;
 
     /// Scene-local remarks editor (follows zoom/pan with the node).
     QGraphicsProxyWidget *_remarksProxy = nullptr;

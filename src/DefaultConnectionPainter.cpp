@@ -1,6 +1,7 @@
 #include "DefaultConnectionPainter.hpp"
 
 #include <QtGui/QIcon>
+#include <QtWidgets/QGraphicsView>
 
 #include "AbstractGraphModel.hpp"
 #include "ConnectionGraphicsObject.hpp"
@@ -57,10 +58,11 @@ void DefaultConnectionPainter::drawHoveredOrSelected(QPainter *painter, Connecti
     if (hovered || selected) {
         auto const &connectionStyle = QtNodes::StyleCollection::connectionStyle();
 
-        double const lineWidth = connectionStyle.lineWidth();
+        double const haloWidth = selected ? connectionStyle.lineSelectedWidth()
+                                          : connectionStyle.lineHoverWidth();
 
         QPen pen;
-        pen.setWidth(static_cast<int>(2 * lineWidth));
+        pen.setWidthF(haloWidth);
         pen.setColor(selected ? connectionStyle.selectedHaloColor()
                               : connectionStyle.hoveredColor());
 
@@ -117,14 +119,14 @@ void DefaultConnectionPainter::drawNormalLine(QPainter *painter, ConnectionGraph
 
     // geometry
 
-    double const lineWidth = connectionStyle.lineWidth();
+    bool const selected = cgo.isSelected();
+    double const lineWidth = selected ? connectionStyle.lineSelectedWidth()
+                                      : connectionStyle.lineWidth();
 
     // draw normal line
     QPen p;
 
-    p.setWidth(lineWidth);
-
-    bool const selected = cgo.isSelected();
+    p.setWidthF(lineWidth);
 
 //    auto cubic = cubicPath(cgo);
     if (useGradientColor) {
@@ -191,6 +193,11 @@ void DefaultConnectionPainter::drawNormalLine(QPainter *painter, ConnectionGraph
 
 void DefaultConnectionPainter::paint(QPainter *painter, ConnectionGraphicsObject const &cgo) const
 {
+    if (cgo.isVirtual() && !cgo.connectionState().requiresPort()) {
+        drawVirtualTags(painter, cgo);
+        return;
+    }
+
     auto cubic = cubicPath(cgo);
     drawHoveredOrSelected(painter, cgo,cubic);
 
@@ -224,8 +231,118 @@ void DefaultConnectionPainter::paint(QPainter *painter, ConnectionGraphicsObject
     }
 }
 
+void DefaultConnectionPainter::drawVirtualTags(QPainter *painter,
+                                               ConnectionGraphicsObject const &cgo) const
+{
+    auto const &connectionStyle = StyleCollection::connectionStyle();
+    AbstractGraphModel const &graphModel = cgo.graphModel();
+    auto const cId = cgo.connectionId();
+
+    // Body color mirrors drawNormalLine (incl. data-defined colors).
+    QColor bodyColor = connectionStyle.normalColor();
+    bool useDataDefined = connectionStyle.useDataDefinedColors();
+    if (useDataDefined) {
+        auto dataTypeOut = graphModel
+                               .portData(cId.outNodeId,
+                                         PortType::Out,
+                                         cId.outPortIndex,
+                                         PortRole::DataType)
+                               .value<NodeDataType>();
+        bodyColor = connectionStyle.normalColor(dataTypeOut.id);
+    }
+
+    bool const selected = cgo.isSelected();
+    bool const hovered = cgo.connectionState().hovered()
+                         || cgo.isVirtualGroupHighlighted(PortType::Out)
+                         || cgo.isVirtualGroupHighlighted(PortType::In);
+
+    QColor fillColor = bodyColor;
+    if (selected) {
+        // Match drawNormalLine: data-defined → darker; otherwise SelectedColor.
+        fillColor = useDataDefined ? bodyColor.darker(200) : connectionStyle.selectedColor();
+    }
+
+    auto drawTag = [&](PortType portType) {
+        QPolygonF const poly = cgo.virtualTagPolygon(portType);
+        if (poly.isEmpty())
+            return;
+
+        // Halo layer — same roles as drawHoveredOrSelected on cubic wires.
+        if (selected || hovered) {
+            QPen halo;
+            halo.setWidthF(selected ? connectionStyle.lineSelectedWidth()
+                                    : connectionStyle.lineHoverWidth());
+            halo.setColor(selected ? connectionStyle.selectedHaloColor()
+                                   : connectionStyle.hoveredColor());
+            halo.setJoinStyle(Qt::RoundJoin);
+            painter->setPen(halo);
+            painter->setBrush(Qt::NoBrush);
+            painter->drawPolygon(poly);
+        }
+
+        QColor fill = fillColor;
+        fill.setAlpha(selected || hovered ? 230 : 200);
+        QPen border(fillColor.darker(140), connectionStyle.lineWidth() > 0
+                                               ? qMax(1.0, connectionStyle.lineWidth() * 0.4)
+                                               : 1.2);
+        border.setJoinStyle(Qt::RoundJoin);
+        painter->setPen(border);
+        painter->setBrush(fill);
+        painter->drawPolygon(poly);
+
+        QRectF br = poly.boundingRect();
+        bool const interlock = !cgo.isVirtualPortFolded(portType)
+                               && cgo.virtualTagCount(portType) >= 2;
+        qreal const tipPad = 7.0;
+        qreal const pad = interlock ? (tipPad + 2.0) : 9.0;
+        if (portType == PortType::Out)
+            br.adjust(pad, 0, interlock ? -pad : -2, 0);
+        else
+            br.adjust(interlock ? pad : 2, 0, -pad, 0);
+
+        painter->setPen(connectionStyle.fontColor());
+        QFont font = painter->font();
+        font.setPointSize(9);
+        font.setBold(true);
+        painter->setFont(font);
+        if (!(cgo.isEditingLabel() && cgo.labelEditPort() == portType))
+            painter->drawText(br, Qt::AlignCenter, cgo.virtualTagCaption(portType));
+    };
+
+    drawTag(PortType::Out);
+    drawTag(PortType::In);
+
+    // Ghost link between tags — use the same halo colors as wire hover/select.
+    if (!selected && !hovered)
+        return;
+    auto const outPoly = cgo.virtualTagPolygon(PortType::Out);
+    auto const inPoly = cgo.virtualTagPolygon(PortType::In);
+    if (outPoly.isEmpty() || inPoly.isEmpty())
+        return;
+
+    QColor ghost = selected ? connectionStyle.selectedHaloColor() : connectionStyle.hoveredColor();
+    ghost.setAlpha(140);
+    painter->setPen(QPen(ghost,
+                         selected ? connectionStyle.lineSelectedWidth() * 0.35
+                                  : connectionStyle.lineHoverWidth() * 0.35,
+                         Qt::DashLine));
+    painter->drawLine(QPointF(outPoly.boundingRect().right(), outPoly.boundingRect().center().y()),
+                      QPointF(inPoly.boundingRect().left(), inPoly.boundingRect().center().y()));
+}
+
 QPainterPath DefaultConnectionPainter::getPainterStroke(ConnectionGraphicsObject const &connection) const
 {
+    if (connection.isVirtual() && !connection.connectionState().requiresPort()) {
+        QPainterPath path;
+        auto const outPoly = connection.virtualTagPolygon(PortType::Out);
+        auto const inPoly = connection.virtualTagPolygon(PortType::In);
+        if (!outPoly.isEmpty())
+            path.addPolygon(outPoly);
+        if (!inPoly.isEmpty())
+            path.addPolygon(inPoly);
+        return path;
+    }
+
     auto cubic = cubicPath(connection);
 
     QPointF const &out = connection.endPoint(PortType::Out);
@@ -238,8 +355,23 @@ QPainterPath DefaultConnectionPainter::getPainterStroke(ConnectionGraphicsObject
         result.lineTo(cubic.pointAtPercent(ratio));
     }
 
+    // Width is in item/scene coordinates. A fixed 10 becomes tiny on screen when
+    // zoomed out — scale it to keep ~14px clickable thickness.
+    qreal hitWidth = 10.0;
+    if (auto *sc = connection.scene()) {
+        auto const views = sc->views();
+        if (!views.isEmpty()) {
+            qreal const scale = qAbs(views.first()->transform().m11());
+            if (scale > 1e-6)
+                hitWidth = 14.0 / scale;
+        }
+    }
+    hitWidth = qBound(hitWidth, 10.0, 100.0);
+
     QPainterPathStroker stroker;
-    stroker.setWidth(10.0);
+    stroker.setWidth(hitWidth);
+    stroker.setCapStyle(Qt::RoundCap);
+    stroker.setJoinStyle(Qt::RoundJoin);
 
     return stroker.createStroke(result);
 }

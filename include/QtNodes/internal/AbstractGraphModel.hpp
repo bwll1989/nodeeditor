@@ -160,6 +160,14 @@ public:
 
     virtual bool deleteConnection(ConnectionId const connectionId) = 0;
 
+    /// Optional per-connection display data (virtual wire, label, …).
+    virtual QVariant connectionData(ConnectionId const, ConnectionRole) const { return {}; }
+
+    virtual bool setConnectionData(ConnectionId const, ConnectionRole, QVariant const &)
+    {
+        return false;
+    }
+
     virtual bool deleteNode(NodeId const nodeId) = 0;
 
     virtual bool deleteGroup(GroupId const groupId) = 0;
@@ -240,6 +248,9 @@ Q_SIGNALS:
     void connectionCreated(ConnectionId const connectionId);
 
     void connectionDeleted(ConnectionId const connectionId);
+
+    /// Emitted when connection display data changes (e.g. virtual / label).
+    void connectionUpdated(ConnectionId const connectionId);
 
     void nodeCreated(NodeId const nodeId);
 

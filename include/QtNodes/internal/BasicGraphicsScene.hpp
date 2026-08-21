@@ -36,6 +36,14 @@ class GroupGraphicsObject;
 class NodeGraphicsObject;
 class NodeStyle;
 
+/// Context for right-click menus (shared actions from GraphicsView).
+enum class ContextMenuKind {
+    Node,
+    Connection,
+    Group,
+    Scene, ///< Blank canvas (no item under cursor)
+};
+
 /// An instance of QGraphicsScene, holds connections and nodes.
 class NODE_EDITOR_PUBLIC BasicGraphicsScene : public QGraphicsScene
 {
@@ -117,9 +125,17 @@ public:
 public:
     /// Can @return an instance of the scene context menu in subclass.
     /**
+   * Used for blank-canvas create-node UI (examples: right-click; app: often double-click).
    * Default implementation returns `nullptr`.
    */
     virtual QMenu *createSceneMenu(QPointF const scenePos);
+
+    /**
+     * Append shared/edit actions into a context menu.
+     * Default for Node/Connection/Group: all GraphicsView actions (examples).
+     * Default for Scene: no-op (GraphicsView then falls back to createSceneMenu).
+     */
+    virtual void appendContextMenuActions(QMenu &menu, ContextMenuKind kind);
 
 Q_SIGNALS:
     void modified(BasicGraphicsScene *);
@@ -162,6 +178,9 @@ public Q_SLOTS:
     /// Slot called when the `connectionId` is created in the AbstractGraphModel.
     void onConnectionCreated(ConnectionId const connectionId);
 
+    /// Slot called when connection display data changes.
+    void onConnectionUpdated(ConnectionId const connectionId);
+
     void onNodeDeleted(NodeId const nodeId);
 
     void onNodeCreated(NodeId const nodeId);
@@ -187,14 +206,18 @@ public Q_SLOTS:
     /**
      * @brief 弹出节点搜索条（横向：搜索框 | ← → | 当前索引/总数）
      *
-     * 按 Remarks / Type / Caption / NodeId 过滤；←→ 与 Enter 在匹配结果间
-     * 选中并 centerOnNode。每个场景最多一个搜索条；重复调用会复用并聚焦输入框。
+     * 按 Remarks / Type / Caption / NodeId 以及虚拟连线 tag 标签过滤；
+     * ←→ 与 Enter 在匹配结果间选中并居中。每个场景最多一个搜索条；
+     * 重复调用会复用并聚焦输入框。
      */
     void showSearchNodeBar();
 
 private:
     /// 选中节点并居中到视图
     void selectAndCenterNode(NodeId nodeId);
+
+    /// 选中连线并居中到视图（虚拟连线会展开 tag）
+    void selectAndCenterConnection(ConnectionId connectionId);
 
     AbstractGraphModel &_graphModel;
 

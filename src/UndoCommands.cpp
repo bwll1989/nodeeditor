@@ -22,6 +22,30 @@
 
 namespace QtNodes {
 
+static QJsonObject connectionToJson(AbstractGraphModel &graphModel, ConnectionId const &cid)
+{
+    QJsonObject connJson = toJson(cid);
+    if (graphModel.connectionData(cid, ConnectionRole::Virtual).toBool()) {
+        connJson[QStringLiteral("virtual")] = true;
+        QString const label = graphModel.connectionData(cid, ConnectionRole::VirtualLabel).toString();
+        if (!label.isEmpty())
+            connJson[QStringLiteral("virtualLabel")] = label;
+    }
+    return connJson;
+}
+
+static void restoreConnectionDisplay(AbstractGraphModel &graphModel,
+                                     ConnectionId const &cid,
+                                     QJsonObject const &connJson)
+{
+    if (!connJson.value(QStringLiteral("virtual")).toBool())
+        return;
+    graphModel.setConnectionData(cid, ConnectionRole::Virtual, true);
+    QString const label = connJson.value(QStringLiteral("virtualLabel")).toString();
+    if (!label.isEmpty())
+        graphModel.setConnectionData(cid, ConnectionRole::VirtualLabel, label);
+}
+
 static QJsonObject serializeSelectedItems(BasicGraphicsScene *scene)
 {
     QJsonObject serializedScene;
@@ -67,7 +91,7 @@ static QJsonObject serializeSelectedItems(BasicGraphicsScene *scene)
         }
 
         for (auto const &cid : selectedConnections) {
-            connJsonArray.append(toJson(cid));
+            connJsonArray.append(connectionToJson(graphModel, cid));
         }
     } else {
         for (QGraphicsItem *item : scene->selectedItems()) {
@@ -75,7 +99,7 @@ static QJsonObject serializeSelectedItems(BasicGraphicsScene *scene)
                 auto const &cid = c->connectionId();
 
                 if (selectedNodes.count(cid.outNodeId) > 0 && selectedNodes.count(cid.inNodeId) > 0) {
-                    connJsonArray.append(toJson(cid));
+                    connJsonArray.append(connectionToJson(graphModel, cid));
                 }
             }
         }
@@ -124,6 +148,7 @@ static void insertSerializedItems(QJsonObject const &json, BasicGraphicsScene *s
 
         // Restore the connection
         graphModel.addConnection(connId);
+        restoreConnectionDisplay(graphModel, connId, connJson);
 
         if (auto* cgo = scene->connectionGraphicsObject(connId)) {
             cgo->setSelected(true);
@@ -185,6 +210,7 @@ CreateCommand::CreateCommand(BasicGraphicsScene *scene,
     : _scene(scene)
     , _sceneJson(QJsonObject())
 {
+    setText(QStringLiteral("创建节点"));
     _nodeId = _scene->graphModel().addNode(name);
     if (_nodeId != InvalidNodeId) {
         _scene->graphModel().setNodeData(_nodeId, NodeRole::Position, mouseScenePos);
@@ -215,6 +241,7 @@ void CreateCommand::redo()
 DeleteCommand::DeleteCommand(BasicGraphicsScene *scene)
     : _scene(scene)
 {
+    setText(QStringLiteral("删除"));
 
     auto &graphModel = _scene->graphModel();
 
@@ -247,7 +274,7 @@ DeleteCommand::DeleteCommand(BasicGraphicsScene *scene)
 
     QJsonArray connJsonArray;
     for (auto const &cid : selectedConnections) {
-        connJsonArray.append(toJson(cid));
+        connJsonArray.append(connectionToJson(graphModel, cid));
     }
 
     QJsonArray groupsJsonArray;
@@ -343,6 +370,7 @@ PasteCommand::PasteCommand(BasicGraphicsScene *scene, QPointF const &mouseSceneP
     : _scene(scene)
     , _mouseScenePos(mouseScenePos)
 {
+    setText(QStringLiteral("粘贴"));
     _newSceneJson = takeSceneJsonFromClipboard();
 
     if (_newSceneJson.empty() || _newSceneJson["nodes"].toArray().empty()) {
@@ -433,7 +461,14 @@ QJsonObject PasteCommand::makeNewNodeIdsInScene(QJsonObject const &sceneJson)
             mapNodeIds[connId.inNodeId],
             connId.inPortIndex
         };
-        newConnJsonArray.append(toJson(newConnId));
+        QJsonObject newConnJson = toJson(newConnId);
+        if (connJson.value(QStringLiteral("virtual")).toBool()) {
+            newConnJson[QStringLiteral("virtual")] = true;
+            QString const label = connJson.value(QStringLiteral("virtualLabel")).toString();
+            if (!label.isEmpty())
+                newConnJson[QStringLiteral("virtualLabel")] = label;
+        }
+        newConnJsonArray.append(newConnJson);
     }
 
     // 3. 处理组
@@ -474,12 +509,21 @@ DisconnectCommand::DisconnectCommand(BasicGraphicsScene *scene, ConnectionId con
     : _scene(scene)
     , _connId(connId)
 {
-    //
+    setText(QStringLiteral("断开连线"));
+    auto &model = _scene->graphModel();
+    _wasVirtual = model.connectionData(connId, ConnectionRole::Virtual).toBool();
+    _virtualLabel = model.connectionData(connId, ConnectionRole::VirtualLabel).toString();
 }
 
 void DisconnectCommand::undo()
 {
-    _scene->graphModel().addConnection(_connId);
+    auto &model = _scene->graphModel();
+    model.addConnection(_connId);
+    if (_wasVirtual) {
+        model.setConnectionData(_connId, ConnectionRole::Virtual, true);
+        if (!_virtualLabel.isEmpty())
+            model.setConnectionData(_connId, ConnectionRole::VirtualLabel, _virtualLabel);
+    }
 }
 
 void DisconnectCommand::redo()
@@ -493,7 +537,7 @@ ConnectCommand::ConnectCommand(BasicGraphicsScene *scene, ConnectionId const con
     : _scene(scene)
     , _connId(connId)
 {
-    //
+    setText(QStringLiteral("连接"));
 }
 
 void ConnectCommand::undo()
@@ -512,6 +556,7 @@ MoveNodeCommand::MoveNodeCommand(BasicGraphicsScene *scene, QPointF const &diff)
     : _scene(scene)
     , _diff(diff)
 {
+    setText(QStringLiteral("移动节点"));
     _selectedNodes.clear();
     for (QGraphicsItem *item : _scene->selectedItems()) {
         if (auto n = qgraphicsitem_cast<NodeGraphicsObject *>(item)) {
@@ -527,6 +572,7 @@ MoveNodeCommand::MoveNodeCommand(BasicGraphicsScene *scene,
     , _selectedNodes(std::move(selectedNodes))
     , _diff(diff)
 {
+    setText(QStringLiteral("移动节点"));
 }
 
 void MoveNodeCommand::undo()
@@ -571,6 +617,7 @@ CreateGroupCommand::CreateGroupCommand(BasicGraphicsScene *scene)
     : _scene(scene)
     , _firstRun(true)  // 添加标志，用于跟踪是否是首次运行
 {
+    setText(QStringLiteral("创建分组"));
     // 收集选中的节点
     for (QGraphicsItem *item : _scene->selectedItems()) {
         if (auto n = qgraphicsitem_cast<NodeGraphicsObject *>(item)) {
@@ -589,6 +636,7 @@ CreateGroupCommand::CreateGroupCommand(BasicGraphicsScene *scene)
 RemoveFromGroupCommand::RemoveFromGroupCommand(BasicGraphicsScene *scene)
     : _scene(scene)
 {
+    setText(QStringLiteral("移除分组"));
     if (!_scene) {
         setObsolete(true);
         return;
@@ -709,7 +757,7 @@ AlignNodesCommand::AlignNodesCommand(BasicGraphicsScene *scene, std::vector<Node
     : _scene(scene)
     , _moves(moves)
 {
-    setText("Align Nodes");
+    setText(QStringLiteral("对齐节点"));
 }
 
 void AlignNodesCommand::undo()
@@ -723,6 +771,99 @@ void AlignNodesCommand::redo()
 {
     for (auto const &move : _moves) {
         _scene->graphModel().setNodeData(move.nodeId, NodeRole::Position, move.newPos);
+    }
+}
+
+//------
+
+SetNodeDataCommand::SetNodeDataCommand(BasicGraphicsScene *scene,
+                                       NodeRole role,
+                                       std::vector<Change> changes,
+                                       QString const &text)
+    : _scene(scene)
+    , _role(role)
+    , _changes(std::move(changes))
+{
+    setText(text.isEmpty() ? QStringLiteral("更改节点属性") : text);
+}
+
+void SetNodeDataCommand::undo()
+{
+    for (auto const &c : _changes) {
+        _scene->graphModel().setNodeData(c.nodeId, _role, c.oldValue);
+    }
+}
+
+void SetNodeDataCommand::redo()
+{
+    for (auto const &c : _changes) {
+        _scene->graphModel().setNodeData(c.nodeId, _role, c.newValue);
+    }
+}
+
+//------
+
+UpdateGroupCommand::UpdateGroupCommand(BasicGraphicsScene *scene,
+                                       std::vector<Change> changes,
+                                       QString const &text)
+    : _scene(scene)
+    , _changes(std::move(changes))
+{
+    setText(text.isEmpty() ? QStringLiteral("更改分组属性") : text);
+}
+
+UpdateGroupCommand::UpdateGroupCommand(BasicGraphicsScene *scene,
+                                       GroupId const &oldGroup,
+                                       GroupId const &newGroup,
+                                       QString const &text)
+    : UpdateGroupCommand(scene, std::vector<Change>{{oldGroup, newGroup}}, text)
+{
+}
+
+void UpdateGroupCommand::apply(GroupId const &from, GroupId const &to)
+{
+    if (auto *ggo = _scene->groupGraphicsObject(from)) {
+        ggo->applyGroupId(to);
+    }
+    _scene->graphModel().updateGroup(from, to);
+}
+
+void UpdateGroupCommand::undo()
+{
+    for (auto const &c : _changes) {
+        apply(c.newGroup, c.oldGroup);
+    }
+}
+
+void UpdateGroupCommand::redo()
+{
+    for (auto const &c : _changes) {
+        apply(c.oldGroup, c.newGroup);
+    }
+}
+
+//------
+
+SetConnectionDataCommand::SetConnectionDataCommand(BasicGraphicsScene *scene,
+                                                   std::vector<Change> changes,
+                                                   QString const &text)
+    : _scene(scene)
+    , _changes(std::move(changes))
+{
+    setText(text.isEmpty() ? QStringLiteral("更改连线属性") : text);
+}
+
+void SetConnectionDataCommand::undo()
+{
+    for (auto it = _changes.rbegin(); it != _changes.rend(); ++it) {
+        _scene->graphModel().setConnectionData(it->connectionId, it->role, it->oldValue);
+    }
+}
+
+void SetConnectionDataCommand::redo()
+{
+    for (auto const &c : _changes) {
+        _scene->graphModel().setConnectionData(c.connectionId, c.role, c.newValue);
     }
 }
 

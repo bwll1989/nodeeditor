@@ -50,14 +50,14 @@ QList<QColor> titleColorPresets()
 QStringList titleColorNames()
 {
     return {
-        QStringLiteral("Orange"),
-        QStringLiteral("Blue"),
-        QStringLiteral("Pink"),
-        QStringLiteral("Purple"),
-        QStringLiteral("Teal"),
-        QStringLiteral("Red"),
-        QStringLiteral("Yellow"),
-        QStringLiteral("Green"),
+        QStringLiteral("橙色"),
+        QStringLiteral("蓝色"),
+        QStringLiteral("粉色"),
+        QStringLiteral("紫色"),
+        QStringLiteral("青色"),
+        QStringLiteral("红色"),
+        QStringLiteral("黄色"),
+        QStringLiteral("绿色"),
     };
 }
 
@@ -107,7 +107,7 @@ NodeGraphicsObject::NodeGraphicsObject(BasicGraphicsScene &scene, NodeId nodeId)
          setGraphicsEffect(effect);
      }
 
-    // Applies Locked / Mute Input interaction + opacity.
+    // Applies Locked / 屏蔽变量输入 interaction + opacity.
     setLockedState();
 
     setAcceptHoverEvents(true);
@@ -241,6 +241,51 @@ void NodeGraphicsObject::embedQWidget()
 
         _proxyWidget->setOpacity(1.0);
         _proxyWidget->setFlag(QGraphicsItem::ItemIgnoresParentOpacity);
+    }
+}
+
+void NodeGraphicsObject::setPortEditing(bool enabled)
+{
+    if (!_graphModel.nodeData(_nodeId, NodeRole::PortEditable).toBool())
+        return;
+
+    auto const currentType = static_cast<NodeWidgetType>(
+        _graphModel.nodeData(_nodeId, NodeRole::EmbeddWidgetType).toInt());
+    bool const isEditing = (currentType == NodeWidgetType::PortEditWidget);
+
+    if (enabled) {
+        // 首次进入时记录展开/折叠，结束时原样恢复
+        if (!isEditing) {
+            _embeddableBeforePortEdit
+                = _graphModel.nodeData(_nodeId, NodeRole::WidgetEmbeddable).toBool();
+            _hasEmbeddableBeforePortEdit = true;
+            // 先切到端口编辑控件，再展开，避免收起态先闪一下内部控件
+            _graphModel.setNodeData(_nodeId,
+                                    NodeRole::EmbeddWidgetType,
+                                    static_cast<int>(NodeWidgetType::PortEditWidget));
+        }
+        if (!_graphModel.nodeData(_nodeId, NodeRole::WidgetEmbeddable).toBool()) {
+            _graphModel.setNodeData(_nodeId, NodeRole::WidgetEmbeddable, true);
+        }
+    } else if (isEditing) {
+        bool const restoreEmbeddable = _hasEmbeddableBeforePortEdit ? _embeddableBeforePortEdit
+                                                                    : true;
+        _hasEmbeddableBeforePortEdit = false;
+
+        if (!restoreEmbeddable) {
+            // 原先折叠：先收起再切回内部控件，避免闪一下属性面板
+            _graphModel.setNodeData(_nodeId, NodeRole::WidgetEmbeddable, false);
+            _graphModel.setNodeData(_nodeId,
+                                    NodeRole::EmbeddWidgetType,
+                                    static_cast<int>(NodeWidgetType::InternalWidget));
+        } else {
+            _graphModel.setNodeData(_nodeId,
+                                    NodeRole::EmbeddWidgetType,
+                                    static_cast<int>(NodeWidgetType::InternalWidget));
+            if (!_graphModel.nodeData(_nodeId, NodeRole::WidgetEmbeddable).toBool()) {
+                _graphModel.setNodeData(_nodeId, NodeRole::WidgetEmbeddable, true);
+            }
+        }
     }
 }
 
@@ -396,6 +441,10 @@ QVariant NodeGraphicsObject::itemChange(GraphicsItemChange change, const QVarian
         moveConnections();
     } else if (change == ItemSelectedHasChanged) {
         setLockedState();
+        // 取消选中时关闭端口编辑
+        if (!value.toBool()) {
+            setPortEditing(false);
+        }
     }
 
     return QGraphicsObject::itemChange(change, value);
@@ -668,30 +717,33 @@ void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
     }
 
     QMenu m_Menu;
-    QAction* renameAction = m_Menu.addAction( "Edit Remarks");
+    QAction* renameAction = m_Menu.addAction(QStringLiteral("编辑备注"));
     renameAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));  // 添加快捷键
     connect(renameAction, &QAction::triggered, [this]() {
         startEditingRemarks(); // 假设这是重命名功能
     });
 
     if (_graphModel.nodeData<bool>(_nodeId, NodeRole::PortEditable)) {
-
-        QAction* editPortAction = m_Menu.addAction( _graphModel.nodeData(_nodeId, NodeRole::EmbeddWidgetType).toBool()?"Finished Port Edit":"Edit Port");
-        editPortAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_P));  // 添加快捷键
-        connect(editPortAction, &QAction::triggered, [this]() {
-            _graphModel.setNodeData(_nodeId, NodeRole::EmbeddWidgetType, !_graphModel.nodeData(_nodeId, NodeRole::EmbeddWidgetType).toBool());
-        });
-
+        bool const isEditing = static_cast<NodeWidgetType>(
+                                   _graphModel.nodeData(_nodeId, NodeRole::EmbeddWidgetType).toInt())
+                               == NodeWidgetType::PortEditWidget;
+        if (!isEditing) {
+            QAction* editPortAction = m_Menu.addAction(QStringLiteral("编辑端口"));
+            editPortAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_P));
+            connect(editPortAction, &QAction::triggered, [this]() {
+                setPortEditing(true);
+            });
+        }
     }
-    QAction* helpAction = m_Menu.addAction( "Node Help");
+    QAction* helpAction = m_Menu.addAction(QStringLiteral("节点帮助"));
     helpAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_H));  // 添加快捷键
     connect(helpAction, &QAction::triggered, [this]() {
         openNodeHelp();
     });
 
-    // Search Node 由下方 view->actions() 注入（GraphicsView 已注册 Ctrl+F），勿再重复添加
+    // Search Node 快捷键已在 GraphicsView 注册；共享菜单项由 appendContextMenuActions 注入
 
-    // Collect selected nodes for Mute Input toggle (same selection set as Color menu).
+    // Collect selected nodes for 屏蔽变量输入 toggle (same selection set as Color menu).
     QList<NodeId> muteTargetIds;
     if (auto *sc = scene()) {
         for (QGraphicsItem *item : sc->selectedItems()) {
@@ -712,51 +764,60 @@ void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
         }
     }
 
-    auto setMuted = [this](QList<NodeId> const &ids, bool muted, bool sync) {
-        if (sync) {
-            QVariantMap payload;
-            payload.insert(QStringLiteral("muted"), muted);
-            payload.insert(QStringLiteral("sync"), true);
-            for (NodeId const id : ids)
-                _graphModel.setNodeData(id, NodeRole::Muted, payload);
-        } else {
-            for (NodeId const id : ids)
-                _graphModel.setNodeData(id, NodeRole::Muted, muted);
+    auto pushMuteCommand = [this](QList<NodeId> const &ids, bool muted) {
+        if (!nodeScene() || ids.isEmpty())
+            return;
+
+        std::vector<SetNodeDataCommand::Change> changes;
+        changes.reserve(static_cast<size_t>(ids.size()));
+
+        for (NodeId const id : ids) {
+            bool const wasMuted = _graphModel.nodeFlags(id).testFlag(NodeFlag::Muted);
+            if (wasMuted == muted)
+                continue;
+
+            QVariant newValue;
+            if (muted) {
+                newValue = true;
+            } else {
+                QVariantMap payload;
+                payload.insert(QStringLiteral("muted"), false);
+                payload.insert(QStringLiteral("sync"), true);
+                newValue = payload;
+            }
+            changes.push_back({id, wasMuted, newValue});
         }
+
+        if (changes.empty())
+            return;
+
+        nodeScene()->undoStack().push(
+            new SetNodeDataCommand(nodeScene(),
+                                   NodeRole::Muted,
+                                   std::move(changes),
+                                   muted ? QStringLiteral("屏蔽变量输入")
+                                         : QStringLiteral("取消屏蔽输入")));
     };
 
     if (allMuted) {
-        QAction *unmuteAction = m_Menu.addAction(QStringLiteral("Unmute Input"));
+        QAction *unmuteAction = m_Menu.addAction(QStringLiteral("取消屏蔽输入"));
         unmuteAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
-        connect(unmuteAction, &QAction::triggered, [setMuted, muteTargetIds]() {
-            setMuted(muteTargetIds, false, false);
-        });
-
-        QAction *unmuteSyncAction = m_Menu.addAction(QStringLiteral("Unmute Input & Sync"));
-        unmuteSyncAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M));
-        connect(unmuteSyncAction, &QAction::triggered, [setMuted, muteTargetIds]() {
-            setMuted(muteTargetIds, false, true);
+        connect(unmuteAction, &QAction::triggered, [pushMuteCommand, muteTargetIds]() {
+            pushMuteCommand(muteTargetIds, false);
         });
     } else {
-        QAction *muteAction = m_Menu.addAction(QStringLiteral("Mute Input"));
+        QAction *muteAction = m_Menu.addAction(QStringLiteral("屏蔽变量输入"));
         muteAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
-        connect(muteAction, &QAction::triggered, [setMuted, muteTargetIds]() {
-            setMuted(muteTargetIds, true, false);
+        connect(muteAction, &QAction::triggered, [pushMuteCommand, muteTargetIds]() {
+            pushMuteCommand(muteTargetIds, true);
         });
     }
 
     m_Menu.addSeparator();
     addTitleColorMenu(m_Menu);
 
-    auto* scene = this->scene();
-    auto views = scene ? scene->views() : QList<QGraphicsView*>();
-    if (!views.isEmpty()) {
-        auto* view = views.first();
-        // 遍历 view 的 actions
-        for (QAction* act : view->actions()) {
-            m_Menu.addAction(act);
-        }
-    }
+    if (auto *bs = nodeScene())
+        bs->appendContextMenuActions(m_Menu, ContextMenuKind::Node);
 
     // 显示菜单并等待用户选择
      m_Menu.exec(event->screenPos());
@@ -798,7 +859,7 @@ void NodeGraphicsObject::addTitleColorMenu(QMenu &menu)
         }
     }
 
-    QMenu *colorMenu = menu.addMenu(QStringLiteral("Color"));
+    QMenu *colorMenu = menu.addMenu(QStringLiteral("颜色"));
     QActionGroup *group = new QActionGroup(colorMenu);
     group->setExclusive(true);
 
@@ -813,17 +874,26 @@ void NodeGraphicsObject::addTitleColorMenu(QMenu &menu)
         group->addAction(action);
 
         QObject::connect(action, &QAction::triggered, &menu, [this, &menu, color, targetNodeIds]() {
+            std::vector<SetNodeDataCommand::Change> changes;
+            changes.reserve(static_cast<size_t>(targetNodeIds.size()));
+
             for (NodeId const nodeId : targetNodeIds) {
-                NodeStyle style(
-                    QJsonDocument::fromVariant(_graphModel.nodeData(nodeId, NodeRole::Style))
-                        .object());
+                QVariant const oldStyle = _graphModel.nodeData(nodeId, NodeRole::Style);
+                NodeStyle style(QJsonDocument::fromVariant(oldStyle).object());
+                if (sameRgb(style.TitleColor, color))
+                    continue;
+
                 style.TitleColor = color;
                 style.SelectedBoundaryColor = color;
-                _graphModel.setNodeData(nodeId, NodeRole::Style, style.toJson().toVariantMap());
+                changes.push_back({nodeId, oldStyle, QVariant(style.toJson().toVariantMap())});
+            }
 
-                if (auto *ngo = nodeScene()->nodeGraphicsObject(nodeId)) {
-                    ngo->update();
-                }
+            if (!changes.empty() && nodeScene()) {
+                nodeScene()->undoStack().push(
+                    new SetNodeDataCommand(nodeScene(),
+                                           NodeRole::Style,
+                                           std::move(changes),
+                                           QStringLiteral("更改节点颜色")));
             }
             menu.close();
         });
@@ -871,10 +941,13 @@ void NodeGraphicsObject::keyPressEvent(QKeyEvent* event)
         event->accept();
         return;
     }
-    if ((event->key() == Qt::Key_P) && (event->modifiers() & Qt::ControlModifier) && _graphModel.nodeData(_nodeId, NodeRole::PortEditable).toBool()) {
-
-        _graphModel.setNodeData(_nodeId, NodeRole::EmbeddWidgetType, !_graphModel.nodeData(_nodeId, NodeRole::EmbeddWidgetType).toBool());
-        // embedQWidget();
+    if ((event->key() == Qt::Key_P) && (event->modifiers() & Qt::ControlModifier)
+        && _graphModel.nodeData(_nodeId, NodeRole::PortEditable).toBool()) {
+        bool const isEditing = static_cast<NodeWidgetType>(
+                                   _graphModel.nodeData(_nodeId, NodeRole::EmbeddWidgetType).toInt())
+                               == NodeWidgetType::PortEditWidget;
+        setPortEditing(!isEditing);
+        event->accept();
         return;
     }
     if ((event->key() == Qt::Key_M) && (event->modifiers() & Qt::ControlModifier)) {
@@ -898,21 +971,31 @@ void NodeGraphicsObject::keyPressEvent(QKeyEvent* event)
             }
         }
 
-        bool const sync = (event->modifiers() & Qt::ShiftModifier) && allMuted;
-        if (allMuted) {
-            if (sync) {
+        std::vector<SetNodeDataCommand::Change> changes;
+        changes.reserve(static_cast<size_t>(targetIds.size()));
+        for (NodeId const id : targetIds) {
+            bool const wasMuted = _graphModel.nodeFlags(id).testFlag(NodeFlag::Muted);
+            if (allMuted) {
+                if (!wasMuted)
+                    continue;
                 QVariantMap payload;
                 payload.insert(QStringLiteral("muted"), false);
                 payload.insert(QStringLiteral("sync"), true);
-                for (NodeId const id : targetIds)
-                    _graphModel.setNodeData(id, NodeRole::Muted, payload);
+                changes.push_back({id, true, payload});
             } else {
-                for (NodeId const id : targetIds)
-                    _graphModel.setNodeData(id, NodeRole::Muted, false);
+                if (wasMuted)
+                    continue;
+                changes.push_back({id, false, true});
             }
-        } else {
-            for (NodeId const id : targetIds)
-                _graphModel.setNodeData(id, NodeRole::Muted, true);
+        }
+
+        if (!changes.empty() && nodeScene()) {
+            nodeScene()->undoStack().push(
+                new SetNodeDataCommand(nodeScene(),
+                                       NodeRole::Muted,
+                                       std::move(changes),
+                                       allMuted ? QStringLiteral("取消屏蔽输入")
+                                                : QStringLiteral("屏蔽变量输入")));
         }
         event->accept();
         return;
@@ -1016,8 +1099,16 @@ void NodeGraphicsObject::finishEditingRemarks()
     QString const newRemarks = _remarksEditor->text();
     _remarksProxy->hide();
 
-    if (!discard)
-        _graphModel.setNodeData(_nodeId, NodeRole::Remarks, newRemarks);
+    if (!discard) {
+        QString const oldRemarks = _graphModel.nodeData(_nodeId, NodeRole::Remarks).toString();
+        if (oldRemarks != newRemarks && nodeScene()) {
+            nodeScene()->undoStack().push(
+                new SetNodeDataCommand(nodeScene(),
+                                       NodeRole::Remarks,
+                                       {{_nodeId, oldRemarks, newRemarks}},
+                                       QStringLiteral("编辑节点备注")));
+        }
+    }
 
     setFocus();
     update();

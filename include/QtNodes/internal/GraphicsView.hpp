@@ -32,7 +32,21 @@ public:
 
     QAction *deleteSelectionAction() const;
 
+    QAction *duplicateSelectionAction() const;
+
+    QAction *copySelectionAction() const;
+
+    QAction *pasteAction() const;
+
     QAction *createGroupAction() const;
+
+    QAction *searchNodeAction() const;
+
+    QAction *alignLayoutAction() const;
+
+    QAction *undoAction() const;
+
+    QAction *redoAction() const;
 
     void setScene(BasicGraphicsScene *scene);
 
@@ -93,6 +107,9 @@ protected:
     QPointF scenePastePosition();
 
 private:
+    /// Show "对齐布局" only when two or more nodes are selected.
+    void updateAlignLayoutActionVisibility();
+
     QAction *_clearSelectionAction = nullptr;
     QAction *_deleteSelectionAction = nullptr;
     QAction *_duplicateSelectionAction = nullptr;
@@ -105,7 +122,10 @@ private:
     QAction *_alignBottomAction = nullptr;
     QAction *_alignLeftAction = nullptr;
     QAction *_alignRightAction = nullptr;
+    QAction *_alignLayoutAction = nullptr;
     QAction *_searchNodeAction = nullptr;
+    QAction *_undoAction = nullptr;
+    QAction *_redoAction = nullptr;
     QPointF _clickPos;
     ScaleRange _scaleRange;
 };

@@ -73,6 +73,12 @@ public:
 
     bool deleteConnection(ConnectionId const connectionId) override;
 
+    QVariant connectionData(ConnectionId const connectionId, ConnectionRole role) const override;
+
+    bool setConnectionData(ConnectionId const connectionId,
+                           ConnectionRole role,
+                           QVariant const &value) override;
+
     bool deleteNode(NodeId const nodeId) override;
 
     bool deleteGroup(GroupId const groupId) override;
@@ -134,7 +140,7 @@ private Q_SLOTS:
     /// Function is called after detaching a connection.
     void propagateEmptyDataTo(NodeId const nodeId, PortIndex const portIndex);
 
-    /// Pull current upstream data into all In ports (used by Unmute Input & Sync).
+    /// Pull current upstream data into all In ports (used by 取消屏蔽变量输入并同步).
     void pullCurrentInputs(NodeId const nodeId);
 
 private:
@@ -147,6 +153,13 @@ private:
     std::unordered_map<NodeId, std::unique_ptr<NodeDelegateModel>> _models;
 
     std::unordered_set<ConnectionId> _connectivity;
+
+    struct ConnectionDisplayData
+    {
+        bool isVirtual = false;
+        QString label;
+    };
+    std::unordered_map<ConnectionId, ConnectionDisplayData> _connectionDisplay;
 
     std::unordered_set<GroupId> _groups;
 

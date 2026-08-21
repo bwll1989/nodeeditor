@@ -5,6 +5,7 @@
 
 #include <QtCore/QJsonObject>
 #include <QtCore/QPointF>
+#include <QtCore/QVariant>
 #include <QUndoCommand>
 
 #include <unordered_set>
@@ -81,6 +82,8 @@ private:
     BasicGraphicsScene *_scene;
 
     ConnectionId _connId;
+    bool _wasVirtual = false;
+    QString _virtualLabel;
 };
 
 class NODE_EDITOR_PUBLIC ConnectCommand : public QUndoCommand
@@ -176,6 +179,90 @@ public:
 private:
     BasicGraphicsScene *_scene;
     std::vector<NodeMove> _moves;
+};
+
+/**
+ * Undoable node property change (remarks, style/color, …).
+ * Multiple nodes can be batched into one undo step.
+ */
+class NODE_EDITOR_PUBLIC SetNodeDataCommand : public QUndoCommand
+{
+public:
+    struct Change {
+        NodeId nodeId;
+        QVariant oldValue;
+        QVariant newValue;
+    };
+
+    SetNodeDataCommand(BasicGraphicsScene *scene,
+                       NodeRole role,
+                       std::vector<Change> changes,
+                       QString const &text = {});
+
+    void undo() override;
+    void redo() override;
+
+private:
+    BasicGraphicsScene *_scene;
+    NodeRole _role;
+    std::vector<Change> _changes;
+};
+
+/**
+ * Undoable group metadata change (remarks, title color, …).
+ * Multiple groups can be batched into one undo step.
+ */
+class NODE_EDITOR_PUBLIC UpdateGroupCommand : public QUndoCommand
+{
+public:
+    struct Change {
+        GroupId oldGroup;
+        GroupId newGroup;
+    };
+
+    UpdateGroupCommand(BasicGraphicsScene *scene,
+                       std::vector<Change> changes,
+                       QString const &text = {});
+
+    UpdateGroupCommand(BasicGraphicsScene *scene,
+                       GroupId const &oldGroup,
+                       GroupId const &newGroup,
+                       QString const &text = {});
+
+    void undo() override;
+    void redo() override;
+
+private:
+    void apply(GroupId const &from, GroupId const &to);
+
+    BasicGraphicsScene *_scene;
+    std::vector<Change> _changes;
+};
+
+/**
+ * Undoable connection display change (virtual flag / label).
+ * Multiple role changes can be batched into one undo step.
+ */
+class NODE_EDITOR_PUBLIC SetConnectionDataCommand : public QUndoCommand
+{
+public:
+    struct Change {
+        ConnectionId connectionId;
+        ConnectionRole role;
+        QVariant oldValue;
+        QVariant newValue;
+    };
+
+    SetConnectionDataCommand(BasicGraphicsScene *scene,
+                             std::vector<Change> changes,
+                             QString const &text = {});
+
+    void undo() override;
+    void redo() override;
+
+private:
+    BasicGraphicsScene *_scene;
+    std::vector<Change> _changes;
 };
 
 } // namespace QtNodes

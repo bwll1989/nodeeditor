@@ -74,15 +74,61 @@ QAction *GraphicsView::deleteSelectionAction() const
     return _deleteSelectionAction;
 }
 
+QAction *GraphicsView::duplicateSelectionAction() const
+{
+    return _duplicateSelectionAction;
+}
+
+QAction *GraphicsView::copySelectionAction() const
+{
+    return _copySelectionAction;
+}
+
+QAction *GraphicsView::pasteAction() const
+{
+    return _pasteAction;
+}
+
+QAction *GraphicsView::createGroupAction() const
+{
+    return _createGroupAction;
+}
+
+QAction *GraphicsView::searchNodeAction() const
+{
+    return _searchNodeAction;
+}
+
+QAction *GraphicsView::alignLayoutAction() const
+{
+    return _alignLayoutAction;
+}
+
+QAction *GraphicsView::undoAction() const
+{
+    return _undoAction;
+}
+
+QAction *GraphicsView::redoAction() const
+{
+    return _redoAction;
+}
+
 void GraphicsView::setScene(BasicGraphicsScene *scene)
 {
     QGraphicsView::setScene(scene);
 
+    auto tag = [](QAction *action, char const *role) {
+        if (action)
+            action->setProperty("menuRole", QLatin1String(role));
+    };
+
     {
         // setup actions
         delete _clearSelectionAction;
-        _clearSelectionAction = new QAction(QStringLiteral("Clear Selection"), this);
+        _clearSelectionAction = new QAction(QStringLiteral("清除选择"), this);
         _clearSelectionAction->setShortcut(Qt::Key_Escape);
+        tag(_clearSelectionAction, "clearSelection");
 
         connect(_clearSelectionAction, &QAction::triggered, scene, &QGraphicsScene::clearSelection);
 
@@ -91,10 +137,11 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
 
     {
         delete _deleteSelectionAction;
-        _deleteSelectionAction = new QAction(QStringLiteral("Delete Selection"), this);
+        _deleteSelectionAction = new QAction(QStringLiteral("删除"), this);
         _deleteSelectionAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _deleteSelectionAction->setShortcut(QKeySequence(QKeySequence::Delete));
         _deleteSelectionAction->setAutoRepeat(false);
+        tag(_deleteSelectionAction, "delete");
         connect(_deleteSelectionAction,
                 &QAction::triggered,
                 this,
@@ -105,10 +152,11 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
 
     {
         delete _duplicateSelectionAction;
-        _duplicateSelectionAction = new QAction(QStringLiteral("Duplicate Selection"), this);
+        _duplicateSelectionAction = new QAction(QStringLiteral("创建副本"), this);
         _duplicateSelectionAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _duplicateSelectionAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_D));
         _duplicateSelectionAction->setAutoRepeat(false);
+        tag(_duplicateSelectionAction, "duplicate");
         connect(_duplicateSelectionAction,
                 &QAction::triggered,
                 this,
@@ -119,10 +167,11 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
 
     {
         delete _copySelectionAction;
-        _copySelectionAction = new QAction(QStringLiteral("Copy Selection"), this);
+        _copySelectionAction = new QAction(QStringLiteral("复制"), this);
         _copySelectionAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _copySelectionAction->setShortcut(QKeySequence(QKeySequence::Copy));
         _copySelectionAction->setAutoRepeat(false);
+        tag(_copySelectionAction, "copy");
 
         connect(_copySelectionAction,
                 &QAction::triggered,
@@ -134,10 +183,11 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
 
     {
         delete _pasteAction;
-        _pasteAction = new QAction(QStringLiteral("Paste Selection"), this);
+        _pasteAction = new QAction(QStringLiteral("粘贴"), this);
         _pasteAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _pasteAction->setShortcut(QKeySequence(QKeySequence::Paste));
         _pasteAction->setAutoRepeat(false);
+        tag(_pasteAction, "paste");
         connect(_pasteAction, &QAction::triggered, this, &GraphicsView::onPasteObjects);
 
         addAction(_pasteAction);
@@ -145,10 +195,11 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
 
     {
         delete _createGroupAction;
-        _createGroupAction = new QAction(QStringLiteral("Create/Remove Group"), this);
+        _createGroupAction = new QAction(QStringLiteral("创建/移除分组"), this);
         _createGroupAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _createGroupAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_G));
         _createGroupAction->setAutoRepeat(false);
+        tag(_createGroupAction, "group");
 
         connect(_createGroupAction, &QAction::triggered, this, &GraphicsView::onCreateGroup);
         addAction(_createGroupAction);
@@ -158,56 +209,94 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
     {
         // Ctrl+F：弹出节点搜索条（右键菜单里的 Shortcut 仅作展示，必须挂到 View 上才生效）
         delete _searchNodeAction;
-        _searchNodeAction = new QAction(QStringLiteral("Search Node"), this);
+        _searchNodeAction = new QAction(QStringLiteral("搜索节点"), this);
         _searchNodeAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
         _searchNodeAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_F));
         _searchNodeAction->setAutoRepeat(false);
+        tag(_searchNodeAction, "search");
         connect(_searchNodeAction, &QAction::triggered, scene, &BasicGraphicsScene::showSearchNodeBar);
         addAction(_searchNodeAction);
     }
     {
         delete _alignTopAction;
-        _alignTopAction = new QAction(QStringLiteral("Align Top"), this);
+        _alignTopAction = new QAction(QStringLiteral("顶端对齐"), this);
         _alignTopAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _alignTopAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Up));
         connect(_alignTopAction, &QAction::triggered, this, &GraphicsView::onAlignTop);
 
         delete _alignBottomAction;
-        _alignBottomAction = new QAction(QStringLiteral("Align Bottom"), this);
+        _alignBottomAction = new QAction(QStringLiteral("底端对齐"), this);
         _alignBottomAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _alignBottomAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Down));
         connect(_alignBottomAction, &QAction::triggered, this, &GraphicsView::onAlignBottom);
 
         delete _alignLeftAction;
-        _alignLeftAction = new QAction(QStringLiteral("Align Left"), this);
+        _alignLeftAction = new QAction(QStringLiteral("左对齐"), this);
         _alignLeftAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _alignLeftAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Left));
         connect(_alignLeftAction, &QAction::triggered, this, &GraphicsView::onAlignLeft);
 
         delete _alignRightAction;
-        _alignRightAction = new QAction(QStringLiteral("Align Right"), this);
+        _alignRightAction = new QAction(QStringLiteral("右对齐"), this);
         _alignRightAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _alignRightAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Right));
         connect(_alignRightAction, &QAction::triggered, this, &GraphicsView::onAlignRight);
 
-        QMenu* layoutMenu = new QMenu(QStringLiteral("Layout"), this);
+        QMenu* layoutMenu = new QMenu(QStringLiteral("对齐布局"), this);
         layoutMenu->addAction(_alignTopAction);
         layoutMenu->addAction(_alignBottomAction);
         layoutMenu->addAction(_alignLeftAction);
         layoutMenu->addAction(_alignRightAction);
 
-        QAction* layoutMenuAction = new QAction(QStringLiteral("Layout"), this);
-        layoutMenuAction->setMenu(layoutMenu);
-        addAction(layoutMenuAction);
+        delete _alignLayoutAction;
+        _alignLayoutAction = new QAction(QStringLiteral("对齐布局"), this);
+        _alignLayoutAction->setMenu(layoutMenu);
+        tag(_alignLayoutAction, "align");
+        addAction(_alignLayoutAction);
     }
-    auto undoAction = scene->undoStack().createUndoAction(this, tr("&Undo"));
-    undoAction->setShortcuts(QKeySequence::Undo);
-    addAction(undoAction);
+    delete _undoAction;
+    _undoAction = scene->undoStack().createUndoAction(this, QStringLiteral("撤销"));
+    _undoAction->setShortcuts(QKeySequence::Undo);
+    tag(_undoAction, "undo");
+    addAction(_undoAction);
 
-    auto redoAction = scene->undoStack().createRedoAction(this, tr("&Redo"));
-    redoAction->setShortcuts(QKeySequence::Redo);
-    addAction(redoAction);
+    delete _redoAction;
+    _redoAction = scene->undoStack().createRedoAction(this, QStringLiteral("重做"));
+    _redoAction->setShortcuts(QKeySequence::Redo);
+    tag(_redoAction, "redo");
+    addAction(_redoAction);
 
+    connect(scene,
+            &QGraphicsScene::selectionChanged,
+            this,
+            &GraphicsView::updateAlignLayoutActionVisibility,
+            Qt::UniqueConnection);
+    updateAlignLayoutActionVisibility();
+}
+
+void GraphicsView::updateAlignLayoutActionVisibility()
+{
+    if (!_alignLayoutAction)
+        return;
+
+    int selectedNodes = 0;
+    if (auto *s = nodeScene()) {
+        for (QGraphicsItem *item : s->selectedItems()) {
+            if (qgraphicsitem_cast<NodeGraphicsObject *>(item))
+                ++selectedNodes;
+        }
+    }
+
+    bool const visible = selectedNodes >= 2;
+    _alignLayoutAction->setVisible(visible);
+    if (_alignTopAction)
+        _alignTopAction->setEnabled(visible);
+    if (_alignBottomAction)
+        _alignBottomAction->setEnabled(visible);
+    if (_alignLeftAction)
+        _alignLeftAction->setEnabled(visible);
+    if (_alignRightAction)
+        _alignRightAction->setEnabled(visible);
 }
 
 void GraphicsView::centerScene()
@@ -239,6 +328,17 @@ void GraphicsView::contextMenuEvent(QContextMenuEvent *event)
     }
 
     auto const scenePos = mapToScene(event->pos());
+
+    // Prefer Scene-kind shared actions (paste / search / …). If the scene leaves
+    // that menu empty, fall back to createSceneMenu (examples: create-node UI).
+    if (s) {
+        QMenu backgroundMenu;
+        s->appendContextMenuActions(backgroundMenu, ContextMenuKind::Scene);
+        if (!backgroundMenu.actions().isEmpty()) {
+            backgroundMenu.exec(event->globalPos());
+            return;
+        }
+    }
 
     QMenu *menu = s ? s->createSceneMenu(scenePos) : nullptr;
 

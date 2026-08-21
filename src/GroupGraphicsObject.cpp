@@ -74,14 +74,14 @@ QList<QColor> titleColorPresets()
 QStringList titleColorNames()
 {
     return {
-        QStringLiteral("Orange"),
-        QStringLiteral("Blue"),
-        QStringLiteral("Pink"),
-        QStringLiteral("Purple"),
-        QStringLiteral("Teal"),
-        QStringLiteral("Red"),
-        QStringLiteral("Yellow"),
-        QStringLiteral("Green"),
+        QStringLiteral("橙色"),
+        QStringLiteral("蓝色"),
+        QStringLiteral("粉色"),
+        QStringLiteral("紫色"),
+        QStringLiteral("青色"),
+        QStringLiteral("红色"),
+        QStringLiteral("黄色"),
+        QStringLiteral("绿色"),
     };
 }
 
@@ -322,11 +322,17 @@ void GroupGraphicsObject::setTitleColor(QColor const &color)
     if (_groupId.titleColor == hex && _groupId.selectedBoundaryColor == hex)
         return;
 
+    auto *scene = nodeScene();
+    if (!scene)
+        return;
+
     GroupId const oldGroupId = _groupId;
-    _groupId.titleColor = hex;
-    _groupId.selectedBoundaryColor = hex; // 对应节点 SelectedBoundaryColor = TitleColor
-    graphModel().updateGroup(oldGroupId, _groupId);
-    update();
+    GroupId newGroupId = _groupId;
+    newGroupId.titleColor = hex;
+    newGroupId.selectedBoundaryColor = hex; // 对应节点 SelectedBoundaryColor = TitleColor
+
+    scene->undoStack().push(
+        new UpdateGroupCommand(scene, oldGroupId, newGroupId, QStringLiteral("更改分组颜色")));
 }
 
 qreal GroupGraphicsObject::captionHeightForText(qreal width, QString const &text) const
@@ -787,12 +793,17 @@ void GroupGraphicsObject::finishEditingRemarks()
     _editingCaptionHeight = 0.0;
 
     if (!discard && _groupId.groupRemarks != newRemarks) {
-        setRemarks(newRemarks);
-        graphModel().updateGroup(_groupId, _groupId);
-        if (_collapsed)
-            applyCollapsedGeometry();
-        else
-            updateGroupBounds();
+        auto *scene = nodeScene();
+        if (scene) {
+            GroupId const oldGroupId = _groupId;
+            GroupId newGroupId = _groupId;
+            newGroupId.groupRemarks = newRemarks;
+            scene->undoStack().push(
+                new UpdateGroupCommand(scene,
+                                       oldGroupId,
+                                       newGroupId,
+                                       QStringLiteral("编辑分组备注")));
+        }
     } else if (_collapsed) {
         applyCollapsedGeometry();
     } else {
@@ -1027,7 +1038,7 @@ void GroupGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event
     }
 
     QMenu m_Menu;
-    QAction* renameAction = m_Menu.addAction( "Edit Remarks");
+    QAction* renameAction = m_Menu.addAction(QStringLiteral("编辑备注"));
     renameAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));  // 添加快捷键
     connect(renameAction, &QAction::triggered, [this]() {
         startEditingRemarks(); // 假设这是重命名功能
@@ -1036,15 +1047,8 @@ void GroupGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event
     m_Menu.addSeparator();
     addTitleColorMenu(m_Menu);
 
-    auto* scene = this->scene();
-    auto views = scene ? scene->views() : QList<QGraphicsView*>();
-    if (!views.isEmpty()) {
-        auto* view = views.first();
-        // 遍历 view 的 actions
-        for (QAction* act : view->actions()) {
-            m_Menu.addAction(act);
-        }
-    }
+    if (auto *bs = nodeScene())
+        bs->appendContextMenuActions(m_Menu, ContextMenuKind::Group);
 
     // 显示菜单并等待用户选择
      m_Menu.exec(event->screenPos());
@@ -1074,7 +1078,7 @@ void GroupGraphicsObject::addTitleColorMenu(QMenu &menu)
         }
     }
 
-    QMenu *colorMenu = menu.addMenu(QStringLiteral("Color"));
+    QMenu *colorMenu = menu.addMenu(QStringLiteral("颜色"));
     QActionGroup *group = new QActionGroup(colorMenu);
     group->setExclusive(true);
 
@@ -1089,9 +1093,34 @@ void GroupGraphicsObject::addTitleColorMenu(QMenu &menu)
         group->addAction(action);
 
         QObject::connect(action, &QAction::triggered, &menu, [color, targetGroups, &menu]() {
+            auto *scene = targetGroups.isEmpty() ? nullptr : targetGroups.first()->nodeScene();
+            if (!scene) {
+                menu.close();
+                return;
+            }
+
+            std::vector<UpdateGroupCommand::Change> changes;
+            changes.reserve(static_cast<size_t>(targetGroups.size()));
+
             for (GroupGraphicsObject *ggo : targetGroups) {
-                if (ggo)
-                    ggo->setTitleColor(color);
+                if (!ggo)
+                    continue;
+                QString const hex = color.name(QColor::HexRgb);
+                GroupId const &oldGroup = ggo->groupId();
+                if (oldGroup.titleColor == hex && oldGroup.selectedBoundaryColor == hex)
+                    continue;
+
+                GroupId newGroup = oldGroup;
+                newGroup.titleColor = hex;
+                newGroup.selectedBoundaryColor = hex;
+                changes.push_back({oldGroup, newGroup});
+            }
+
+            if (!changes.empty()) {
+                scene->undoStack().push(
+                    new UpdateGroupCommand(scene,
+                                           std::move(changes),
+                                           QStringLiteral("更改分组颜色")));
             }
             menu.close();
         });

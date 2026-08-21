@@ -35,7 +35,10 @@
     "SelectedColor": [100, 100, 100],
     "SelectedHaloColor": "orange",
     "HoveredColor": "lightcyan",
+    "FontColor": [30, 30, 30],
     "LineWidth": 3.0,
+    "LineHoverWidth": 5.0,
+    "LineSelectedWidth": 6.0,
     "ConstructionLineWidth": 2.0,
     "PointDiameter": 10.0,
     "UseDataDefinedColors": false

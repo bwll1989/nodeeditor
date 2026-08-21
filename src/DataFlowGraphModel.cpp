@@ -474,7 +474,7 @@ bool DataFlowGraphModel::setNodeData(NodeId nodeId, NodeRole role, QVariant valu
             break;
 
         // Accept bool, or map: { "muted": bool, "sync": bool }.
-        // sync=true with muted=false => Unmute Input & Sync (pull all upstream ports).
+        // sync=true with muted=false => 取消屏蔽变量输入并同步 (pull all upstream ports).
         bool muted = false;
         bool sync = false;
         if (value.canConvert<QVariantMap>()) {
@@ -573,7 +573,7 @@ bool DataFlowGraphModel::setPortData(
     switch (role) {
     case PortRole::Data:
         if (portType == PortType::In) {
-            // Mute Input: ignore incoming data, preserve current state.
+            // 屏蔽变量输入: ignore VariableData setInData; preserve current state.
             if (_mutedNodes.find(nodeId) != _mutedNodes.end())
                 return false;
 
@@ -601,16 +601,111 @@ bool DataFlowGraphModel::deleteConnection(ConnectionId const connectionId)
         disconnected = true;
 
         _connectivity.erase(it);
+        _connectionDisplay.erase(connectionId);
     }
 
     if (disconnected) {
+        // Sibling virtual tags may need re-layout after this connection disappears.
+        auto const outSiblings = connections(connectionId.outNodeId,
+                                             PortType::Out,
+                                             connectionId.outPortIndex);
+        auto const inSiblings = connections(connectionId.inNodeId,
+                                            PortType::In,
+                                            connectionId.inPortIndex);
+
         sendConnectionDeletion(connectionId);
+
+        for (auto const &cid : outSiblings)
+            Q_EMIT connectionUpdated(cid);
+        for (auto const &cid : inSiblings)
+            Q_EMIT connectionUpdated(cid);
 
         propagateEmptyDataTo(getNodeId(PortType::In, connectionId),
                              getPortIndex(PortType::In, connectionId));
     }
 
     return disconnected;
+}
+
+QVariant DataFlowGraphModel::connectionData(ConnectionId const connectionId, ConnectionRole role) const
+{
+    auto it = _connectionDisplay.find(connectionId);
+    if (it == _connectionDisplay.end())
+        return {};
+
+    switch (role) {
+    case ConnectionRole::Virtual:
+        return it->second.isVirtual;
+    case ConnectionRole::VirtualLabel:
+        return it->second.label;
+    }
+    return {};
+}
+
+bool DataFlowGraphModel::setConnectionData(ConnectionId const connectionId,
+                                           ConnectionRole role,
+                                           QVariant const &value)
+{
+    if (!connectionExists(connectionId))
+        return false;
+
+    bool changed = false;
+
+    switch (role) {
+    case ConnectionRole::Virtual: {
+        bool const v = value.toBool();
+        auto it = _connectionDisplay.find(connectionId);
+        if (v) {
+            if (it == _connectionDisplay.end()) {
+                _connectionDisplay[connectionId] = ConnectionDisplayData{true, {}};
+                changed = true;
+            } else if (!it->second.isVirtual) {
+                it->second.isVirtual = true;
+                changed = true;
+            }
+        } else if (it != _connectionDisplay.end()) {
+            if (it->second.label.isEmpty()) {
+                _connectionDisplay.erase(it);
+                changed = true;
+            } else if (it->second.isVirtual) {
+                it->second.isVirtual = false;
+                changed = true;
+            }
+        }
+        break;
+    }
+    case ConnectionRole::VirtualLabel: {
+        QString const label = value.toString();
+        auto it = _connectionDisplay.find(connectionId);
+        if (it == _connectionDisplay.end()) {
+            if (!label.isEmpty()) {
+                _connectionDisplay[connectionId] = ConnectionDisplayData{false, label};
+                changed = true;
+            }
+        } else if (it->second.label != label) {
+            it->second.label = label;
+            if (!it->second.isVirtual && label.isEmpty())
+                _connectionDisplay.erase(it);
+            changed = true;
+        }
+        break;
+    }
+    }
+
+    if (changed) {
+        Q_EMIT connectionUpdated(connectionId);
+        // Sibling virtual tags on the same ports may need re-layout.
+        for (auto const &cid : connections(connectionId.outNodeId, PortType::Out, connectionId.outPortIndex)) {
+            if (cid != connectionId)
+                Q_EMIT connectionUpdated(cid);
+        }
+        for (auto const &cid : connections(connectionId.inNodeId, PortType::In, connectionId.inPortIndex)) {
+            if (cid != connectionId)
+                Q_EMIT connectionUpdated(cid);
+        }
+    }
+
+    return changed;
 }
 
 bool DataFlowGraphModel::deleteNode(NodeId const nodeId)
@@ -695,7 +790,14 @@ QJsonObject DataFlowGraphModel::save() const
 
     QJsonArray connJsonArray;
     for (auto const &cid : _connectivity) {
-        connJsonArray.append(toJson(cid));
+        QJsonObject connJson = toJson(cid);
+        if (connectionData(cid, ConnectionRole::Virtual).toBool()) {
+            connJson[QStringLiteral("virtual")] = true;
+            QString const label = connectionData(cid, ConnectionRole::VirtualLabel).toString();
+            if (!label.isEmpty())
+                connJson[QStringLiteral("virtualLabel")] = label;
+        }
+        connJsonArray.append(connJson);
     }
     sceneJson["connections"] = connJsonArray;
     QJsonArray groupJsonArray;
@@ -799,6 +901,12 @@ void DataFlowGraphModel::load(QJsonObject const &jsonDocument)
         ConnectionId connId = fromJson(connJson);
         // 恢复连接
         addConnection(connId);
+        if (connJson.value(QStringLiteral("virtual")).toBool()) {
+            setConnectionData(connId, ConnectionRole::Virtual, true);
+            QString const label = connJson.value(QStringLiteral("virtualLabel")).toString();
+            if (!label.isEmpty())
+                setConnectionData(connId, ConnectionRole::VirtualLabel, label);
+        }
     }
 }
 

@@ -114,8 +114,11 @@ void ConnectionStyle::loadJson(QJsonObject const &json)
     CONNECTION_STYLE_READ_COLOR(obj, SelectedColor);
     CONNECTION_STYLE_READ_COLOR(obj, SelectedHaloColor);
     CONNECTION_STYLE_READ_COLOR(obj, HoveredColor);
+    CONNECTION_STYLE_READ_COLOR(obj, FontColor);
 
     CONNECTION_STYLE_READ_FLOAT(obj, LineWidth);
+    CONNECTION_STYLE_READ_FLOAT(obj, LineHoverWidth);
+    CONNECTION_STYLE_READ_FLOAT(obj, LineSelectedWidth);
     CONNECTION_STYLE_READ_FLOAT(obj, ConstructionLineWidth);
     CONNECTION_STYLE_READ_FLOAT(obj, PointDiameter);
 
@@ -133,8 +136,11 @@ QJsonObject ConnectionStyle::toJson() const
     CONNECTION_STYLE_WRITE_COLOR(obj, SelectedColor);
     CONNECTION_STYLE_WRITE_COLOR(obj, SelectedHaloColor);
     CONNECTION_STYLE_WRITE_COLOR(obj, HoveredColor);
+    CONNECTION_STYLE_WRITE_COLOR(obj, FontColor);
 
     CONNECTION_STYLE_WRITE_FLOAT(obj, LineWidth);
+    CONNECTION_STYLE_WRITE_FLOAT(obj, LineHoverWidth);
+    CONNECTION_STYLE_WRITE_FLOAT(obj, LineSelectedWidth);
     CONNECTION_STYLE_WRITE_FLOAT(obj, ConstructionLineWidth);
     CONNECTION_STYLE_WRITE_FLOAT(obj, PointDiameter);
 
@@ -187,9 +193,24 @@ QColor ConnectionStyle::hoveredColor() const
     return HoveredColor;
 }
 
+QColor ConnectionStyle::fontColor() const
+{
+    return FontColor.isValid() ? FontColor : QColor(30, 30, 30);
+}
+
 float ConnectionStyle::lineWidth() const
 {
     return LineWidth;
+}
+
+float ConnectionStyle::lineHoverWidth() const
+{
+    return LineHoverWidth;
+}
+
+float ConnectionStyle::lineSelectedWidth() const
+{
+    return LineSelectedWidth;
 }
 
 float ConnectionStyle::constructionLineWidth() const

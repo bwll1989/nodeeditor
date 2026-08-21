@@ -22,6 +22,7 @@ private:
     void drawSketchLine(QPainter *painter, ConnectionGraphicsObject const &cgo,QPainterPath const & cubic) const;
     void drawHoveredOrSelected(QPainter *painter, ConnectionGraphicsObject const &cgo,QPainterPath const & cubic) const;
     void drawNormalLine(QPainter *painter, ConnectionGraphicsObject const &cgo,QPainterPath const & cubic) const;
+    void drawVirtualTags(QPainter *painter, ConnectionGraphicsObject const &cgo) const;
 #ifdef NODE_DEBUG_DRAWING
     void debugDrawing(QPainter *painter, ConnectionGraphicsObject const &cgo,QPainterPath const & cubic) const;
 #endif

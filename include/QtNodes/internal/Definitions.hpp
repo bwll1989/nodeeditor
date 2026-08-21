@@ -41,7 +41,7 @@ Q_NAMESPACE_EXPORT(NODE_EDITOR_PUBLIC)
         Remarks=16,         ///< `QString` for node remarks
         EmbeddWidgetType=17, ///< `NodeWidgetType` for embeddable widget
         ModelAlias=18,           ///< `QString` for node Model alias
-        Muted=19,                ///< Mute Input: `bool`, or map {muted, sync} for Unmute & Sync
+        Muted=19,                ///< 屏蔽变量输入: `bool`, or map {muted, sync} for 取消并同步
     };
 Q_ENUM_NS(NodeRole)
 
@@ -52,7 +52,7 @@ enum NodeFlag {
     NoFlags = 0x0,   ///< Default NodeFlag
     Resizable = 0x1, ///< Lets the node be resizable
     Locked = 0x2,    ///< Locks node interaction
-    Muted = 0x4      ///< Mute Input: skip setInData, keep current state
+    Muted = 0x4      ///< 屏蔽变量输入: skip VariableData setInData, keep current state
 };
 
 Q_DECLARE_FLAGS(NodeFlags, NodeFlag)
@@ -75,6 +75,15 @@ enum class PortRole {
     Caption = 4,              ///< `QString` for port caption.
 };
 Q_ENUM_NS(PortRole)
+
+/**
+ * Display / metadata roles for a connection (not data-flow payload).
+ */
+enum class ConnectionRole {
+    Virtual = 0,      ///< `bool` — draw as paired end tags instead of a wire.
+    VirtualLabel = 1, ///< `QString` — shared label on both end tags.
+};
+Q_ENUM_NS(ConnectionRole)
 
 /**
  * Defines how many connections are possible to attach to ports. The

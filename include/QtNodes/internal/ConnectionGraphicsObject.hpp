@@ -8,7 +8,9 @@
 #include "ConnectionState.hpp"
 #include "Definitions.hpp"
 
+class QGraphicsProxyWidget;
 class QGraphicsSceneMouseEvent;
+class QLineEdit;
 
 namespace QtNodes {
 
@@ -58,12 +60,46 @@ public:
 
     ConnectionState &connectionState();
 
+    /// Whether this connection is drawn as paired end tags.
+    bool isVirtual() const;
+
+    /// Shared label for virtual end tags (empty if unset).
+    QString virtualLabel() const;
+
+    /// Visible caption for a tag end (`untitled`, or `×N ▾` when folded).
+    QString virtualTagCaption(PortType portType) const;
+
+    /// Local-space polygon for one virtual tag (empty if not virtual / hidden by fold).
+    QPolygonF virtualTagPolygon(PortType portType) const;
+
+    /// Stable horizontal slot index among virtual connections on the same port.
+    int virtualTagSlotIndex(PortType portType) const;
+
+    /// Number of virtual connections on the given end port.
+    int virtualTagCount(PortType portType) const;
+
+    /// Width of this connection's tag on the given end (based on its own caption).
+    qreal virtualTagWidth(PortType portType) const;
+
+    /// True when this port end is collapsed to a single `×N` chip (count >= 2).
+    bool isVirtualPortFolded(PortType portType) const;
+
+    /// Folded group shares hover/selection highlight across sibling connections.
+    bool isVirtualGroupHighlighted(PortType portType) const;
+
+    bool isEditingLabel() const;
+
+    /// Which end currently hosts the in-place label editor.
+    PortType labelEditPort() const { return _labelEditPort; }
+
 protected:
     void paint(QPainter *painter,
                QStyleOptionGraphicsItem const *option,
                QWidget *widget = 0) override;
 
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
+
+    void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
 
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
 
@@ -77,12 +113,44 @@ protected:
 
     void keyPressEvent(QKeyEvent *event) override;
 
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
+    QVariant itemChange(QGraphicsItem::GraphicsItemChange change, const QVariant &value) override;
+
 private:
     void initializePosition();
 
     void addGraphicsEffect();
 
     void setLockedState();
+
+    void initLabelEditor();
+    void startEditingLabel(PortType preferPort = PortType::Out);
+    void finishEditingLabel();
+    void syncLabelEditorGeometry();
+
+    /// Prefer the virtual tag under `localPos`, else the nearer one.
+    PortType virtualTagPortAt(QPointF const &localPos) const;
+
+    /// Text area inside a virtual tag (matches painter layout).
+    QRectF virtualTagTextRect(PortType portType) const;
+
+    std::vector<ConnectionId> virtualConnectionsOnPort(PortType portType) const;
+
+    /// Horizontal offset before this tag along the port chain.
+    qreal virtualTagChainOffset(PortType portType) const;
+
+    bool isVirtualPortExpanded(PortType portType) const;
+    void setVirtualPortExpanded(PortType portType, bool expanded);
+    void refreshVirtualPortGraphics(PortType portType);
+
+    /// Expand out/in ends when they have multiple virtual tags.
+    void expandVirtualEndsIfNeeded();
+    /// Collapse expanded ends when nothing in the group is hovered/selected.
+    void maybeCollapseVirtualPorts();
+
+    /// Repaint all siblings that share a folded port with this connection.
+    void notifyVirtualGroupRepaint();
 
 private Q_SLOTS:
     void onLockedState(NodeId nodeId);
@@ -100,6 +168,13 @@ private:
 
     mutable QPointF _out;
     mutable QPointF _in;
+
+    /// In-place virtual label editor (same interaction as node remarks).
+    QGraphicsProxyWidget *_labelProxy = nullptr;
+    QLineEdit *_labelEditor = nullptr;
+    PortType _labelEditPort = PortType::Out;
+    bool _finishingLabelEdit = false;
+    bool _discardLabelEdit = false;
 };
 
 } // namespace QtNodes

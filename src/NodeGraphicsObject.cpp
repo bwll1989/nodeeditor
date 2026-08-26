@@ -4,6 +4,9 @@
 #include <cstdlib>
 #include <iostream>
 
+#include <QtGui/QClipboard>
+#include <QtWidgets/QApplication>
+#include <QtCore/QJsonObject>
 #include <QtWidgets/QGraphicsEffect>
 #include <QtWidgets/QGraphicsProxyWidget>
 #include <QtWidgets/QLineEdit>
@@ -45,6 +48,34 @@ QList<QColor> titleColorPresets()
         QColor(240, 190, 40),  // yellow
         QColor(100, 180, 70),  // green
     };
+}
+
+QString makeFullOscAddressForNode(AbstractGraphModel const &model,
+                                  NodeId nodeId,
+                                  QString const &relative)
+{
+    QString const norm = relative.startsWith(QLatin1Char('/')) ? relative
+                                                              : (QLatin1Char('/') + relative);
+    QString prefix = QStringLiteral("/dataflow/");
+    QString const alias = model.nodeData(nodeId, NodeRole::ModelAlias).toString().trimmed();
+    if (!alias.isEmpty())
+        prefix += alias + QLatin1Char('/');
+    prefix += QString::number(nodeId);
+    return prefix + norm;
+}
+
+QString relativePathForAddress(AbstractGraphModel const &model,
+                               NodeId nodeId,
+                               QString const &fullAddress)
+{
+    QString prefix = QStringLiteral("/dataflow/");
+    QString const alias = model.nodeData(nodeId, NodeRole::ModelAlias).toString().trimmed();
+    if (!alias.isEmpty())
+        prefix += alias + QLatin1Char('/');
+    prefix += QString::number(nodeId);
+    if (fullAddress.startsWith(prefix))
+        return fullAddress.mid(prefix.size());
+    return fullAddress;
 }
 
 QStringList titleColorNames()
@@ -302,9 +333,8 @@ void NodeGraphicsObject::setLockedState()
     setFlag(QGraphicsItem::ItemIsSelectable, !locked);
     setFlag(QGraphicsItem::ItemSendsScenePositionChanges, !locked);
 
-    QJsonObject nodeStyleJson = _graphModel.nodeData(_nodeId, NodeRole::Style).toJsonObject();
-    NodeStyle nodeStyle(nodeStyleJson);
-    double const baseOpacity = nodeStyle.Opacity;
+    // 只用全局样式 Opacity，避免 hover 时反复解析节点 Style JSON
+    double const baseOpacity = StyleCollection::nodeStyle().Opacity;
     setOpacity((muted && !highlighted) ? baseOpacity * 0.4 : baseOpacity);
     if (_proxyWidget) {
         _proxyWidget->setOpacity((muted && !highlighted) ? 0.45 : 1.0);
@@ -611,16 +641,7 @@ void NodeGraphicsObject::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
 
 void NodeGraphicsObject::hoverEnterEvent(QGraphicsSceneHoverEvent *event)
 {
-    // bring all the colliding nodes to background
-    QList<QGraphicsItem *> overlapItems = collidingItems();
-
-    for (QGraphicsItem *item : overlapItems) {
-        if (item->zValue() > 0.0) {
-            item->setZValue(0.0);
-        }
-    }
-
-    // bring this node forward
+    // 提到最前即可；原先 collidingItems() 在 NoIndex/多节点下是 O(N) 扫描
     setZValue(1.0);
 
     _nodeState.setHovered(true);
@@ -815,6 +836,7 @@ void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 
     m_Menu.addSeparator();
     addTitleColorMenu(m_Menu);
+    addExternalControlMenu(m_Menu);
 
     if (auto *bs = nodeScene())
         bs->appendContextMenuActions(m_Menu, ContextMenuKind::Node);
@@ -823,6 +845,58 @@ void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
      m_Menu.exec(event->screenPos());
 
     event->accept(); // 确保事件被处理
+}
+
+void NodeGraphicsObject::addExternalControlMenu(QMenu &menu)
+{
+    QVariant const oscVar = _graphModel.nodeData(_nodeId, NodeRole::OSCAddress);
+    if (!oscVar.isValid())
+        return;
+
+    using BindingMap = ExternalBindingMap;
+    if (!oscVar.canConvert<BindingMap>())
+        return;
+
+    BindingMap const mapping = oscVar.value<BindingMap>();
+    if (mapping.empty())
+        return;
+
+    QStringList keys;
+    keys.reserve(static_cast<int>(mapping.size()));
+    for (auto const &kv : mapping)
+        keys.append(kv.first);
+    keys.sort();
+
+    QMenu *oscMenu = menu.addMenu(QStringLiteral("外部控制"));
+
+    QString const nodeName = _graphModel.nodeData(_nodeId, NodeRole::Remarks).toString();
+    QString const nodeType = _graphModel.nodeData(_nodeId, NodeRole::Type).toString();
+    QString const displayName = nodeName.isEmpty() ? nodeType : nodeName;
+
+    for (QString const &rel : keys) {
+        QString const full = makeFullOscAddressForNode(_graphModel, _nodeId, rel);
+
+        QMenu *addrMenu = oscMenu->addMenu(full);
+
+        QAction *copyAct = addrMenu->addAction(QStringLiteral("复制控制地址"));
+        connect(copyAct, &QAction::triggered, [full]() {
+            QApplication::clipboard()->setText(full);
+        });
+
+        QAction *webAct = addrMenu->addAction(QStringLiteral("添加网页控制"));
+        connect(webAct, &QAction::triggered, [this, full, nodeName, nodeType, displayName]() {
+            if (auto *bs = nodeScene()) {
+                QJsonObject item;
+                item[QStringLiteral("entity")] = full;
+                item[QStringLiteral("nodeId")] = static_cast<int>(_nodeId);
+                item[QStringLiteral("nodeName")] = nodeName;
+                item[QStringLiteral("nodeType")] = nodeType;
+                item[QStringLiteral("relative")] = relativePathForAddress(_graphModel, _nodeId, full);
+                item[QStringLiteral("suggestedName")] = displayName;
+                bs->requestSendOscBindingToWebPanel(item);
+            }
+        });
+    }
 }
 
 void NodeGraphicsObject::addTitleColorMenu(QMenu &menu)

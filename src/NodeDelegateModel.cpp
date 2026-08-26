@@ -200,6 +200,16 @@ NodeId NodeDelegateModel::getNodeID() const
     return _nodeId;
 }
 
+QString NodeDelegateModel::makeFullOscAddress(QString const &relative) const
+{
+    QString const norm = relative.startsWith(QLatin1Char('/')) ? relative
+                                                               : (QLatin1Char('/') + relative);
+    QString const parent = _parentAlias.trimmed();
+    if (parent.isEmpty())
+        return QStringLiteral("/dataflow/%1%2").arg(_nodeId).arg(norm);
+    return QStringLiteral("/dataflow/%1/%2%3").arg(parent).arg(_nodeId).arg(norm);
+}
+
 bool NodeDelegateModel::eventFilter(QObject* watched, QEvent* event)
 {
     // 检查 watched 是否是外部绑定中的控件
@@ -259,7 +269,7 @@ void NodeDelegateModel::startDrag(QWidget* widget){
     if (oscAddress.isEmpty()) return;
 
     OSCMessage message;
-    message.address = "/dataflow/" + _parentAlias + "/" + QString::number(_nodeId) + oscAddress;
+    message.address = makeFullOscAddress(oscAddress);
     message.host = "127.0.0.1";
     message.port = 8991;
     QClipboard *clipboard = QApplication::clipboard();

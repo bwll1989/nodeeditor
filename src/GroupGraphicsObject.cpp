@@ -15,6 +15,8 @@
 #include "UndoCommands.hpp"
 #include "ConnectionGraphicsObject.hpp"
 #include <QtCore/QDebug>
+#include <QtCore/QMetaObject>
+#include <QtCore/QPointer>
 #include <QtCore/QTimer>
 #include <QtGui/QFontMetrics>
 #include <QtGui/QPainter>
@@ -123,15 +125,6 @@ GroupGraphicsObject::GroupGraphicsObject(BasicGraphicsScene &scene,
     // Opacity 仅作用于主体填充（见 DefaultGroupPainter），整图元保持不透明以免标题变淡
     setOpacity(1.0);
 
-    _boundsUpdateTimer = new QTimer(this);
-    _boundsUpdateTimer->setSingleShot(true);
-    //合并5ms以内的重复计算
-    _boundsUpdateTimer->setInterval(5);
-    connect(_boundsUpdateTimer,
-            &QTimer::timeout,
-            this,
-            &GroupGraphicsObject::updateGroupBounds);
-
     // 连接节点位置更新信号
     connect(&_graphModel, &AbstractGraphModel::nodePositionUpdated,
             this, &GroupGraphicsObject::onNodePositionUpdated);
@@ -181,9 +174,6 @@ void GroupGraphicsObject::setCollapsed(bool collapsed, bool updateModel)
 
     _collapsed = collapsed;
     _groupId.collapsed = collapsed;
-
-    if (_boundsUpdateTimer)
-        _boundsUpdateTimer->stop();
 
     setGroupItemsVisible(!collapsed);
 
@@ -882,51 +872,59 @@ void GroupGraphicsObject::selectMemberNodes()
     }
 }
 
-void GroupGraphicsObject::scheduleGroupBoundsUpdate()
+bool GroupGraphicsObject::containsNode(NodeId nodeId) const
 {
-    if (!_boundsUpdateTimer)
-        return;
-
-    _boundsUpdateTimer->start();
+    return std::find(_groupId.nodeIds.begin(), _groupId.nodeIds.end(), nodeId)
+           != _groupId.nodeIds.end();
 }
 
-// 添加新的槽函数来处理节点位置更新
+void GroupGraphicsObject::scheduleGroupBoundsUpdate()
+{
+    if (_boundsUpdatePending)
+        return;
+
+    _boundsUpdatePending = true;
+    QPointer<GroupGraphicsObject> self(this);
+    QMetaObject::invokeMethod(
+        this,
+        [self]() {
+            if (!self)
+                return;
+            self->_boundsUpdatePending = false;
+            self->updateGroupBounds();
+        },
+        Qt::QueuedConnection);
+}
+
 void GroupGraphicsObject::onNodePositionUpdated(NodeId nodeId)
 {
-    // 检查更新的节点是否属于此组
-    if (std::find(_groupId.nodeIds.begin(), _groupId.nodeIds.end(), nodeId) != _groupId.nodeIds.end()) {
+    if (containsNode(nodeId))
         scheduleGroupBoundsUpdate();
-    }
 }
 
 void GroupGraphicsObject::onNodeUpdated(NodeId nodeId)
 {
-    // 检查更新的节点是否属于此组
-    if (std::find(_groupId.nodeIds.begin(), _groupId.nodeIds.end(), nodeId) != _groupId.nodeIds.end()) {
+    if (containsNode(nodeId))
         scheduleGroupBoundsUpdate();
-    }
-
 }
 
-// 添加节点删除信号连接
 void GroupGraphicsObject::onNodeDeleted(NodeId nodeId)
 {
+    if (!containsNode(nodeId))
+        return;
 
     auto oldGroupId = _groupId;
+    _groupId.nodeIds.erase(
+        std::remove(_groupId.nodeIds.begin(), _groupId.nodeIds.end(), nodeId),
+        _groupId.nodeIds.end());
 
-    // 检查删除的节点是否属于此组
-    auto it = std::find(_groupId.nodeIds.begin(), _groupId.nodeIds.end(), nodeId);
-    if (it != _groupId.nodeIds.end()) {
-        _groupId.nodeIds.erase(it);
-        if (_groupId.nodeIds.empty()) {
-            graphModel().deleteGroup(oldGroupId); // 直接删除空分组
-            return;
-        }
+    if (_groupId.nodeIds.empty()) {
+        graphModel().deleteGroup(oldGroupId);
+        return;
     }
-    // 如果组内没有节点，删除组
-    graphModel().updateGroup(oldGroupId,_groupId);
 
-    scheduleGroupBoundsUpdate();
+    graphModel().updateGroup(oldGroupId, _groupId);
+    updateGroupBounds();
 }
 
 // 更新组的边界

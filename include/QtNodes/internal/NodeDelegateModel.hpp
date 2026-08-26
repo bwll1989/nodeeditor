@@ -161,12 +161,20 @@ public:
     NodeId getNodeID() const;
     /**
      * 设置父模型别名
+     * 根图为空：OSC 为 /dataflow/<nodeId>/...
+     * 嵌套 Container：为 <上层路径>/<containerNodeId>
      */
     void setParentAlias(QString alias){_parentAlias=alias;};
     /**
      * 获取父模型别名
      */
     QString getParentAlias() const{return _parentAlias;};
+
+    /**
+     * 拼完整 OSC：/dataflow/[<parentAlias>/]<nodeId><relative>
+     * parentAlias 为空时不加多余段（根层）
+     */
+    QString makeFullOscAddress(QString const &relative) const;
     /**
      * @brief 外部属性绑定描述（OSC 地址 -> Qt 属性）
      *
@@ -311,11 +319,11 @@ private:
     /**
      * 节点ID
      */
-    NodeId _nodeId;
+    NodeId _nodeId = InvalidNodeId;
     /**
      * 所属数据模型别名
      */
-    QString _parentAlias="Dataflow";
+    QString _parentAlias;
     /**
      * 拖拽起始位置
      */
@@ -330,5 +338,9 @@ private:
     NodeValidationState _nodeValidationState;
 };
 
+using ExternalBindingMap = std::unordered_map<QString, NodeDelegateModel::ExternalBinding>;
+
 } // namespace QtNodes
+
+Q_DECLARE_METATYPE(QtNodes::ExternalBindingMap)
 

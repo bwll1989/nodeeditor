@@ -8,11 +8,12 @@
 
 #include "QUuidStdHash.hpp"
 
+#include <QtCore/QJsonObject>
 #include <QtCore/QPointer>
 #include <QtCore/QUuid>
-#include <QtWidgets/QDialog>
 #include <QtWidgets/QGraphicsScene>
 #include <QtWidgets/QMenu>
+#include <QtWidgets/QWidget>
 
 #include <functional>
 #include <memory>
@@ -137,6 +138,11 @@ public:
      */
     virtual void appendContextMenuActions(QMenu &menu, ContextMenuKind kind);
 
+    /**
+     * 请求将 OSC 绑定发送到外部 Web 面板（由应用层连接 HttpServer 等）。
+     */
+    void requestSendOscBindingToWebPanel(QJsonObject const &binding);
+
 Q_SIGNALS:
     void modified(BasicGraphicsScene *);
 
@@ -158,6 +164,9 @@ Q_SIGNALS:
 
     /// Signal allows showing custom context menu upon clicking a node.
     void nodeContextMenu(NodeId const nodeId, QPointF const pos);
+
+    /// 节点 OSC 绑定发送到 Web 面板（payload 字段与 HttpServer::addPendingBinding 一致）
+    void sendOscBindingToWebPanel(QJsonObject const &binding);
 
 private:
     /// @brief Creates Node and Connection graphics objects.
@@ -208,7 +217,7 @@ public Q_SLOTS:
      *
      * 按 Remarks / Type / Caption / NodeId 以及虚拟连线 tag 标签过滤；
      * ←→ 与 Enter 在匹配结果间选中并居中。每个场景最多一个搜索条；
-     * 重复调用会复用并聚焦输入框。
+     * 重复调用会复用并聚焦输入框。搜索条为 GraphicsView 子控件，不随画布平移。
      */
     void showSearchNodeBar();
 
@@ -251,8 +260,8 @@ private:
 
     Qt::Orientation _orientation;
 
-    /// 当前场景的节点搜索条（无边框浮动条；关闭后指针自动清空）
-    QPointer<QDialog> _searchNodeBar;
+    /// 当前场景的节点搜索条（视口内嵌 overlay；关闭后隐藏复用）
+    QPointer<QWidget> _searchNodeBar;
 };
 
 } // namespace QtNodes

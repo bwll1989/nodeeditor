@@ -93,6 +93,7 @@ set(CPP_SOURCE_FILES
   src/NodeDelegateModel.cpp
   src/NodeDelegateModelRegistry.cpp
   src/NodeGraphicsObject.cpp
+  src/NodeSearchSession.cpp
   src/NodeState.cpp
   src/NodeStyle.cpp
   src/StyleCollection.cpp
@@ -129,6 +130,7 @@ set(HPP_HEADER_FILES
   include/QtNodes/internal/NodeDelegateModel.hpp
   include/QtNodes/internal/NodeDelegateModelRegistry.hpp
   include/QtNodes/internal/NodeGraphicsObject.hpp
+  include/QtNodes/internal/NodeSearchSession.hpp
   include/QtNodes/internal/NodeState.hpp
   include/QtNodes/internal/NodeStyle.hpp
   include/QtNodes/internal/OperatingSystem.hpp

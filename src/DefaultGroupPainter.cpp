@@ -25,6 +25,7 @@ namespace QtNodes {
 
 void DefaultGroupPainter::paint(QPainter *painter, GroupGraphicsObject const &ggo) const
 {
+    painter->setRenderHint(QPainter::Antialiasing, true);
     drawGroupRect(painter, ggo);
     drawGroupCaption(painter, ggo);
     drawGroupPorts(painter, ggo);
@@ -35,28 +36,33 @@ void DefaultGroupPainter::drawGroupRect(QPainter *painter, GroupGraphicsObject c
 
     auto const &groupStyle = QtNodes::StyleCollection::groupStyle();
 
-    // 与节点一致：选中时用 SelectedBoundaryColor，否则用 NormalBoundaryColor
-    auto color = ggo.isSelected() ? ggo.selectedBoundaryColor() : groupStyle.NormalColor;
-
-     if (ggo.isUnderMouse()) {
-         QPen p(color, groupStyle.HoveredPenWidth);
-         painter->setPen(p);
-     } else {
-         QPen p(color, groupStyle.PenWidth);
-         painter->setPen(p);
-     }
-
     QRectF boundary(0, 0, rect.width(), rect.height());
+    qreal const radius = groupStyle.BoundaryRadius;
 
-    // 展开：Opacity 控制主体透明度；折叠：整体不透明
+    // 主体：尽量用不透明实色，避免大分组半透明 overdraw；Opacity 仍可用于微调
+    QColor fill = groupStyle.GradientColor2;
     qreal const bodyOpacity = ggo.isCollapsed()
-                                  ? 0.7
-                                  : qBound(0.0, static_cast<qreal>(groupStyle.Opacity), 1.0);
-    QColor fill = ggo.isSelected() ? ggo.selectedBoundaryColor() : groupStyle.GradientColor2;
+                                  ? 1.0
+                                  : qBound(0.15, static_cast<qreal>(groupStyle.Opacity), 1.0);
     fill.setAlphaF(bodyOpacity);
+    painter->setPen(Qt::NoPen);
     painter->setBrush(fill);
-    painter->drawRoundedRect(boundary, groupStyle.BoundaryRadius, groupStyle.BoundaryRadius);
+    painter->drawRoundedRect(boundary, radius, radius);
 
+    // 选中：淡橙色叠层，避免整块实心橙
+    if (ggo.isSelected()) {
+        QColor sel = ggo.selectedBoundaryColor();
+        sel.setAlpha(ggo.isCollapsed() ? 55 : 40);
+        painter->setBrush(sel);
+        painter->drawRoundedRect(boundary, radius, radius);
+    }
+
+    // 边框
+    QColor border = ggo.isSelected() ? ggo.selectedBoundaryColor() : groupStyle.NormalColor;
+    qreal const penWidth = ggo.isUnderMouse() ? groupStyle.HoveredPenWidth : groupStyle.PenWidth;
+    painter->setBrush(Qt::NoBrush);
+    painter->setPen(QPen(border, penWidth));
+    painter->drawRoundedRect(boundary, radius, radius);
 }
 
 void DefaultGroupPainter::drawGroupCaption(QPainter *painter, GroupGraphicsObject const &ggo) const
@@ -114,7 +120,6 @@ void DefaultGroupPainter::drawGroupPorts(QPainter *painter, GroupGraphicsObject 
     auto inGroup = [&gid](NodeId nid) {
         return std::find(gid.nodeIds.begin(), gid.nodeIds.end(), nid) != gid.nodeIds.end();
     };
-
     for (auto nid : gid.nodeIds) {
         for (auto const &cid : gm.allConnectionIds(nid)) {
             bool aIn = (cid.inNodeId == nid) && !inGroup(cid.outNodeId);

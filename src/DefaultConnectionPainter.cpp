@@ -193,6 +193,8 @@ void DefaultConnectionPainter::drawNormalLine(QPainter *painter, ConnectionGraph
 
 void DefaultConnectionPainter::paint(QPainter *painter, ConnectionGraphicsObject const &cgo) const
 {
+    painter->setRenderHint(QPainter::Antialiasing, true);
+
     if (cgo.isVirtual() && !cgo.connectionState().requiresPort()) {
         drawVirtualTags(painter, cgo);
         return;
@@ -348,7 +350,8 @@ QPainterPath DefaultConnectionPainter::getPainterStroke(ConnectionGraphicsObject
     QPointF const &out = connection.endPoint(PortType::Out);
     QPainterPath result(out);
 
-    unsigned int constexpr segments = 20;
+    // 命中用更少采样即可；原先 20 段 + stroker 在鼠标移动时对每条连线都跑一遍
+    unsigned int constexpr segments = 8;
 
     for (auto i = 0ul; i < segments; ++i) {
         double ratio = double(i + 1) / segments;
@@ -366,7 +369,7 @@ QPainterPath DefaultConnectionPainter::getPainterStroke(ConnectionGraphicsObject
                 hitWidth = 14.0 / scale;
         }
     }
-    hitWidth = qBound(hitWidth, 10.0, 100.0);
+    hitWidth = qBound(hitWidth, 10.0, 40.0);
 
     QPainterPathStroker stroker;
     stroker.setWidth(hitWidth);

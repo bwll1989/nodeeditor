@@ -397,6 +397,7 @@ QPolygonF ConnectionGraphicsObject::virtualTagPolygon(PortType portType) const
 QRectF ConnectionGraphicsObject::boundingRect() const
 {
     if (isVirtual() && !_connectionState.requiresPort()) {
+        // 虚拟连线只绘制两端标签，包围盒不应跨整段 out→in，否则搜索/选中会居中到空白中点
         QRectF r;
         auto const outPoly = virtualTagPolygon(PortType::Out);
         auto const inPoly = virtualTagPolygon(PortType::In);
@@ -404,7 +405,8 @@ QRectF ConnectionGraphicsObject::boundingRect() const
             r = r.united(outPoly.boundingRect());
         if (!inPoly.isEmpty())
             r = r.united(inPoly.boundingRect());
-        r = r.united(QRectF(_out, _in).normalized());
+        if (r.isNull())
+            r = QRectF(_out, _in).normalized();
         return r.adjusted(-4, -4, 4, 4);
     }
 

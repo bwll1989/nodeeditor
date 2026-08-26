@@ -374,7 +374,11 @@ bool DataFlowGraphModel::setNodeData(NodeId nodeId, NodeRole role, QVariant valu
     } break;
 
     case NodeRole::Size: {
-        _nodeGeometryData[nodeId].size = value.value<QSize>();
+        QSize const newSize = value.value<QSize>();
+        if (_nodeGeometryData[nodeId].size != newSize) {
+            _nodeGeometryData[nodeId].size = newSize;
+            Q_EMIT nodeUpdated(nodeId);
+        }
         result = true;
     } break;
 
@@ -718,6 +722,9 @@ bool DataFlowGraphModel::deleteNode(NodeId const nodeId)
 
     _nodeGeometryData.erase(nodeId);
     _mutedNodes.erase(nodeId);
+
+    Q_EMIT nodeAboutToBeDeleted(nodeId);
+
     _models.erase(nodeId);
 
     Q_EMIT nodeDeleted(nodeId);
@@ -833,7 +840,39 @@ void DataFlowGraphModel::loadNode(QJsonObject const &nodeJson)
                 [restoredNodeId, this](PortIndex const portIndex) {
                     onOutPortDataUpdated(restoredNodeId, portIndex);
                 });
+
+        connect(model.get(),
+                &NodeDelegateModel::portsAboutToBeDeleted,
+                this,
+                [restoredNodeId, this](PortType const portType, PortIndex const first, PortIndex const last) {
+                    portsAboutToBeDeleted(restoredNodeId, portType, first, last);
+                });
+
+        connect(model.get(),
+                &NodeDelegateModel::portsDeleted,
+                this,
+                [restoredNodeId, this]() {
+                    portsDeleted();
+                    Q_EMIT nodeUpdated(restoredNodeId);
+                });
+
+        connect(model.get(),
+                &NodeDelegateModel::portsAboutToBeInserted,
+                this,
+                [restoredNodeId, this](PortType const portType, PortIndex const first, PortIndex const last) {
+                    portsAboutToBeInserted(restoredNodeId, portType, first, last);
+                });
+
+        connect(model.get(),
+                &NodeDelegateModel::portsInserted,
+                this,
+                [restoredNodeId, this]() {
+                    portsInserted();
+                    Q_EMIT nodeUpdated(restoredNodeId);
+                });
+
         model->setNodeID(restoredNodeId);
+        model->setParentAlias(modelAlias());
         _models[restoredNodeId] = std::move(model);
 
         Q_EMIT nodeCreated(restoredNodeId);

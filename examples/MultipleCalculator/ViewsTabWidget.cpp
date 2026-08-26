@@ -1,154 +1,400 @@
-// 文件：ViewsTabWidget.cpp（类 ViewsTabWidget 的成员实现）
-// 依赖：QtNodes 的 DataFlowGraphicsScene / GraphicsView；QJsonObject / QJsonArray
-
 #include "ViewsTabWidget.hpp"
+
+#include "ContainerDataModel.hpp"
+
 #include <QtNodes/DataFlowGraphicsScene>
 #include <QtNodes/GraphicsView>
-#include <QJsonObject>
+
 #include <QJsonArray>
+#include <QJsonObject>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QPushButton>
+#include <QTimer>
+#include <QVBoxLayout>
+#include <QDebug>
 
 using namespace QtNodes;
 
-DataflowViewsManger::DataflowViewsManger(QWidget* parent)
-    : QTabWidget(parent)
+DataflowViewsManger::DataflowViewsManger(QWidget *parent)
+    : QWidget(parent)
 {
+    _layout = new QVBoxLayout(this);
+    _layout->setContentsMargins(0, 0, 0, 0);
+    _layout->setSpacing(0);
 
+    auto *bar = new QWidget(this);
+    auto *barLayout = new QHBoxLayout(bar);
+    barLayout->setContentsMargins(6, 4, 6, 4);
+    barLayout->setSpacing(8);
+
+    _backButton = new QPushButton(QStringLiteral("← 返回"), bar);
+    _backButton->setEnabled(false);
+    _backButton->setFlat(true);
+    connect(_backButton, &QPushButton::clicked, this, &DataflowViewsManger::goBack);
+
+    _pathLabel = new QLabel(QStringLiteral("dataflow"), bar);
+    _pathLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+
+    barLayout->addWidget(_backButton);
+    barLayout->addWidget(_pathLabel, 1);
+
+    _view = new GraphicsView(this);
+    connect(_view, &GraphicsView::scaleChanged, this, [this](double) { rememberCurrentViewport(); });
+    connect(_view, &GraphicsView::viewportChanged, this, [this]() { rememberCurrentViewport(); });
+
+    _layout->addWidget(bar);
+    _layout->addWidget(_view, 1);
 }
 
 void DataflowViewsManger::setDefaultRegistry(std::shared_ptr<NodeDelegateModelRegistry> registry)
 {
     _defaultRegistry = std::move(registry);
+    ContainerDataModel::setSharedRegistry(_defaultRegistry);
 }
 
-DataFlowGraphicsScene* DataflowViewsManger::addNewScene(const QString& title)
+void DataflowViewsManger::purgeScene(DataFlowGraphicsScene *scene)
 {
-    // 如果未设置默认注册器，返回 nullptr
+    if (!scene)
+        return;
+
+    _sceneViewports.remove(scene);
+    scene->clearScene();
+    delete scene;
+}
+
+void DataflowViewsManger::runWithoutViewportRepaint(std::function<void()> fn)
+{
+    if (!_view || !fn)
+        return;
+
+    _view->setUpdatesEnabled(false);
+    _suppressViewportSave = true;
+    fn();
+    _suppressViewportSave = false;
+    _view->setUpdatesEnabled(true);
+    _view->viewport()->update();
+}
+
+void DataflowViewsManger::rememberCurrentViewport()
+{
+    if (_suppressViewportSave || !_view || _view->isRestoringViewport() || !_view->scene())
+        return;
+
+    auto *currentScene = dynamic_cast<DataFlowGraphicsScene *>(_view->scene());
+    if (!currentScene)
+        return;
+
+    _sceneViewports.insert(currentScene, _view->viewportState());
+}
+
+void DataflowViewsManger::restoreOrCenterViewport(DataFlowGraphicsScene *scene, bool forceCenter)
+{
+    if (!scene || !_view || _view->scene() != scene)
+        return;
+
+    if (!forceCenter && _sceneViewports.contains(scene)) {
+        _view->setViewportState(_sceneViewports.value(scene));
+        return;
+    }
+
+    _view->centerScene();
+    _sceneViewports.insert(scene, _view->viewportState());
+}
+
+void DataflowViewsManger::switchToScene(DataFlowGraphicsScene *scene)
+{
+    if (!scene || !_view)
+        return;
+
+    rememberCurrentViewport();
+
+    runWithoutViewportRepaint([this, scene]() {
+        _view->setScene(scene);
+        restoreOrCenterViewport(scene);
+    });
+}
+
+void DataflowViewsManger::bindSceneLoadedViewport(DataFlowGraphicsScene *scene)
+{
+    connect(scene, &DataFlowGraphicsScene::sceneLoaded, this, [this, scene]() {
+        if (_view->scene() != scene)
+            return;
+
+        runWithoutViewportRepaint([this, scene]() { restoreOrCenterViewport(scene, true); });
+    });
+}
+
+DataFlowGraphicsScene *DataflowViewsManger::createRootScene(const QString &title)
+{
     if (!_defaultRegistry)
         return nullptr;
 
-    return addNewScene(_defaultRegistry, title);
-}
+    _view->setScene(nullptr);
+    _sceneViewports.clear();
 
-DataFlowGraphicsScene* DataflowViewsManger::addNewScene(std::shared_ptr<NodeDelegateModelRegistry> registry,
-                                                   const QString& title)
-{
-    // 创建并持久化模型
-    _models.emplace_back(std::make_unique<DataFlowGraphModel>(std::move(registry)));
-    auto& model = *_models.back();
+    while (!_stack.empty()) {
+        Level top = _stack.back();
+        _stack.pop_back();
+        purgeScene(top.scene);
+    }
 
-    // 以 ViewsTabWidget 为父对象，方便统一管理与销毁
-    auto scene = new DataFlowGraphicsScene(model, this);
-    auto view  = new GraphicsView(scene);
+    const auto leftover = findChildren<DataFlowGraphicsScene *>(QString(), Qt::FindDirectChildrenOnly);
+    for (DataFlowGraphicsScene *s : leftover)
+        purgeScene(s);
 
-    // 插入标签页
-    const QString tabTitle = title.isEmpty() ? QString("view%1").arg(count()) : title;
-    insertTab(count(), view, tabTitle);
+    _rootModel.reset();
 
-    // 便捷行为：加载后居中显示
-    QObject::connect(scene, &DataFlowGraphicsScene::sceneLoaded, view, &GraphicsView::centerScene);
+    _rootModel = std::make_unique<DataFlowGraphModel>(_defaultRegistry);
+    _rootModel->setModelAlias(QString());
+
+    auto *scene = new DataFlowGraphicsScene(*_rootModel, this);
+    connectSceneNavigation(scene);
+    bindSceneLoadedViewport(scene);
+
+    Level root;
+    root.model = _rootModel.get();
+    root.scene = scene;
+    root.title = title.isEmpty() ? QStringLiteral("dataflow") : title;
+    root.container = nullptr;
+    root.ownsModel = true;
+    pushLevel(root);
 
     return scene;
 }
 
-DataFlowGraphicsScene* DataflowViewsManger::currentScene() const
+void DataflowViewsManger::connectSceneNavigation(DataFlowGraphicsScene *scene)
 {
-    auto* v = currentView();
-    return v ? dynamic_cast<DataFlowGraphicsScene*>(v->scene()) : nullptr;
-}
-
-GraphicsView* DataflowViewsManger::currentView() const
-{
-    return qobject_cast<GraphicsView*>(currentWidget());
-}
-
-// 函数：ViewsTabWidget::load
-// 作用：从传入的 JSON（包含所有标签页的序列化信息）恢复 ViewsTabWidget 的状态：重建每个标签页并载入对应的图模型数据。
-// 参数：nodeJson - 根 JSON 对象，结构应包含 "tabs" (QJsonArray) 和可选 "currentIndex" (int)
-// 注意：依赖 _defaultRegistry 创建新页；若未设置默认注册器则跳过创建。
-void DataflowViewsManger::load(QJsonObject const &nodeJson) {
-    // 1) 解析 tabs 数组
-    const QJsonArray tabsArray = nodeJson.value(QStringLiteral("tabs")).toArray();
-    if (tabsArray.isEmpty()) {
-        // 无有效数据，直接返回
+    if (!scene)
         return;
-    }
 
-    // 2) 清空现有标签页与模型（避免内存泄漏）
-    for (int i = count() - 1; i >= 0; --i) {
-        auto* view = qobject_cast<GraphicsView*>(widget(i));
-        // 先移除标签页
-        removeTab(i);
-        // 删除当前页的 view
-        if (view) {
-            // 同时删除其关联的 scene（其父对象为 this）
-            if (auto* sc = qobject_cast<DataFlowGraphicsScene*>(view->scene())) {
-                sc->clearScene();
-                delete sc;
-            }
-            delete view;
-        }
-    }
-    _models.clear();
+    connect(scene,
+            &BasicGraphicsScene::nodeDoubleClicked,
+            this,
+            &DataflowViewsManger::onNodeDoubleClicked);
 
-    // 3) 按序创建标签页并载入其模型 JSON
-    for (const auto& tabVal : tabsArray) {
-        const QJsonObject tabObj = tabVal.toObject();
-        const QString title = tabObj.value(QStringLiteral("title")).toString(QString("view%1").arg(count()));
-        const QJsonObject sceneJson = tabObj.value(QStringLiteral("scene")).toObject();
+    auto *gm = dynamic_cast<DataFlowGraphModel *>(&scene->graphModel());
+    if (!gm)
+        return;
 
-        // 若未设置默认注册器，则无法创建
-        DataFlowGraphicsScene* scene = addNewScene(_defaultRegistry, title);
-        if (!scene) {
-            continue;
-        }
+    connect(gm,
+            &AbstractGraphModel::nodeCreated,
+            this,
+            [gm](NodeId id) {
+                auto *container = gm->delegateModel<ContainerDataModel>(id);
+                if (!container)
+                    return;
+                container->setParentAlias(gm->modelAlias());
+                container->setNodeID(id);
+                QTimer::singleShot(0, container, [container]() {
+                    container->ensureInnerModel();
+                    container->seedDefaultInterfaceNodes();
+                    container->refreshInnerModelAlias();
+                });
+            });
 
-        // 加载模型 JSON 到最新创建的模型（_models.back() 对应刚插入的标签页）
-        try {
-               _models.back()->load(sceneJson);
-            } catch (const std::exception& e) {
-                qDebug() << e.what();
-                // 若加载失败（例如未注册模型类型），避免崩溃。可按需记录日志或提示。
-                // 此处保持场景为空，以便用户手动处理。
-            }
-        
-        //
-        //
-        // 居中视图（使加载后的内容居中显示）
-        if (auto* view = qobject_cast<GraphicsView*>(widget(count() - 1))) {
-            view->centerScene();
-        }
-    }
+    connect(gm,
+            &AbstractGraphModel::nodeAboutToBeDeleted,
+            this,
+            [this, gm](NodeId id) {
+                auto *container = gm->delegateModel<ContainerDataModel>(id);
+                if (!container)
+                    return;
 
-    // 4) 恢复当前活动标签页索引
-    const int curIdx = nodeJson.value(QStringLiteral("currentIndex")).toInt(0);
-    if (curIdx >= 0 && curIdx < count()) {
-        setCurrentIndex(curIdx);
-    }
+                DataFlowGraphModel *inner = container->innerModel();
+
+                for (size_t i = 0; i < _stack.size(); ++i) {
+                    if (_stack[i].container == container) {
+                        rememberCurrentViewport();
+                        while (_stack.size() > i)
+                            _stack.pop_back();
+                        if (!_stack.empty())
+                            switchToScene(_stack.back().scene);
+                        updateBreadcrumb();
+                        break;
+                    }
+                }
+
+                if (!inner)
+                    return;
+
+                const auto scenes = findChildren<DataFlowGraphicsScene *>();
+                for (DataFlowGraphicsScene *s : scenes) {
+                    if (&s->graphModel() == inner)
+                        purgeScene(s);
+                }
+            });
 }
 
-QJsonObject DataflowViewsManger::save() const {
-    QJsonObject root;
-    QJsonArray tabsArray;
+void DataflowViewsManger::pushLevel(Level level)
+{
+    _stack.push_back(level);
+    switchToScene(level.scene);
+    updateBreadcrumb();
+}
 
-    const int tabCount = count();
-    for (int i = 0; i < tabCount; ++i) {
-        QJsonObject tabObj;
-        tabObj.insert(QStringLiteral("title"), tabText(i));
+void DataflowViewsManger::updateBreadcrumb()
+{
+    QStringList parts;
+    for (auto const &lv : _stack)
+        parts << lv.title;
+    _pathLabel->setText(parts.join(QStringLiteral(" / ")));
+    _backButton->setEnabled(canGoBack());
+}
 
-        // _models 与标签页按插入顺序对齐（当前示例不支持移除标签页，因此索引对应）
-        if (i >= 0 && i < static_cast<int>(_models.size()) && _models[i]) {
-            tabObj.insert(QStringLiteral("scene"), _models[i]->save());
-        } else {
-            // 若模型缺失，插入空对象以占位
-            tabObj.insert(QStringLiteral("scene"), QJsonObject{});
-        }
+DataFlowGraphicsScene *DataflowViewsManger::currentScene() const
+{
+    if (_stack.empty())
+        return nullptr;
+    return _stack.back().scene;
+}
 
-        tabsArray.append(tabObj);
+DataFlowGraphModel *DataflowViewsManger::currentModel() const
+{
+    if (_stack.empty())
+        return nullptr;
+    return _stack.back().model;
+}
+
+void DataflowViewsManger::onNodeDoubleClicked(NodeId nodeId)
+{
+    auto *model = currentModel();
+    auto *scene = currentScene();
+    if (!model || !scene)
+        return;
+
+    auto *container = model->delegateModel<ContainerDataModel>(nodeId);
+    if (!container)
+        return;
+
+    model->setNodeData(nodeId, NodeRole::WidgetEmbeddable, false);
+
+    container->setParentAlias(model->modelAlias());
+    container->setNodeID(nodeId);
+
+    auto &inner = container->ensureInnerModel();
+    container->seedDefaultInterfaceNodes();
+    container->refreshInnerModelAlias();
+
+    for (auto const &lv : _stack) {
+        if (lv.container == container && lv.scene)
+            return;
     }
 
-    root.insert(QStringLiteral("tabs"), tabsArray);
-    root.insert(QStringLiteral("currentIndex"), currentIndex());
+    DataFlowGraphicsScene *innerScene = nullptr;
+    const auto children = findChildren<DataFlowGraphicsScene *>();
+    for (DataFlowGraphicsScene *s : children) {
+        if (&s->graphModel() == &inner) {
+            innerScene = s;
+            break;
+        }
+    }
 
+    if (!innerScene) {
+        innerScene = new DataFlowGraphicsScene(inner, this);
+        connectSceneNavigation(innerScene);
+        bindSceneLoadedViewport(innerScene);
+    }
+
+    QString title = container->getRemarks().trimmed();
+    if (title.isEmpty())
+        title = QStringLiteral("Container");
+
+    Level level;
+    level.model = &inner;
+    level.scene = innerScene;
+    level.title = title;
+    level.container = container;
+    level.ownsModel = false;
+    pushLevel(level);
+}
+
+void DataflowViewsManger::goBack()
+{
+    if (!canGoBack())
+        return;
+
+    if (_stack.back().container)
+        _stack.back().container->syncInterfaceFromInner();
+
+    rememberCurrentViewport();
+
+    _stack.pop_back();
+    switchToScene(_stack.back().scene);
+    updateBreadcrumb();
+}
+
+void DataflowViewsManger::clearToNewRoot()
+{
+    createRootScene(QStringLiteral("dataflow"));
+}
+
+QJsonObject DataflowViewsManger::save() const
+{
+    QJsonObject root;
+    if (_rootModel)
+        root[QStringLiteral("scene")] = _rootModel->save();
+    else
+        root[QStringLiteral("scene")] = QJsonObject{};
+
+    QJsonArray tabs;
+    QJsonObject tab;
+    tab[QStringLiteral("title")] = _stack.empty() ? QStringLiteral("dataflow") : _stack.front().title;
+    tab[QStringLiteral("scene")] = root.value(QStringLiteral("scene"));
+    tabs.append(tab);
+    root[QStringLiteral("tabs")] = tabs;
+    root[QStringLiteral("currentIndex")] = 0;
+    root[QStringLiteral("format")] = QStringLiteral("container-v1");
     return root;
 }
 
+void DataflowViewsManger::load(QJsonObject const &json)
+{
+    if (!_defaultRegistry)
+        return;
+
+    createRootScene(QStringLiteral("dataflow"));
+    if (!_rootModel)
+        return;
+
+    QJsonObject sceneJson = json.value(QStringLiteral("scene")).toObject();
+    if (sceneJson.isEmpty()) {
+        QJsonArray tabs = json.value(QStringLiteral("tabs")).toArray();
+        if (!tabs.isEmpty())
+            sceneJson = tabs.at(0).toObject().value(QStringLiteral("scene")).toObject();
+    }
+
+    if (sceneJson.isEmpty())
+        return;
+
+    {
+        QJsonArray nodes = sceneJson.value(QStringLiteral("nodes")).toArray();
+        bool changed = false;
+        for (int i = 0; i < nodes.size(); ++i) {
+            QJsonObject node = nodes.at(i).toObject();
+            QString const t = node.value(QStringLiteral("type")).toString();
+            if (t == QLatin1String("Entrance")) {
+                node.insert(QStringLiteral("type"), QStringLiteral("In"));
+                nodes.replace(i, node);
+                changed = true;
+            } else if (t == QLatin1String("Export")) {
+                node.insert(QStringLiteral("type"), QStringLiteral("Out"));
+                nodes.replace(i, node);
+                changed = true;
+            }
+        }
+        if (changed)
+            sceneJson.insert(QStringLiteral("nodes"), nodes);
+    }
+
+    try {
+        _rootModel->load(sceneJson);
+    } catch (std::exception const &e) {
+        qDebug() << "load failed:" << e.what();
+    }
+
+    if (_stack.empty())
+        return;
+
+    runWithoutViewportRepaint([this]() { restoreOrCenterViewport(_stack.back().scene, true); });
+}

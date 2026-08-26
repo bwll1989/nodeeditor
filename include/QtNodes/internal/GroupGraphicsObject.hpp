@@ -133,8 +133,6 @@ private:
 
     void setGroupItemsVisible(bool visible);
 
-    void scheduleGroupBoundsUpdate();
-
     void updateGroupBounds();
 
     void onNodePositionUpdated(NodeId nodeId);
@@ -159,6 +157,10 @@ private:
     {
         return collapsedWidthForRemarks(_groupId.groupRemarks);
     }
+
+    bool containsNode(NodeId nodeId) const;
+
+    void scheduleGroupBoundsUpdate();
 
     qreal collapsedBodyHeight() const;
 
@@ -185,7 +187,7 @@ private:
     bool _collapsed = false;
     /// 展开态编辑时记录上一帧标题高度，用于随草稿增减顶边
     qreal _editingCaptionHeight = 0.0;
-    QTimer* _boundsUpdateTimer = nullptr;
+    bool _boundsUpdatePending = false;
 };
 
 } // namespace QtNodes

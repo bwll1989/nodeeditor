@@ -17,6 +17,7 @@
 #include <QtCore/QDebug>
 #include <QtCore/QPointF>
 #include <QtCore/QRectF>
+#include <QtCore/QSignalBlocker>
 
 #include <QtOpenGL>
 #include <QtWidgets>
@@ -27,6 +28,17 @@
 using QtNodes::BasicGraphicsScene;
 using QtNodes::GraphicsView;
 
+namespace {
+
+constexpr int MaxSceneSize =15000;
+
+QRectF defaultViewSceneRect()
+{
+    return QRectF(-MaxSceneSize, -MaxSceneSize, MaxSceneSize * 2, MaxSceneSize * 1.8);
+}
+
+} // namespace
+
 GraphicsView::GraphicsView(QWidget *parent)
     : QGraphicsView(parent)
     , _clearSelectionAction(Q_NULLPTR)
@@ -36,7 +48,9 @@ GraphicsView::GraphicsView(QWidget *parent)
     , _pasteAction(Q_NULLPTR)
 {
     setDragMode(QGraphicsView::ScrollHandDrag);
-    setRenderHint(QPainter::Antialiasing);
+    // 抗锯齿放到节点/连线 painter 内开启；视图级 AA 会让背景网格极贵
+    setRenderHint(QPainter::Antialiasing, false);
+    setRenderHint(QPainter::TextAntialiasing, true);
 
     auto const &flowViewStyle = StyleCollection::flowViewStyle();
 
@@ -45,6 +59,8 @@ GraphicsView::GraphicsView(QWidget *parent)
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 
+    // Pan uses ScrollHandDrag on hidden scroll bars; do not add a second pan path
+    // (e.g. translating view sceneRect in mouseMoveEvent) or viewport restore breaks.
     setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
 
     setCacheMode(QGraphicsView::CacheBackground);
@@ -54,8 +70,7 @@ GraphicsView::GraphicsView(QWidget *parent)
 
     // Sets the scene rect to its maximum possible ranges to avoid autu scene range
     // re-calculation when expanding the all QGraphicsItems common rect.
-    int maxSize = 32767;
-    setSceneRect(-maxSize, -maxSize, (maxSize * 2), (maxSize * 2));
+    setSceneRect(defaultViewSceneRect());
 }
 
 GraphicsView::GraphicsView(BasicGraphicsScene *scene, QWidget *parent)
@@ -117,6 +132,10 @@ QAction *GraphicsView::redoAction() const
 void GraphicsView::setScene(BasicGraphicsScene *scene)
 {
     QGraphicsView::setScene(scene);
+
+    // 允许先构造 View、稍后挂 Scene（Container 导航会切换 scene）
+    if (!scene)
+        return;
 
     auto tag = [](QAction *action, char const *role) {
         if (action)
@@ -299,19 +318,80 @@ void GraphicsView::updateAlignLayoutActionVisibility()
         _alignRightAction->setEnabled(visible);
 }
 
+// ---------------------------------------------------------------------------
+// Viewport snapshot (scale + hidden scroll-bar offsets)
+// ---------------------------------------------------------------------------
+
+double GraphicsView::getScale() const
+{
+    return transform().m11();
+}
+
+GraphicsView::ViewportState GraphicsView::viewportState() const
+{
+    ViewportState state;
+    state.scale = getScale();
+    state.hScroll = horizontalScrollBar()->value();
+    state.vScroll = verticalScrollBar()->value();
+    return state;
+}
+
+void GraphicsView::setViewportState(ViewportState const &state)
+{
+    QSignalBlocker const blocker(this);
+    _restoringViewport = true;
+
+    setSceneRect(defaultViewSceneRect());
+    setupScale(state.scale);
+    horizontalScrollBar()->setValue(state.hScroll);
+    verticalScrollBar()->setValue(state.vScroll);
+
+    _restoringViewport = false;
+}
+
+void GraphicsView::resetViewportStateInternal()
+{
+    QTransform matrix;
+    matrix.scale(1.0, 1.0);
+    setTransform(matrix, false);
+    setSceneRect(defaultViewSceneRect());
+    horizontalScrollBar()->setValue(horizontalScrollBar()->minimum());
+    verticalScrollBar()->setValue(verticalScrollBar()->minimum());
+}
+
+void GraphicsView::resetViewportState()
+{
+    QSignalBlocker const blocker(this);
+    _restoringViewport = true;
+    resetViewportStateInternal();
+    _restoringViewport = false;
+}
+
 void GraphicsView::centerScene()
 {
-    if (scene()) {
-        scene()->setSceneRect(QRectF());
+    if (!scene())
+        return;
 
-        QRectF sceneRect = scene()->sceneRect();
+    QSignalBlocker const blocker(this);
+    _restoringViewport = true;
 
-        if (sceneRect.width() > this->rect().width() || sceneRect.height() > this->rect().height()) {
-            fitInView(sceneRect, Qt::KeepAspectRatio);
-        }
+    resetViewportStateInternal();
 
-        centerOn(sceneRect.center());
+    // Recompute item bounds on the scene (not the view's large sceneRect).
+    scene()->setSceneRect(QRectF());
+    QRectF const itemsRect = scene()->sceneRect();
+
+    if (itemsRect.width() > this->rect().width() || itemsRect.height() > this->rect().height()) {
+        double const scaleX = this->rect().width() / itemsRect.width();
+        double const scaleY = this->rect().height() / itemsRect.height();
+        double const fitScale = std::min(scaleX, scaleY);
+        // fitInView ignores setScaleRange; clamp via setupScale instead.
+        setupScale(fitScale);
     }
+
+    centerOn(itemsRect.center());
+
+    _restoringViewport = false;
 }
 
 void GraphicsView::contextMenuEvent(QContextMenuEvent *event)
@@ -368,11 +448,6 @@ void GraphicsView::wheelEvent(QWheelEvent *event)
         scaleUp();
     else
         scaleDown();
-}
-
-double GraphicsView::getScale() const
-{
-    return transform().m11();
 }
 
 void GraphicsView::setScaleRange(double minimum, double maximum)
@@ -679,65 +754,19 @@ void GraphicsView::keyReleaseEvent(QKeyEvent *event)
     QGraphicsView::keyReleaseEvent(event);
 }
 
-void GraphicsView::mousePressEvent(QMouseEvent *event)
+void GraphicsView::mouseReleaseEvent(QMouseEvent *event)
 {
-    QGraphicsView::mousePressEvent(event);
-    if (event->button() == Qt::LeftButton) {
-        _clickPos = mapToScene(event->pos());
-    }
-}
-
-void GraphicsView::mouseMoveEvent(QMouseEvent *event)
-{
-    QGraphicsView::mouseMoveEvent(event);
-    if (scene()->mouseGrabberItem() == nullptr && event->buttons() == Qt::LeftButton) {
-        // Make sure shift is not being pressed
-        if ((event->modifiers() & Qt::ShiftModifier) == 0) {
-            QPointF difference = _clickPos - mapToScene(event->pos());
-            setSceneRect(sceneRect().translated(difference.x(), difference.y()));
-        }
-    }
+    QGraphicsView::mouseReleaseEvent(event);
+    if (event->button() == Qt::LeftButton && !_restoringViewport)
+        Q_EMIT viewportChanged();
 }
 
 void GraphicsView::drawBackground(QPainter *painter, const QRectF &r)
 {
     QGraphicsView::drawBackground(painter, r);
 
-    auto drawGrid = [&](double gridStep) {
-        QRect windowRect = rect();
-        QPointF tl = mapToScene(windowRect.topLeft());
-        QPointF br = mapToScene(windowRect.bottomRight());
-
-        double left = std::floor(tl.x() / gridStep - 0.5);
-        double right = std::floor(br.x() / gridStep + 1.0);
-        double bottom = std::floor(tl.y() / gridStep - 0.5);
-        double top = std::floor(br.y() / gridStep + 1.0);
-
-        // vertical lines
-        for (int xi = int(left); xi <= int(right); ++xi) {
-            QLineF line(xi * gridStep, bottom * gridStep, xi * gridStep, top * gridStep);
-
-            painter->drawLine(line);
-        }
-
-        // horizontal lines
-        for (int yi = int(bottom); yi <= int(top); ++yi) {
-            QLineF line(left * gridStep, yi * gridStep, right * gridStep, yi * gridStep);
-            painter->drawLine(line);
-        }
-    };
-
+    // 不画网格，只保留场景原点的横纵坐标轴
     auto const &flowViewStyle = StyleCollection::flowViewStyle();
-
-    QPen pfine(flowViewStyle.FineGridColor, 1.0);
-
-    painter->setPen(pfine);
-    drawGrid(15);
-
-    QPen p(flowViewStyle.CoarseGridColor, 1.0);
-
-    painter->setPen(p);
-    drawGrid(150);
 
     QRect windowRect = rect();
     QPointF tl = mapToScene(windowRect.topLeft());
@@ -748,6 +777,9 @@ void GraphicsView::drawBackground(QPainter *painter, const QRectF &r)
     double yMin = std::min(tl.y(), br.y());
     double yMax = std::max(tl.y(), br.y());
 
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing, false);
+
     QPen axisPen(flowViewStyle.CoarseGridColor, 4.0);
     painter->setPen(axisPen);
 
@@ -756,6 +788,8 @@ void GraphicsView::drawBackground(QPainter *painter, const QRectF &r)
 
     if (yMin <= 0.0 && yMax >= 0.0)
         painter->drawLine(QLineF(xMin, 0.0, xMax, 0.0));
+
+    painter->restore();
 }
 
 void GraphicsView::showEvent(QShowEvent *event)

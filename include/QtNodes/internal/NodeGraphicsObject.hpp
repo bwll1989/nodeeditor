@@ -103,6 +103,7 @@ private:
     void syncRemarksEditorGeometry();
 
     void addTitleColorMenu(QMenu &menu);
+    void addExternalControlMenu(QMenu &menu);
     void openNodeHelp() const;
 
     /**

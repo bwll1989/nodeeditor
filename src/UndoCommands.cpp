@@ -1,5 +1,6 @@
 #include "UndoCommands.hpp"
 
+#include <algorithm>
 #include <typeinfo>
 #include <utility>
 
@@ -116,6 +117,21 @@ static QJsonObject serializeSelectedItems(BasicGraphicsScene *scene)
     return serializedScene;
 }
 
+static bool findOverlappingGroup(AbstractGraphModel &graphModel,
+                                 GroupId const &target,
+                                 GroupId &found)
+{
+    for (auto const &gid : graphModel.allGroupIds()) {
+        for (auto const nid : target.nodeIds) {
+            if (std::find(gid.nodeIds.begin(), gid.nodeIds.end(), nid) != gid.nodeIds.end()) {
+                found = gid;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 static void insertSerializedItems(QJsonObject const &json, BasicGraphicsScene *scene)
 {
     AbstractGraphModel &graphModel = scene->graphModel();
@@ -135,8 +151,17 @@ static void insertSerializedItems(QJsonObject const &json, BasicGraphicsScene *s
     QJsonArray const &groupsJsonArray = json["groups"].toArray();
     for (QJsonValue group : groupsJsonArray) {
         QJsonObject groupJson = group.toObject();
+        GroupId const targetGroup = fromJsonToGroup(groupJson);
 
-        graphModel.addGroup(fromJsonToGroup(groupJson));
+        GroupId existing;
+        if (findOverlappingGroup(graphModel, targetGroup, existing)) {
+            if (auto *ggo = scene->groupGraphicsObject(existing)) {
+                ggo->applyGroupId(targetGroup);
+            }
+            graphModel.updateGroup(existing, targetGroup);
+        } else {
+            graphModel.addGroup(targetGroup);
+        }
     }
 
     QJsonArray const &connJsonArray = json["connections"].toArray();
@@ -156,13 +181,22 @@ static void insertSerializedItems(QJsonObject const &json, BasicGraphicsScene *s
     }
 }
 
-static void deleteSerializedItems(QJsonObject &sceneJson, AbstractGraphModel &graphModel)
+static void deleteSerializedItems(QJsonObject &sceneJson,
+                                  AbstractGraphModel &graphModel,
+                                  bool deleteRestoredGroups = false)
 {
-    QJsonArray GroupsJsonArray = sceneJson["groups"].toArray();
-    for (QJsonValueRef group : GroupsJsonArray) {
+    QJsonArray groupsToDeleteJsonArray = sceneJson.value(QStringLiteral("deleteGroups")).toArray();
+    for (QJsonValueRef group : groupsToDeleteJsonArray) {
         QJsonObject groupJson = group.toObject();
         graphModel.deleteGroup(fromJsonToGroup(groupJson));
+    }
 
+    if (deleteRestoredGroups) {
+        QJsonArray restoredGroupsJsonArray = sceneJson.value(QStringLiteral("groups")).toArray();
+        for (QJsonValueRef group : restoredGroupsJsonArray) {
+            QJsonObject groupJson = group.toObject();
+            graphModel.deleteGroup(fromJsonToGroup(groupJson));
+        }
     }
     QJsonArray connectionJsonArray = sceneJson["connections"].toArray();
 
@@ -277,9 +311,25 @@ DeleteCommand::DeleteCommand(BasicGraphicsScene *scene)
         connJsonArray.append(connectionToJson(graphModel, cid));
     }
 
-    QJsonArray groupsJsonArray;
+    QJsonArray groupsForUndoJsonArray;
+    if (!selectedNodes.empty()) {
+        auto const allGroups = graphModel.allGroupIds();
+        for (auto const &gid : allGroups) {
+            bool affected = false;
+            for (auto const nodeId : gid.nodeIds) {
+                if (selectedNodes.count(nodeId) > 0) {
+                    affected = true;
+                    break;
+                }
+            }
+            if (affected)
+                groupsForUndoJsonArray.append(groupToJson(gid));
+        }
+    }
+
+    QJsonArray groupsToDeleteJsonArray;
     for (auto const &gid : selectedGroups) {
-        groupsJsonArray.append(groupToJson(gid));
+        groupsToDeleteJsonArray.append(groupToJson(gid));
     }
 
     QJsonArray nodesJsonArray;
@@ -288,7 +338,7 @@ DeleteCommand::DeleteCommand(BasicGraphicsScene *scene)
     }
 
     // If nothing is deleted, cancel this operation
-    if (connJsonArray.isEmpty() && nodesJsonArray.isEmpty() && groupsJsonArray.isEmpty())
+    if (connJsonArray.isEmpty() && nodesJsonArray.isEmpty() && groupsToDeleteJsonArray.isEmpty())
     {
         setObsolete(true);
         return;
@@ -296,7 +346,8 @@ DeleteCommand::DeleteCommand(BasicGraphicsScene *scene)
 
     _sceneJson["nodes"] = nodesJsonArray;
     _sceneJson["connections"] = connJsonArray;
-    _sceneJson["groups"] = groupsJsonArray;
+    _sceneJson["groups"] = groupsForUndoJsonArray;
+    _sceneJson["deleteGroups"] = groupsToDeleteJsonArray;
 
 }
 
@@ -387,7 +438,7 @@ PasteCommand::PasteCommand(BasicGraphicsScene *scene, QPointF const &mouseSceneP
 
 void PasteCommand::undo()
 {
-    deleteSerializedItems(_newSceneJson, _scene->graphModel());
+    deleteSerializedItems(_newSceneJson, _scene->graphModel(), true);
 }
 
 void PasteCommand::redo()

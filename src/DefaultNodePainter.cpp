@@ -2,6 +2,7 @@
 
 #include <cmath>
 
+#include <QtCore/QJsonDocument>
 #include <QtCore/QMargins>
 
 #include "AbstractGraphModel.hpp"
@@ -20,28 +21,32 @@ namespace QtNodes {
 
 void DefaultNodePainter::paint(QPainter *painter, NodeGraphicsObject &ngo) const
 {
-    // TODO?
-    //AbstractNodeGeometry & geometry = ngo.nodeScene()->nodeGeometry();
-    //geometry.recomputeSizeIfFontChanged(painter->font());
+    AbstractGraphModel &model = ngo.graphModel();
+    NodeStyle const nodeStyle(
+        QJsonDocument::fromVariant(model.nodeData(ngo.nodeId(), NodeRole::Style)).object());
 
-    drawNodeRect(painter, ngo);
+    painter->setRenderHint(QPainter::Antialiasing, true);
 
-    drawConnectionPoints(painter, ngo);
+    drawNodeRect(painter, ngo, nodeStyle);
 
-    drawFilledConnectionPoints(painter, ngo);
+    drawConnectionPoints(painter, ngo, nodeStyle);
 
-    drawNodeCaption(painter, ngo);
+    drawFilledConnectionPoints(painter, ngo, nodeStyle);
 
-    drawEntryLabels(painter, ngo);
+    drawNodeCaption(painter, ngo, nodeStyle);
+
+    drawEntryLabels(painter, ngo, nodeStyle);
 
     drawResizeRect(painter, ngo);
 
-    drawValidationIcon(painter, ngo);
+    drawValidationIcon(painter, ngo, nodeStyle);
 
-    drawMutedOverlay(painter, ngo);
+    drawMutedOverlay(painter, ngo, nodeStyle);
 }
 
-void DefaultNodePainter::drawNodeRect(QPainter *painter, NodeGraphicsObject &ngo) const
+void DefaultNodePainter::drawNodeRect(QPainter *painter,
+                                      NodeGraphicsObject &ngo,
+                                      NodeStyle const &nodeStyle) const
 {
     AbstractGraphModel &model = ngo.graphModel();
 
@@ -50,10 +55,6 @@ void DefaultNodePainter::drawNodeRect(QPainter *painter, NodeGraphicsObject &ngo
     AbstractNodeGeometry &geometry = ngo.nodeScene()->nodeGeometry();
 
     QSize size = geometry.size(nodeId);
-
-    QJsonDocument json = QJsonDocument::fromVariant(model.nodeData(nodeId, NodeRole::Style));
-
-    NodeStyle nodeStyle(json.object());
 
     QVariant var = model.nodeData(nodeId, NodeRole::ValidationState);
 
@@ -107,14 +108,13 @@ void DefaultNodePainter::drawNodeRect(QPainter *painter, NodeGraphicsObject &ngo
     painter->drawRoundedRect(boundary, nodeStyle.BoundaryRadius, nodeStyle.BoundaryRadius);
 }
 
-void DefaultNodePainter::drawConnectionPoints(QPainter *painter, NodeGraphicsObject &ngo) const
+void DefaultNodePainter::drawConnectionPoints(QPainter *painter,
+                                              NodeGraphicsObject &ngo,
+                                              NodeStyle const &nodeStyle) const
 {
     AbstractGraphModel &model = ngo.graphModel();
     NodeId const nodeId = ngo.nodeId();
     AbstractNodeGeometry &geometry = ngo.nodeScene()->nodeGeometry();
-
-    QJsonDocument json = QJsonDocument::fromVariant(model.nodeData(nodeId, NodeRole::Style));
-    NodeStyle nodeStyle(json.object());
 
     auto const &connectionStyle = StyleCollection::connectionStyle();
 
@@ -184,14 +184,13 @@ void DefaultNodePainter::drawConnectionPoints(QPainter *painter, NodeGraphicsObj
     }
 }
 
-void DefaultNodePainter::drawFilledConnectionPoints(QPainter *painter, NodeGraphicsObject &ngo) const
+void DefaultNodePainter::drawFilledConnectionPoints(QPainter *painter,
+                                                    NodeGraphicsObject &ngo,
+                                                    NodeStyle const &nodeStyle) const
 {
     AbstractGraphModel &model = ngo.graphModel();
     NodeId const nodeId = ngo.nodeId();
     AbstractNodeGeometry &geometry = ngo.nodeScene()->nodeGeometry();
-
-    QJsonDocument json = QJsonDocument::fromVariant(model.nodeData(nodeId, NodeRole::Style));
-    NodeStyle nodeStyle(json.object());
 
     auto diameter = nodeStyle.ConnectionPointDiameter;
 
@@ -227,7 +226,9 @@ void DefaultNodePainter::drawFilledConnectionPoints(QPainter *painter, NodeGraph
     }
 }
 
-void DefaultNodePainter::drawNodeCaption(QPainter *painter, NodeGraphicsObject &ngo) const
+void DefaultNodePainter::drawNodeCaption(QPainter *painter,
+                                         NodeGraphicsObject &ngo,
+                                         NodeStyle const &nodeStyle) const
 {
     AbstractGraphModel &model = ngo.graphModel();
     NodeId const nodeId = ngo.nodeId();
@@ -236,15 +237,12 @@ void DefaultNodePainter::drawNodeCaption(QPainter *painter, NodeGraphicsObject &
     if (!model.nodeData(nodeId, NodeRole::CaptionVisible).toBool())
         return;
 
-    // QString const name = model.nodeData(nodeId, NodeRole::Caption).toString();
     QString const name = model.nodeData(nodeId, NodeRole::Remarks).toString();
     QFont f = painter->font();
     f.setBold(true);
 
     QPointF position = geometry.captionPosition(nodeId);
 
-    QJsonDocument json = QJsonDocument::fromVariant(model.nodeData(nodeId, NodeRole::Style));
-    NodeStyle nodeStyle(json.object());
     auto offset=ngo.nodeState().hovered() || ngo.isSelected() ? nodeStyle.HoveredPenWidth : nodeStyle.PenWidth;
     // draw caption color
     painter->setPen(Qt::NoPen);
@@ -267,14 +265,13 @@ void DefaultNodePainter::drawNodeCaption(QPainter *painter, NodeGraphicsObject &
     painter->setFont(f);
 }
 
-void DefaultNodePainter::drawEntryLabels(QPainter *painter, NodeGraphicsObject &ngo) const
+void DefaultNodePainter::drawEntryLabels(QPainter *painter,
+                                         NodeGraphicsObject &ngo,
+                                         NodeStyle const &nodeStyle) const
 {
     AbstractGraphModel &model = ngo.graphModel();
     NodeId const nodeId = ngo.nodeId();
     AbstractNodeGeometry &geometry = ngo.nodeScene()->nodeGeometry();
-
-    QJsonDocument json = QJsonDocument::fromVariant(model.nodeData(nodeId, NodeRole::Style));
-    NodeStyle nodeStyle(json.object());
 
     for (PortType portType : {PortType::Out, PortType::In}) {
         unsigned int n = model.nodeData<unsigned int>(nodeId,
@@ -318,15 +315,18 @@ void DefaultNodePainter::drawResizeRect(QPainter *painter, NodeGraphicsObject &n
 
         // 创建三角形路径（右下角三角形）
         QPolygonF triangle;
-        triangle << handleRect.topRight()
-                 << handleRect.bottomRight()
-                 << handleRect.bottomLeft();
-
+        triangle << QPointF(handleRect.left(), handleRect.bottom())
+                 << QPointF(handleRect.right(), handleRect.bottom())
+                 << QPointF(handleRect.right(), handleRect.top());
+        
+        // 绘制三角形
         painter->drawPolygon(triangle);
     }
 }
 
-void DefaultNodePainter::drawValidationIcon(QPainter *painter, NodeGraphicsObject &ngo) const
+void DefaultNodePainter::drawValidationIcon(QPainter *painter,
+                                            NodeGraphicsObject &ngo,
+                                            NodeStyle const &nodeStyle) const
 {
     AbstractGraphModel &model = ngo.graphModel();
     NodeId const nodeId = ngo.nodeId();
@@ -339,9 +339,6 @@ void DefaultNodePainter::drawValidationIcon(QPainter *painter, NodeGraphicsObjec
     auto state = var.value<NodeValidationState>();
     if (state._state == NodeValidationState::State::Valid)
         return;
-
-    QJsonDocument json = QJsonDocument::fromVariant(model.nodeData(nodeId, NodeRole::Style));
-    NodeStyle nodeStyle(json.object());
 
     QSize size = geometry.size(nodeId);
 
@@ -375,7 +372,9 @@ void DefaultNodePainter::drawValidationIcon(QPainter *painter, NodeGraphicsObjec
     painter->restore();
 }
 
-void DefaultNodePainter::drawMutedOverlay(QPainter *painter, NodeGraphicsObject &ngo) const
+void DefaultNodePainter::drawMutedOverlay(QPainter *painter,
+                                          NodeGraphicsObject &ngo,
+                                          NodeStyle const &nodeStyle) const
 {
     AbstractGraphModel &model = ngo.graphModel();
     NodeId const nodeId = ngo.nodeId();
@@ -384,8 +383,6 @@ void DefaultNodePainter::drawMutedOverlay(QPainter *painter, NodeGraphicsObject 
 
     AbstractNodeGeometry &geometry = ngo.nodeScene()->nodeGeometry();
     QSize size = geometry.size(nodeId);
-    QJsonDocument json = QJsonDocument::fromVariant(model.nodeData(nodeId, NodeRole::Style));
-    NodeStyle nodeStyle(json.object());
     QRectF boundary(0, 0, size.width(), size.height());
 
     painter->save();

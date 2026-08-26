@@ -274,6 +274,9 @@ Q_SIGNALS:
 
     void groupUpdated(GroupId const groupId);
 
+    /// Emitted before the node model is destroyed; handlers may still query the node.
+    void nodeAboutToBeDeleted(NodeId const nodeId);
+
 private:
     std::vector<ConnectionId> _shiftedByDynamicPortsConnections;
     std::vector<GroupId> _shiftedByGroups;

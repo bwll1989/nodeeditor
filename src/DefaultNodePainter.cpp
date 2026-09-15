@@ -79,7 +79,7 @@ void DefaultNodePainter::drawNodeRect(QPainter *painter,
 
     float penWidth = ngo.nodeState().hovered() || ngo.isSelected() ? nodeStyle.HoveredPenWidth : nodeStyle.PenWidth;
     if (validationState != NodeValidationState::State::Valid) {
-        float factor = (validationState == NodeValidationState::State::Error) ? 3.0f : 2.0f;
+        float factor = (validationState == NodeValidationState::State::Error) ? 1.2f : 1.0f;
         penWidth *= factor;
     }
 

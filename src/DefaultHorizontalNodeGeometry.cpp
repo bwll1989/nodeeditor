@@ -22,7 +22,10 @@ DefaultHorizontalNodeGeometry::DefaultHorizontalNodeGeometry(AbstractGraphModel 
     f.setBold(true);
     _boldFontMetrics = QFontMetrics(f);
 
-    _portSize = _fontMetrics.height();
+    // step = _portSize + _portSpasing，须与 PortAlignedEditList / PortEdit 行高一致：
+    //   QFontMetrics(QFont()).height() + 10
+    _portSize = static_cast<unsigned int>(_fontMetrics.height());
+    _portSpasing = 10;
 }
 
 QRectF DefaultHorizontalNodeGeometry::boundingRect(NodeId const nodeId) const
@@ -81,38 +84,24 @@ QPointF DefaultHorizontalNodeGeometry::portPosition(NodeId const nodeId,
 {
     unsigned int const step = _portSize + _portSpasing;
 
-    QPointF result;
-
-    double totalHeight = 0.0;
-
-    totalHeight += captionRect(nodeId).height();
-    totalHeight += _portSpasing;
-
-    totalHeight += step * portIndex;
-    totalHeight += step / 2.0;
+    // 与嵌入控件内容区顶部对齐：第 n 个端口落在「第 n 行」中线
+    // （行高 = step 时，可与列表行水平对齐）
+    double const totalHeight = embeddedWidgetTopOffset(nodeId)
+                             + step * portIndex
+                             + step / 2.0;
 
     QSize size = _graphModel.nodeData<QSize>(nodeId, NodeRole::Size);
 
     switch (portType) {
-    case PortType::In: {
-        double x = 0.0;
+    case PortType::In:
+        return QPointF(0.0, totalHeight);
 
-        result = QPointF(x, totalHeight);
-        break;
-    }
-
-    case PortType::Out: {
-        double x = size.width();
-
-        result = QPointF(x, totalHeight);
-        break;
-    }
+    case PortType::Out:
+        return QPointF(size.width(), totalHeight);
 
     default:
-        break;
+        return QPointF();
     }
-
-    return result;
 }
 
 QPointF DefaultHorizontalNodeGeometry::portTextPosition(NodeId const nodeId,

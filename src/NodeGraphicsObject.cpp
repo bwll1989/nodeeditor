@@ -122,7 +122,9 @@ NodeGraphicsObject::NodeGraphicsObject(BasicGraphicsScene &scene, NodeId nodeId)
     setFlag(QGraphicsItem::ItemDoesntPropagateOpacityToChildren, true);
     setFlag(QGraphicsItem::ItemIsFocusable, true);
 
-    setCacheMode(QGraphicsItem::DeviceCoordinateCache);
+    // DeviceCoordinateCache 与 QGraphicsProxyWidget 子项不兼容，展开节点必须 NoCache。
+    // 构造时先 NoCache，embed 后再按是否有 proxy 同步。
+    setCacheMode(QGraphicsItem::NoCache);
 
     QJsonObject nodeStyleJson = _graphModel.nodeData(_nodeId, NodeRole::Style).toJsonObject();
 
@@ -162,10 +164,13 @@ NodeGraphicsObject::NodeGraphicsObject(BasicGraphicsScene &scene, NodeId nodeId)
 
 NodeGraphicsObject::~NodeGraphicsObject()
 {
-//    disconnect(&_graphModel,
-//               &AbstractGraphModel::nodeFlagsUpdated,
-//               this,
-//               &NodeGraphicsObject::onLockedState);
+}
+
+void NodeGraphicsObject::syncCacheModeWithProxy()
+{
+    // DeviceCoordinateCache 与 QGraphicsProxyWidget 不兼容；展开用 NoCache，折叠可开缓存。
+    setCacheMode(_proxyWidget ? QGraphicsItem::NoCache
+                              : QGraphicsItem::DeviceCoordinateCache);
 }
 
 AbstractGraphModel &NodeGraphicsObject::graphModel() const
@@ -227,8 +232,9 @@ void NodeGraphicsObject::updateQWidgetEmbedPos()
           scene()->removeItem(_proxyWidget);
            _proxyWidget->setWidget(nullptr);
           _proxyWidget->setParentItem(nullptr);
-          _proxyWidget->deleteLater();  // 删除小部件
+          _proxyWidget->deleteLater();
           _proxyWidget=nullptr;
+          syncCacheModeWithProxy();
 
       }
   }else {
@@ -248,11 +254,13 @@ void NodeGraphicsObject::embedQWidget()
         scene()->removeItem(_proxyWidget);
         _proxyWidget->setWidget(nullptr);
         _proxyWidget->setParentItem(nullptr);
-        _proxyWidget->deleteLater();  // 删除小部件
+        _proxyWidget->deleteLater();
         _proxyWidget=nullptr;
     }
-    if (!_graphModel.nodeData(_nodeId, NodeRole::WidgetEmbeddable).value<bool>())
+    if (!_graphModel.nodeData(_nodeId, NodeRole::WidgetEmbeddable).value<bool>()) {
+        syncCacheModeWithProxy();
         return;
+    }
 
     if (auto w = _graphModel.nodeData(_nodeId, NodeRole::Widget).value<QWidget *>()) {
 
@@ -272,6 +280,8 @@ void NodeGraphicsObject::embedQWidget()
 
         _proxyWidget->setOpacity(1.0);
         _proxyWidget->setFlag(QGraphicsItem::ItemIgnoresParentOpacity);
+
+        syncCacheModeWithProxy();
     }
 }
 

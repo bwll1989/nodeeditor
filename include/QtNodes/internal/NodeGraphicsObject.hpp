@@ -89,6 +89,9 @@ protected:
 private:
     void embedQWidget();
 
+    /// 有 proxy 时禁用 DeviceCoordinateCache
+    void syncCacheModeWithProxy();
+
     /// 按当前端口高度同步嵌入控件尺寸（端口增删后需调用，否则只涨节点框不涨控件）
     void syncEmbeddedWidgetSize(QWidget *w);
 

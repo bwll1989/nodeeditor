@@ -86,7 +86,9 @@ void DefaultNodePainter::drawNodeRect(QPainter *painter,
     bool const muted = model.nodeFlags(nodeId).testFlag(NodeFlag::Muted);
     bool const highlighted = ngo.isSelected() || ngo.nodeState().hovered();
 
+    // cosmetic：边框宽度不随视图缩放变化（屏幕像素恒定）
     QPen p(color, penWidth);
+    p.setCosmetic(true);
     // Mute 仅在未选中/未悬停时用虚线灰边；选中与 hover 保持原样式
     if (muted && !highlighted) {
         p.setStyle(Qt::DashLine);

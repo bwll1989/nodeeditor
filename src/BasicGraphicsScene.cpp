@@ -57,7 +57,7 @@ BasicGraphicsScene::BasicGraphicsScene(AbstractGraphModel &graphModel, QObject *
     , _undoStack(new QUndoStack(this))
     , _orientation(Qt::Horizontal)
 {
-    setItemIndexMethod(QGraphicsScene::BspTreeIndex);
+    setItemIndexMethod(QGraphicsScene::NoIndex);
 
     connect(&_graphModel,
             &AbstractGraphModel::connectionCreated,

@@ -48,3 +48,4 @@ cmake-build-debug/.cmake/api/v1/reply/target-dynamic_ports_autogen-Debug-4387793
 /MinGW-64
 /MSVC
 /.idea
+/src/.idea

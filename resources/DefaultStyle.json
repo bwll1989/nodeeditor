@@ -2,7 +2,11 @@
   "GraphicsViewStyle": {
     "BackgroundColor": [53, 53, 53],
     "FineGridColor": [60, 60, 60],
-    "CoarseGridColor": [25, 25, 25]
+    "CoarseGridColor": [25, 25, 25],
+    "AxisGridColor": [205, 0, 0],
+    "AxisLineWidth": 10.0,
+    "BackgroundGrid": false,
+    "BackgroundAxis": false
   },
   "NodeStyle": {
     "NormalBoundaryColor": [255, 255, 255],
@@ -41,7 +45,7 @@
     "LineSelectedWidth": 6.0,
     "ConstructionLineWidth": 2.0,
     "PointDiameter": 10.0,
-    "UseDataDefinedColors": false
+    "UseDataDefinedColors":true
   },
   "GroupStyle": {
     "NormalBoundaryColor": [255, 255, 255],

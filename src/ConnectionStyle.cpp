@@ -167,15 +167,24 @@ QColor ConnectionStyle::normalColor(QString typeId) const
 {
     std::size_t hash = qHash(typeId);
 
-    std::size_t const hue_range = 0xFF;
+    // HSL的色度范围扩展到359度（完整的色相环），最大化不同类型ID的色度差异
+    std::size_t const hue_range = 359;
 
-    std::mt19937 gen(static_cast<unsigned int>(hash));
-    std::uniform_int_distribution<int> distrib(0, hue_range);
+    // 使用黄金分割法确保色度均匀分布，避免相邻哈希值的色度过于接近
+    // 黄金分割共轭数，保证生成的色相在色相环上均匀间隔
+    const float golden_ratio = 0.61803398875f;
+    // 基于哈希值生成唯一的初始相位
+    float seed = static_cast<float>(hash % 360) / 360.0f;
+    // 每次迭代添加黄金分割数，模1处理，确保分布在[0,1)区间
+    seed = fmod(seed + golden_ratio, 1.0f);
+    // 将归一化的种子值转换为0-359的色度值
+    int hue = static_cast<int>(seed * 360);
 
-    int hue = distrib(gen);
-    int sat = 120 + hash % 129;
+    // 调整饱和度和亮度范围，保证颜色鲜艳且差异明显
+    int sat = 160 + (hash % 96);  // 饱和度160-255，保持颜色饱和度足够高
+    int lum = 130 + (hash % 70);  // 亮度130-200，避免过亮或过暗
 
-    return QColor::fromHsl(hue, sat, 160);
+    return QColor::fromHsl(hue, sat, lum);
 }
 
 QColor ConnectionStyle::selectedColor() const

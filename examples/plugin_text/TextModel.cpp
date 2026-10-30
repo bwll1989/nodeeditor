@@ -11,6 +11,7 @@ TextModel::TextModel()
     NodeDelegateModel::ExternalBinding ui;
     ui.control = _textEdit;
     registerExternalBinding("/text", nullptr, ui);
+    connect(_textEdit,&QLineEdit::textChanged,this,&TextModel::onTextEdited);
 }
 
 unsigned int TextModel::nPorts(PortType portType) const
@@ -74,4 +75,5 @@ void TextModel::setInData(std::shared_ptr<NodeData> data, PortIndex const)
     }
 
     _textEdit->setText(inputText);
+    Q_EMIT dataUpdated(0);
 }

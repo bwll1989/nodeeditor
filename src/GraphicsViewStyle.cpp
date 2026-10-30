@@ -45,6 +45,8 @@ void GraphicsViewStyle::setStyle(QString jsonText)
 #else
 #define FLOW_VIEW_STYLE_CHECK_UNDEFINED_VALUE(v, variable)
 #endif
+#define FLOW_VALUE_STYLE_EXISTS(v) \
+    (v.type() != QJsonValue::Undefined && v.type() != QJsonValue::Null)
 
 #define FLOW_VIEW_STYLE_READ_COLOR(values, variable) \
     { \
@@ -62,12 +64,33 @@ void GraphicsViewStyle::setStyle(QString jsonText)
             variable = QColor(valueRef.toString()); \
         } \
     }
-
 #define FLOW_VIEW_STYLE_WRITE_COLOR(values, variable) \
     { \
         values[#variable] = variable.name(); \
     }
+#define FLOW_VIEW_STYLE_READ_BOOL(values, variable) \
+    { \
+    auto valueRef = values[#variable]; \
+    FLOW_VIEW_STYLE_CHECK_UNDEFINED_VALUE(valueRef, variable) \
+    if (FLOW_VALUE_STYLE_EXISTS(valueRef)) \
+    variable = valueRef.toBool(); \
+    }
+#define FLOW_VIEW_STYLE_WRITE_BOOL(values, variable) \
+    { \
+    values[#variable] = variable; \
+    }
+#define FLOW_VIEW_STYLE_READ_FLOAT(values, variable) \
+    { \
+    auto valueRef = values[#variable]; \
+    FLOW_VIEW_STYLE_CHECK_UNDEFINED_VALUE(valueRef, variable) \
+    if (FLOW_VALUE_STYLE_EXISTS(valueRef)) \
+    variable = valueRef.toDouble(); \
+    }
 
+#define FLOW_VIEW_STYLE_WRITE_FLOAT(values, variable) \
+    { \
+    values[#variable] = variable; \
+    }
 void GraphicsViewStyle::loadJson(QJsonObject const &json)
 {
     QJsonValue nodeStyleValues = json["GraphicsViewStyle"];
@@ -77,6 +100,11 @@ void GraphicsViewStyle::loadJson(QJsonObject const &json)
     FLOW_VIEW_STYLE_READ_COLOR(obj, BackgroundColor);
     FLOW_VIEW_STYLE_READ_COLOR(obj, FineGridColor);
     FLOW_VIEW_STYLE_READ_COLOR(obj, CoarseGridColor);
+    FLOW_VIEW_STYLE_READ_COLOR(obj, AxisGridColor);
+    FLOW_VIEW_STYLE_READ_FLOAT(obj, AxisLineWidth);
+    FLOW_VIEW_STYLE_READ_BOOL(obj,BackgroundGrid);
+    FLOW_VIEW_STYLE_READ_BOOL(obj,BackgroundAxis);
+
 }
 
 QJsonObject GraphicsViewStyle::toJson() const
@@ -86,7 +114,10 @@ QJsonObject GraphicsViewStyle::toJson() const
     FLOW_VIEW_STYLE_WRITE_COLOR(obj, BackgroundColor);
     FLOW_VIEW_STYLE_WRITE_COLOR(obj, FineGridColor);
     FLOW_VIEW_STYLE_WRITE_COLOR(obj, CoarseGridColor);
-
+    FLOW_VIEW_STYLE_WRITE_COLOR(obj, AxisGridColor);
+    FLOW_VIEW_STYLE_WRITE_FLOAT(obj, AxisLineWidth);
+    FLOW_VIEW_STYLE_WRITE_BOOL(obj,BackgroundGrid);
+    FLOW_VIEW_STYLE_WRITE_BOOL(obj,BackgroundAxis);
     QJsonObject root;
     root["GraphicsViewStyle"] = obj;
 

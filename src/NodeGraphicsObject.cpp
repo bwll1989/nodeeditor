@@ -121,11 +121,7 @@ NodeGraphicsObject::NodeGraphicsObject(BasicGraphicsScene &scene, NodeId nodeId)
 
     setFlag(QGraphicsItem::ItemDoesntPropagateOpacityToChildren, true);
     setFlag(QGraphicsItem::ItemIsFocusable, true);
-
-    // DeviceCoordinateCache 与 QGraphicsProxyWidget 子项不兼容，展开节点必须 NoCache。
-    // 构造时先 NoCache，embed 后再按是否有 proxy 同步。
-    setCacheMode(QGraphicsItem::NoCache);
-
+    setCacheMode(QGraphicsItem::DeviceCoordinateCache);
     QJsonObject nodeStyleJson = _graphModel.nodeData(_nodeId, NodeRole::Style).toJsonObject();
 
     NodeStyle nodeStyle(nodeStyleJson);
@@ -164,13 +160,6 @@ NodeGraphicsObject::NodeGraphicsObject(BasicGraphicsScene &scene, NodeId nodeId)
 
 NodeGraphicsObject::~NodeGraphicsObject()
 {
-}
-
-void NodeGraphicsObject::syncCacheModeWithProxy()
-{
-    // DeviceCoordinateCache 与 QGraphicsProxyWidget 不兼容；展开用 NoCache，折叠可开缓存。
-    setCacheMode(_proxyWidget ? QGraphicsItem::NoCache
-                              : QGraphicsItem::DeviceCoordinateCache);
 }
 
 AbstractGraphModel &NodeGraphicsObject::graphModel() const
@@ -234,7 +223,6 @@ void NodeGraphicsObject::updateQWidgetEmbedPos()
           _proxyWidget->setParentItem(nullptr);
           _proxyWidget->deleteLater();
           _proxyWidget=nullptr;
-          syncCacheModeWithProxy();
 
       }
   }else {
@@ -258,7 +246,6 @@ void NodeGraphicsObject::embedQWidget()
         _proxyWidget=nullptr;
     }
     if (!_graphModel.nodeData(_nodeId, NodeRole::WidgetEmbeddable).value<bool>()) {
-        syncCacheModeWithProxy();
         return;
     }
 
@@ -280,8 +267,6 @@ void NodeGraphicsObject::embedQWidget()
 
         _proxyWidget->setOpacity(1.0);
         _proxyWidget->setFlag(QGraphicsItem::ItemIgnoresParentOpacity);
-
-        syncCacheModeWithProxy();
     }
 }
 
@@ -952,7 +937,10 @@ void NodeGraphicsObject::addTitleColorMenu(QMenu &menu)
 
     for (int i = 0; i < colors.size(); ++i) {
         QColor const color = colors.at(i);
-        QAction *action = colorMenu->addAction(colorSwatchIcon(color), names.at(i));
+        // 确保colors和names列表长度一致，避免越界访问
+        QString displayName = (i < names.size()) ? names.at(i) : QStringLiteral("未知颜色");
+        QAction *action = colorMenu->addAction(colorSwatchIcon(color), displayName);
+
         action->setCheckable(true);
         action->setChecked(allSame && sameRgb(sharedColor, color));
         group->addAction(action);
@@ -979,8 +967,8 @@ void NodeGraphicsObject::addTitleColorMenu(QMenu &menu)
                                            std::move(changes),
                                            QStringLiteral("更改节点颜色")));
             }
-            menu.close();
-        });
+    menu.close();
+    });
     }
 }
 

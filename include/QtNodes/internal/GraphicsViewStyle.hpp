@@ -28,5 +28,9 @@ public:
     QColor BackgroundColor;
     QColor FineGridColor;
     QColor CoarseGridColor;
+    QColor AxisGridColor;
+    float AxisLineWidth;
+    bool BackgroundGrid;
+    bool BackgroundAxis;
 };
 } // namespace QtNodes

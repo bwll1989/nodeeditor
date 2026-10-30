@@ -764,32 +764,64 @@ void GraphicsView::mouseReleaseEvent(QMouseEvent *event)
 void GraphicsView::drawBackground(QPainter *painter, const QRectF &r)
 {
     QGraphicsView::drawBackground(painter, r);
-
-    // 不画网格，只保留场景原点的横纵坐标轴
     auto const &flowViewStyle = StyleCollection::flowViewStyle();
+    if (!flowViewStyle.BackgroundGrid && !flowViewStyle.BackgroundAxis)
+        return;
 
+    // 计算视图在场景中的坐标范围
     QRect windowRect = rect();
-    QPointF tl = mapToScene(windowRect.topLeft());
-    QPointF br = mapToScene(windowRect.bottomRight());
+    QPointF const sceneTopLeft = mapToScene(windowRect.topLeft());
+    QPointF const sceneBottomRight = mapToScene(windowRect.bottomRight());
+    double const sceneLeft = std::min(sceneTopLeft.x(), sceneBottomRight.x());
+    double const sceneRight = std::max(sceneTopLeft.x(), sceneBottomRight.x());
+    double const sceneTop = std::min(sceneTopLeft.y(), sceneBottomRight.y());
+    double const sceneBottom = std::max(sceneTopLeft.y(), sceneBottomRight.y());
 
-    double xMin = std::min(tl.x(), br.x());
-    double xMax = std::max(tl.x(), br.x());
-    double yMin = std::min(tl.y(), br.y());
-    double yMax = std::max(tl.y(), br.y());
+    // 绘制网格背景
+    if (flowViewStyle.BackgroundGrid) {
+        auto drawGridLines = [&](double gridStep, const QColor &color, qreal width) {
+            // 计算需要绘制的网格线范围
+            qint64 startX = static_cast<qint64>(std::floor(sceneLeft / gridStep));
+            qint64 endX = static_cast<qint64>(std::ceil(sceneRight / gridStep));
+            qint64 startY = static_cast<qint64>(std::floor(sceneTop / gridStep));
+            qint64 endY = static_cast<qint64>(std::ceil(sceneBottom / gridStep));
 
-    painter->save();
-    painter->setRenderHint(QPainter::Antialiasing, false);
+            QPen pen(color, width);
+            painter->setPen(pen);
 
-    QPen axisPen(flowViewStyle.CoarseGridColor, 4.0);
-    painter->setPen(axisPen);
+            // 绘制垂直网格线
+            for (qint64 x = startX; x <= endX; ++x) {
+                const qreal lineX = static_cast<qreal>(x) * gridStep;
+                painter->drawLine(lineX, sceneTop, lineX, sceneBottom);
+            }
 
-    if (xMin <= 0.0 && xMax >= 0.0)
-        painter->drawLine(QLineF(0.0, yMin, 0.0, yMax));
+            // 绘制水平网格线
+            for (qint64 y = startY; y <= endY; ++y) {
+                const qreal lineY = static_cast<qreal>(y) * gridStep;
+                painter->drawLine(sceneLeft, lineY, sceneRight, lineY);
+            }
+        };
 
-    if (yMin <= 0.0 && yMax >= 0.0)
-        painter->drawLine(QLineF(xMin, 0.0, xMax, 0.0));
+        // 绘制细网格和粗网格
+        drawGridLines(15, flowViewStyle.FineGridColor, 1.0);
+        drawGridLines(150, flowViewStyle.CoarseGridColor, 1.0);
+    }
 
-    painter->restore();
+    // 绘制坐标轴
+    if (flowViewStyle.BackgroundAxis) {
+        QPen axisPen(flowViewStyle.AxisGridColor, flowViewStyle.AxisLineWidth);
+        painter->setPen(axisPen);
+
+        // 绘制Y轴（X=0）
+        if (sceneLeft <= 0.0 && sceneRight >= 0.0) {
+            painter->drawLine(0.0, sceneTop, 0.0, sceneBottom);
+        }
+
+        // 绘制X轴（Y=0）
+        if (sceneTop <= 0.0 && sceneBottom >= 0.0) {
+            painter->drawLine(sceneLeft, 0.0, sceneRight, 0.0);
+        }
+    }
 }
 
 void GraphicsView::showEvent(QShowEvent *event)

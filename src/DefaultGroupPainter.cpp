@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include <QtGui/QIcon>
+#include <QtGui/QColor>
 #include "GroupGraphicsObject.hpp"
 #include "Definitions.hpp"
 #include "StyleCollection.hpp"

@@ -276,12 +276,18 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
     delete _undoAction;
     _undoAction = scene->undoStack().createUndoAction(this, QStringLiteral("撤销"));
     _undoAction->setShortcuts(QKeySequence::Undo);
+    // WidgetShortcut（上游补缺，2026-11-26）：同文件 delete/copy/paste 等
+    // 动作均显式 WidgetShortcut，唯独 undo/redo 漏设（默认 WindowShortcut
+    // =全窗口抢 Ctrl+Z/Y）→ 与宿主场景撤销二义（Ambiguous shortcut
+    // overload）。对齐同文件惯例收紧。
+    _undoAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
     tag(_undoAction, "undo");
     addAction(_undoAction);
 
     delete _redoAction;
     _redoAction = scene->undoStack().createRedoAction(this, QStringLiteral("重做"));
     _redoAction->setShortcuts(QKeySequence::Redo);
+    _redoAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
     tag(_redoAction, "redo");
     addAction(_redoAction);
 

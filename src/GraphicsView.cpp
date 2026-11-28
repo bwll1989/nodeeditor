@@ -7,6 +7,7 @@
 #include "StyleCollection.hpp"
 #include "UndoCommands.hpp"
 
+#include <QCoreApplication>
 #include <QtWidgets/QGraphicsScene>
 
 #include <QtGui/QBrush>
@@ -145,7 +146,7 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
     {
         // setup actions
         delete _clearSelectionAction;
-        _clearSelectionAction = new QAction(QStringLiteral("清除选择"), this);
+        _clearSelectionAction = new QAction(QCoreApplication::translate("QtNodes::GraphicsView", "清除选择"), this);
         _clearSelectionAction->setShortcut(Qt::Key_Escape);
         tag(_clearSelectionAction, "clearSelection");
 
@@ -156,7 +157,7 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
 
     {
         delete _deleteSelectionAction;
-        _deleteSelectionAction = new QAction(QStringLiteral("删除"), this);
+        _deleteSelectionAction = new QAction(QCoreApplication::translate("QtNodes::GraphicsView", "删除"), this);
         _deleteSelectionAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _deleteSelectionAction->setShortcut(QKeySequence(QKeySequence::Delete));
         _deleteSelectionAction->setAutoRepeat(false);
@@ -171,7 +172,7 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
 
     {
         delete _duplicateSelectionAction;
-        _duplicateSelectionAction = new QAction(QStringLiteral("创建副本"), this);
+        _duplicateSelectionAction = new QAction(QCoreApplication::translate("QtNodes::GraphicsView", "创建副本"), this);
         _duplicateSelectionAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _duplicateSelectionAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_D));
         _duplicateSelectionAction->setAutoRepeat(false);
@@ -186,7 +187,7 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
 
     {
         delete _copySelectionAction;
-        _copySelectionAction = new QAction(QStringLiteral("复制"), this);
+        _copySelectionAction = new QAction(QCoreApplication::translate("QtNodes::GraphicsView", "复制"), this);
         _copySelectionAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _copySelectionAction->setShortcut(QKeySequence(QKeySequence::Copy));
         _copySelectionAction->setAutoRepeat(false);
@@ -202,7 +203,7 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
 
     {
         delete _pasteAction;
-        _pasteAction = new QAction(QStringLiteral("粘贴"), this);
+        _pasteAction = new QAction(QCoreApplication::translate("QtNodes::GraphicsView", "粘贴"), this);
         _pasteAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _pasteAction->setShortcut(QKeySequence(QKeySequence::Paste));
         _pasteAction->setAutoRepeat(false);
@@ -214,7 +215,7 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
 
     {
         delete _createGroupAction;
-        _createGroupAction = new QAction(QStringLiteral("创建/移除分组"), this);
+        _createGroupAction = new QAction(QCoreApplication::translate("QtNodes::GraphicsView", "创建/移除分组"), this);
         _createGroupAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _createGroupAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_G));
         _createGroupAction->setAutoRepeat(false);
@@ -228,7 +229,7 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
     {
         // Ctrl+F：弹出节点搜索条（右键菜单里的 Shortcut 仅作展示，必须挂到 View 上才生效）
         delete _searchNodeAction;
-        _searchNodeAction = new QAction(QStringLiteral("搜索节点"), this);
+        _searchNodeAction = new QAction(QCoreApplication::translate("QtNodes::GraphicsView", "搜索节点"), this);
         _searchNodeAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
         _searchNodeAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_F));
         _searchNodeAction->setAutoRepeat(false);
@@ -238,43 +239,43 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
     }
     {
         delete _alignTopAction;
-        _alignTopAction = new QAction(QStringLiteral("顶端对齐"), this);
+        _alignTopAction = new QAction(QCoreApplication::translate("QtNodes::GraphicsView", "顶端对齐"), this);
         _alignTopAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _alignTopAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Up));
         connect(_alignTopAction, &QAction::triggered, this, &GraphicsView::onAlignTop);
 
         delete _alignBottomAction;
-        _alignBottomAction = new QAction(QStringLiteral("底端对齐"), this);
+        _alignBottomAction = new QAction(QCoreApplication::translate("QtNodes::GraphicsView", "底端对齐"), this);
         _alignBottomAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _alignBottomAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Down));
         connect(_alignBottomAction, &QAction::triggered, this, &GraphicsView::onAlignBottom);
 
         delete _alignLeftAction;
-        _alignLeftAction = new QAction(QStringLiteral("左对齐"), this);
+        _alignLeftAction = new QAction(QCoreApplication::translate("QtNodes::GraphicsView", "左对齐"), this);
         _alignLeftAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _alignLeftAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Left));
         connect(_alignLeftAction, &QAction::triggered, this, &GraphicsView::onAlignLeft);
 
         delete _alignRightAction;
-        _alignRightAction = new QAction(QStringLiteral("右对齐"), this);
+        _alignRightAction = new QAction(QCoreApplication::translate("QtNodes::GraphicsView", "右对齐"), this);
         _alignRightAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
         _alignRightAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Right));
         connect(_alignRightAction, &QAction::triggered, this, &GraphicsView::onAlignRight);
 
-        QMenu* layoutMenu = new QMenu(QStringLiteral("对齐布局"), this);
+        QMenu* layoutMenu = new QMenu(QCoreApplication::translate("QtNodes::GraphicsView", "对齐布局"), this);
         layoutMenu->addAction(_alignTopAction);
         layoutMenu->addAction(_alignBottomAction);
         layoutMenu->addAction(_alignLeftAction);
         layoutMenu->addAction(_alignRightAction);
 
         delete _alignLayoutAction;
-        _alignLayoutAction = new QAction(QStringLiteral("对齐布局"), this);
+        _alignLayoutAction = new QAction(QCoreApplication::translate("QtNodes::GraphicsView", "对齐布局"), this);
         _alignLayoutAction->setMenu(layoutMenu);
         tag(_alignLayoutAction, "align");
         addAction(_alignLayoutAction);
     }
     delete _undoAction;
-    _undoAction = scene->undoStack().createUndoAction(this, QStringLiteral("撤销"));
+    _undoAction = scene->undoStack().createUndoAction(this, QCoreApplication::translate("QtNodes::GraphicsView", "撤销"));
     _undoAction->setShortcuts(QKeySequence::Undo);
     // WidgetShortcut（上游补缺，2026-11-26）：同文件 delete/copy/paste 等
     // 动作均显式 WidgetShortcut，唯独 undo/redo 漏设（默认 WindowShortcut
@@ -285,7 +286,7 @@ void GraphicsView::setScene(BasicGraphicsScene *scene)
     addAction(_undoAction);
 
     delete _redoAction;
-    _redoAction = scene->undoStack().createRedoAction(this, QStringLiteral("重做"));
+    _redoAction = scene->undoStack().createRedoAction(this, QCoreApplication::translate("QtNodes::GraphicsView", "重做"));
     _redoAction->setShortcuts(QKeySequence::Redo);
     _redoAction->setShortcutContext(Qt::ShortcutContext::WidgetShortcut);
     tag(_redoAction, "redo");

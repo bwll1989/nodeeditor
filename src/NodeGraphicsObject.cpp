@@ -81,14 +81,14 @@ QString relativePathForAddress(AbstractGraphModel const &model,
 QStringList titleColorNames()
 {
     return {
-        QStringLiteral("橙色"),
-        QStringLiteral("蓝色"),
-        QStringLiteral("粉色"),
-        QStringLiteral("紫色"),
-        QStringLiteral("青色"),
-        QStringLiteral("红色"),
-        QStringLiteral("黄色"),
-        QStringLiteral("绿色"),
+        QCoreApplication::translate("QtNodes", "橙色"),
+        QCoreApplication::translate("QtNodes", "蓝色"),
+        QCoreApplication::translate("QtNodes", "粉色"),
+        QCoreApplication::translate("QtNodes", "紫色"),
+        QCoreApplication::translate("QtNodes", "青色"),
+        QCoreApplication::translate("QtNodes", "红色"),
+        QCoreApplication::translate("QtNodes", "黄色"),
+        QCoreApplication::translate("QtNodes", "绿色"),
     };
 }
 
@@ -733,7 +733,7 @@ void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
     }
 
     QMenu m_Menu;
-    QAction* renameAction = m_Menu.addAction(QStringLiteral("编辑备注"));
+    QAction* renameAction = m_Menu.addAction(QCoreApplication::translate("QtNodes", "编辑备注"));
     renameAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));  // 添加快捷键
     connect(renameAction, &QAction::triggered, [this]() {
         startEditingRemarks(); // 假设这是重命名功能
@@ -744,14 +744,14 @@ void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
                                    _graphModel.nodeData(_nodeId, NodeRole::EmbeddWidgetType).toInt())
                                == NodeWidgetType::PortEditWidget;
         if (!isEditing) {
-            QAction* editPortAction = m_Menu.addAction(QStringLiteral("编辑端口"));
+            QAction* editPortAction = m_Menu.addAction(QCoreApplication::translate("QtNodes", "编辑端口"));
             editPortAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_P));
             connect(editPortAction, &QAction::triggered, [this]() {
                 setPortEditing(true);
             });
         }
     }
-    QAction* helpAction = m_Menu.addAction(QStringLiteral("节点帮助"));
+    QAction* helpAction = m_Menu.addAction(QCoreApplication::translate("QtNodes", "节点帮助"));
     helpAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_H));  // 添加快捷键
     connect(helpAction, &QAction::triggered, [this]() {
         openNodeHelp();
@@ -811,18 +811,18 @@ void NodeGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
             new SetNodeDataCommand(nodeScene(),
                                    NodeRole::Muted,
                                    std::move(changes),
-                                   muted ? QStringLiteral("屏蔽变量输入")
-                                         : QStringLiteral("取消屏蔽输入")));
+                                   muted ? QCoreApplication::translate("QtNodes", "屏蔽变量输入")
+                                         : QCoreApplication::translate("QtNodes", "取消屏蔽输入")));
     };
 
     if (allMuted) {
-        QAction *unmuteAction = m_Menu.addAction(QStringLiteral("取消屏蔽输入"));
+        QAction *unmuteAction = m_Menu.addAction(QCoreApplication::translate("QtNodes", "取消屏蔽输入"));
         unmuteAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
         connect(unmuteAction, &QAction::triggered, [pushMuteCommand, muteTargetIds]() {
             pushMuteCommand(muteTargetIds, false);
         });
     } else {
-        QAction *muteAction = m_Menu.addAction(QStringLiteral("屏蔽变量输入"));
+        QAction *muteAction = m_Menu.addAction(QCoreApplication::translate("QtNodes", "屏蔽变量输入"));
         muteAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
         connect(muteAction, &QAction::triggered, [pushMuteCommand, muteTargetIds]() {
             pushMuteCommand(muteTargetIds, true);
@@ -862,7 +862,7 @@ void NodeGraphicsObject::addExternalControlMenu(QMenu &menu)
         keys.append(kv.first);
     keys.sort();
 
-    QMenu *oscMenu = menu.addMenu(QStringLiteral("外部控制"));
+    QMenu *oscMenu = menu.addMenu(QCoreApplication::translate("QtNodes", "外部控制"));
 
     QString const nodeName = _graphModel.nodeData(_nodeId, NodeRole::Remarks).toString();
     QString const nodeType = _graphModel.nodeData(_nodeId, NodeRole::Type).toString();
@@ -873,12 +873,12 @@ void NodeGraphicsObject::addExternalControlMenu(QMenu &menu)
 
         QMenu *addrMenu = oscMenu->addMenu(full);
 
-        QAction *copyAct = addrMenu->addAction(QStringLiteral("复制控制地址"));
+        QAction *copyAct = addrMenu->addAction(QCoreApplication::translate("QtNodes", "复制控制地址"));
         connect(copyAct, &QAction::triggered, [full]() {
             QApplication::clipboard()->setText(full);
         });
 
-        QAction *webAct = addrMenu->addAction(QStringLiteral("添加网页控制"));
+        QAction *webAct = addrMenu->addAction(QCoreApplication::translate("QtNodes", "添加网页控制"));
         connect(webAct, &QAction::triggered, [this, full, nodeName, nodeType, displayName]() {
             if (auto *bs = nodeScene()) {
                 QJsonObject item;
@@ -928,7 +928,7 @@ void NodeGraphicsObject::addTitleColorMenu(QMenu &menu)
         }
     }
 
-    QMenu *colorMenu = menu.addMenu(QStringLiteral("颜色"));
+    QMenu *colorMenu = menu.addMenu(QCoreApplication::translate("QtNodes", "颜色"));
     QActionGroup *group = new QActionGroup(colorMenu);
     group->setExclusive(true);
 
@@ -938,7 +938,7 @@ void NodeGraphicsObject::addTitleColorMenu(QMenu &menu)
     for (int i = 0; i < colors.size(); ++i) {
         QColor const color = colors.at(i);
         // 确保colors和names列表长度一致，避免越界访问
-        QString displayName = (i < names.size()) ? names.at(i) : QStringLiteral("未知颜色");
+        QString displayName = (i < names.size()) ? names.at(i) : QCoreApplication::translate("QtNodes", "未知颜色");
         QAction *action = colorMenu->addAction(colorSwatchIcon(color), displayName);
 
         action->setCheckable(true);
@@ -965,7 +965,7 @@ void NodeGraphicsObject::addTitleColorMenu(QMenu &menu)
                     new SetNodeDataCommand(nodeScene(),
                                            NodeRole::Style,
                                            std::move(changes),
-                                           QStringLiteral("更改节点颜色")));
+                                           QCoreApplication::translate("QtNodes", "更改节点颜色")));
             }
     menu.close();
     });
@@ -1066,8 +1066,8 @@ void NodeGraphicsObject::keyPressEvent(QKeyEvent* event)
                 new SetNodeDataCommand(nodeScene(),
                                        NodeRole::Muted,
                                        std::move(changes),
-                                       allMuted ? QStringLiteral("取消屏蔽输入")
-                                                : QStringLiteral("屏蔽变量输入")));
+                                       allMuted ? QCoreApplication::translate("QtNodes", "取消屏蔽输入")
+                                                : QCoreApplication::translate("QtNodes", "屏蔽变量输入")));
         }
         event->accept();
         return;
@@ -1178,7 +1178,7 @@ void NodeGraphicsObject::finishEditingRemarks()
                 new SetNodeDataCommand(nodeScene(),
                                        NodeRole::Remarks,
                                        {{_nodeId, oldRemarks, newRemarks}},
-                                       QStringLiteral("编辑节点备注")));
+                                       QCoreApplication::translate("QtNodes", "编辑节点备注")));
         }
     }
 

@@ -21,6 +21,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include <QCoreApplication>
 #include <QtCore/QEvent>
 #include <QtCore/QPointer>
 #include <QtCore/QTimer>
@@ -836,7 +837,7 @@ void ConnectionGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *
 
     if (!_connectionState.requiresPort()) {
         if (isVirtual()) {
-            QAction *jumpPeer = m_Menu.addAction(QStringLiteral("跳转到对端节点"));
+            QAction *jumpPeer = m_Menu.addAction(QCoreApplication::translate("QtNodes::ConnectionGraphicsObject", "跳转到对端节点"));
             PortType const clickPort = virtualTagPortAt(event->pos());
             connect(jumpPeer, &QAction::triggered, [this, clickPort]() {
                 NodeId const target = (clickPort == PortType::Out) ? _connectionId.inNodeId
@@ -848,7 +849,7 @@ void ConnectionGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *
                 }
             });
 
-            QAction *restoreAction = m_Menu.addAction(QStringLiteral("恢复为实线"));
+            QAction *restoreAction = m_Menu.addAction(QCoreApplication::translate("QtNodes::ConnectionGraphicsObject", "恢复为实线"));
             connect(restoreAction, &QAction::triggered, [this]() {
                 if (!nodeScene())
                     return;
@@ -859,10 +860,10 @@ void ConnectionGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *
                     new SetConnectionDataCommand(
                         nodeScene(),
                         {{_connectionId, ConnectionRole::Virtual, true, false}},
-                        QStringLiteral("恢复为实线")));
+                        QCoreApplication::translate("QtNodes::ConnectionGraphicsObject", "恢复为实线")));
             });
 
-            QAction *renameAction = m_Menu.addAction(QStringLiteral("编辑标签"));
+            QAction *renameAction = m_Menu.addAction(QCoreApplication::translate("QtNodes::ConnectionGraphicsObject", "编辑标签"));
             renameAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
             PortType const editPort = clickPort;
             connect(renameAction, &QAction::triggered, [this, editPort]() {
@@ -872,7 +873,7 @@ void ConnectionGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *
 
             m_Menu.addSeparator();
         } else {
-            QAction *virtualAction = m_Menu.addAction(QStringLiteral("转为虚拟连线"));
+            QAction *virtualAction = m_Menu.addAction(QCoreApplication::translate("QtNodes::ConnectionGraphicsObject", "转为虚拟连线"));
             connect(virtualAction, &QAction::triggered, [this]() {
                 if (!nodeScene() || isVirtual())
                     return;
@@ -888,11 +889,11 @@ void ConnectionGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *
                 nodeScene()->undoStack().push(
                     new SetConnectionDataCommand(nodeScene(),
                                                  std::move(changes),
-                                                 QStringLiteral("转为虚拟连线")));
+                                                 QCoreApplication::translate("QtNodes::ConnectionGraphicsObject", "转为虚拟连线")));
             });
             m_Menu.addSeparator();
 
-            QAction* focusInAction = m_Menu.addAction(QStringLiteral("聚焦结束节点"));
+            QAction* focusInAction = m_Menu.addAction(QCoreApplication::translate("QtNodes::ConnectionGraphicsObject", "聚焦结束节点"));
             focusInAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_I));
             connect(focusInAction, &QAction::triggered, [this]() {
                 if (auto nodeObj = nodeScene()->nodeGraphicsObject(_connectionId.inNodeId)) {
@@ -901,7 +902,7 @@ void ConnectionGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *
                 }
             });
 
-            QAction* focusOutAction = m_Menu.addAction(QStringLiteral("聚焦起始节点"));
+            QAction* focusOutAction = m_Menu.addAction(QCoreApplication::translate("QtNodes::ConnectionGraphicsObject", "聚焦起始节点"));
             focusOutAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_O));
             connect(focusOutAction, &QAction::triggered, [this]() {
                 if (auto nodeObj = nodeScene()->nodeGraphicsObject(_connectionId.outNodeId)) {
@@ -1113,7 +1114,7 @@ void ConnectionGraphicsObject::finishEditingLabel()
                 new SetConnectionDataCommand(
                     nodeScene(),
                     {{_connectionId, ConnectionRole::VirtualLabel, oldLabel, newLabel}},
-                    QStringLiteral("编辑虚拟标签")));
+                    QCoreApplication::translate("QtNodes::ConnectionGraphicsObject", "编辑虚拟标签")));
         }
     }
 

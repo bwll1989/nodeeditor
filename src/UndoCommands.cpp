@@ -1,4 +1,5 @@
 #include "UndoCommands.hpp"
+#include <QCoreApplication>
 
 #include <algorithm>
 #include <typeinfo>
@@ -244,7 +245,7 @@ CreateCommand::CreateCommand(BasicGraphicsScene *scene,
     : _scene(scene)
     , _sceneJson(QJsonObject())
 {
-    setText(QStringLiteral("创建节点"));
+    setText(QCoreApplication::translate("QtNodes", "创建节点"));
     _nodeId = _scene->graphModel().addNode(name);
     if (_nodeId != InvalidNodeId) {
         _scene->graphModel().setNodeData(_nodeId, NodeRole::Position, mouseScenePos);
@@ -275,7 +276,7 @@ void CreateCommand::redo()
 DeleteCommand::DeleteCommand(BasicGraphicsScene *scene)
     : _scene(scene)
 {
-    setText(QStringLiteral("删除"));
+    setText(QCoreApplication::translate("QtNodes", "删除"));
 
     auto &graphModel = _scene->graphModel();
 
@@ -421,7 +422,7 @@ PasteCommand::PasteCommand(BasicGraphicsScene *scene, QPointF const &mouseSceneP
     : _scene(scene)
     , _mouseScenePos(mouseScenePos)
 {
-    setText(QStringLiteral("粘贴"));
+    setText(QCoreApplication::translate("QtNodes", "粘贴"));
     _newSceneJson = takeSceneJsonFromClipboard();
 
     if (_newSceneJson.empty() || _newSceneJson["nodes"].toArray().empty()) {
@@ -560,7 +561,7 @@ DisconnectCommand::DisconnectCommand(BasicGraphicsScene *scene, ConnectionId con
     : _scene(scene)
     , _connId(connId)
 {
-    setText(QStringLiteral("断开连线"));
+    setText(QCoreApplication::translate("QtNodes", "断开连线"));
     auto &model = _scene->graphModel();
     _wasVirtual = model.connectionData(connId, ConnectionRole::Virtual).toBool();
     _virtualLabel = model.connectionData(connId, ConnectionRole::VirtualLabel).toString();
@@ -588,7 +589,7 @@ ConnectCommand::ConnectCommand(BasicGraphicsScene *scene, ConnectionId const con
     : _scene(scene)
     , _connId(connId)
 {
-    setText(QStringLiteral("连接"));
+    setText(QCoreApplication::translate("QtNodes", "连接"));
 }
 
 void ConnectCommand::undo()
@@ -607,7 +608,7 @@ MoveNodeCommand::MoveNodeCommand(BasicGraphicsScene *scene, QPointF const &diff)
     : _scene(scene)
     , _diff(diff)
 {
-    setText(QStringLiteral("移动节点"));
+    setText(QCoreApplication::translate("QtNodes", "移动节点"));
     _selectedNodes.clear();
     for (QGraphicsItem *item : _scene->selectedItems()) {
         if (auto n = qgraphicsitem_cast<NodeGraphicsObject *>(item)) {
@@ -623,7 +624,7 @@ MoveNodeCommand::MoveNodeCommand(BasicGraphicsScene *scene,
     , _selectedNodes(std::move(selectedNodes))
     , _diff(diff)
 {
-    setText(QStringLiteral("移动节点"));
+    setText(QCoreApplication::translate("QtNodes", "移动节点"));
 }
 
 void MoveNodeCommand::undo()
@@ -668,7 +669,7 @@ CreateGroupCommand::CreateGroupCommand(BasicGraphicsScene *scene)
     : _scene(scene)
     , _firstRun(true)  // 添加标志，用于跟踪是否是首次运行
 {
-    setText(QStringLiteral("创建分组"));
+    setText(QCoreApplication::translate("QtNodes", "创建分组"));
     // 收集选中的节点
     for (QGraphicsItem *item : _scene->selectedItems()) {
         if (auto n = qgraphicsitem_cast<NodeGraphicsObject *>(item)) {
@@ -687,7 +688,7 @@ CreateGroupCommand::CreateGroupCommand(BasicGraphicsScene *scene)
 RemoveFromGroupCommand::RemoveFromGroupCommand(BasicGraphicsScene *scene)
     : _scene(scene)
 {
-    setText(QStringLiteral("移除分组"));
+    setText(QCoreApplication::translate("QtNodes", "移除分组"));
     if (!_scene) {
         setObsolete(true);
         return;
@@ -808,7 +809,7 @@ AlignNodesCommand::AlignNodesCommand(BasicGraphicsScene *scene, std::vector<Node
     : _scene(scene)
     , _moves(moves)
 {
-    setText(QStringLiteral("对齐节点"));
+    setText(QCoreApplication::translate("QtNodes", "对齐节点"));
 }
 
 void AlignNodesCommand::undo()
@@ -835,7 +836,7 @@ SetNodeDataCommand::SetNodeDataCommand(BasicGraphicsScene *scene,
     , _role(role)
     , _changes(std::move(changes))
 {
-    setText(text.isEmpty() ? QStringLiteral("更改节点属性") : text);
+    setText(text.isEmpty() ? QCoreApplication::translate("QtNodes", "更改节点属性") : text);
 }
 
 void SetNodeDataCommand::undo()
@@ -860,7 +861,7 @@ UpdateGroupCommand::UpdateGroupCommand(BasicGraphicsScene *scene,
     : _scene(scene)
     , _changes(std::move(changes))
 {
-    setText(text.isEmpty() ? QStringLiteral("更改分组属性") : text);
+    setText(text.isEmpty() ? QCoreApplication::translate("QtNodes", "更改分组属性") : text);
 }
 
 UpdateGroupCommand::UpdateGroupCommand(BasicGraphicsScene *scene,
@@ -901,7 +902,7 @@ SetConnectionDataCommand::SetConnectionDataCommand(BasicGraphicsScene *scene,
     : _scene(scene)
     , _changes(std::move(changes))
 {
-    setText(text.isEmpty() ? QStringLiteral("更改连线属性") : text);
+    setText(text.isEmpty() ? QCoreApplication::translate("QtNodes", "更改连线属性") : text);
 }
 
 void SetConnectionDataCommand::undo()

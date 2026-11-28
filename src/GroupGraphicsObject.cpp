@@ -76,14 +76,14 @@ QList<QColor> titleColorPresets()
 QStringList titleColorNames()
 {
     return {
-        QStringLiteral("橙色"),
-        QStringLiteral("蓝色"),
-        QStringLiteral("粉色"),
-        QStringLiteral("紫色"),
-        QStringLiteral("青色"),
-        QStringLiteral("红色"),
-        QStringLiteral("黄色"),
-        QStringLiteral("绿色"),
+        QCoreApplication::translate("QtNodes", "橙色"),
+        QCoreApplication::translate("QtNodes", "蓝色"),
+        QCoreApplication::translate("QtNodes", "粉色"),
+        QCoreApplication::translate("QtNodes", "紫色"),
+        QCoreApplication::translate("QtNodes", "青色"),
+        QCoreApplication::translate("QtNodes", "红色"),
+        QCoreApplication::translate("QtNodes", "黄色"),
+        QCoreApplication::translate("QtNodes", "绿色"),
     };
 }
 
@@ -322,7 +322,7 @@ void GroupGraphicsObject::setTitleColor(QColor const &color)
     newGroupId.selectedBoundaryColor = hex; // 对应节点 SelectedBoundaryColor = TitleColor
 
     scene->undoStack().push(
-        new UpdateGroupCommand(scene, oldGroupId, newGroupId, QStringLiteral("更改分组颜色")));
+        new UpdateGroupCommand(scene, oldGroupId, newGroupId, QCoreApplication::translate("QtNodes", "更改分组颜色")));
 }
 
 qreal GroupGraphicsObject::captionHeightForText(qreal width, QString const &text) const
@@ -792,7 +792,7 @@ void GroupGraphicsObject::finishEditingRemarks()
                 new UpdateGroupCommand(scene,
                                        oldGroupId,
                                        newGroupId,
-                                       QStringLiteral("编辑分组备注")));
+                                       QCoreApplication::translate("QtNodes", "编辑分组备注")));
         }
     } else if (_collapsed) {
         applyCollapsedGeometry();
@@ -1036,7 +1036,7 @@ void GroupGraphicsObject::contextMenuEvent(QGraphicsSceneContextMenuEvent *event
     }
 
     QMenu m_Menu;
-    QAction* renameAction = m_Menu.addAction(QStringLiteral("编辑备注"));
+    QAction* renameAction = m_Menu.addAction(QCoreApplication::translate("QtNodes", "编辑备注"));
     renameAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));  // 添加快捷键
     connect(renameAction, &QAction::triggered, [this]() {
         startEditingRemarks(); // 假设这是重命名功能
@@ -1076,7 +1076,7 @@ void GroupGraphicsObject::addTitleColorMenu(QMenu &menu)
         }
     }
 
-    QMenu *colorMenu = menu.addMenu(QStringLiteral("颜色"));
+    QMenu *colorMenu = menu.addMenu(QCoreApplication::translate("QtNodes", "颜色"));
     QActionGroup *group = new QActionGroup(colorMenu);
     group->setExclusive(true);
 
@@ -1118,7 +1118,7 @@ void GroupGraphicsObject::addTitleColorMenu(QMenu &menu)
                 scene->undoStack().push(
                     new UpdateGroupCommand(scene,
                                            std::move(changes),
-                                           QStringLiteral("更改分组颜色")));
+                                           QCoreApplication::translate("QtNodes", "更改分组颜色")));
             }
             menu.close();
         });

@@ -19,6 +19,7 @@
 #include "NodeSearchSession.hpp"
 #include "GroupGraphicsObject.hpp"
 #include <QUndoStack>
+#include <QCoreApplication>
 #include <QtCore/QBuffer>
 #include <QtCore/QByteArray>
 #include <QtCore/QDataStream>
@@ -583,25 +584,25 @@ void BasicGraphicsScene::showSearchNodeBar()
         auto *searchEdit = new QLineEdit(bar);
         searchEdit->setObjectName(QStringLiteral("searchNodeEdit"));
         searchEdit->setFocusPolicy(Qt::StrongFocus);
-        searchEdit->setPlaceholderText(tr("Search by name, type, id or virtual tag..."));
+        searchEdit->setPlaceholderText(QCoreApplication::translate("QtNodes::BasicGraphicsScene", "按名称、类型、ID 或虚拟标签搜索..."));
         searchEdit->setClearButtonEnabled(true);
         bar->setFocusProxy(searchEdit);
 
         auto *prevBtn = new QToolButton(bar);
         prevBtn->setObjectName(QStringLiteral("searchNodePrev"));
         prevBtn->setArrowType(Qt::LeftArrow);
-        prevBtn->setToolTip(tr("Previous match"));
+        prevBtn->setToolTip(QCoreApplication::translate("QtNodes::BasicGraphicsScene", "上一个匹配"));
         prevBtn->setAutoRaise(true);
         prevBtn->setEnabled(false);
 
         auto *nextBtn = new QToolButton(bar);
         nextBtn->setObjectName(QStringLiteral("searchNodeNext"));
         nextBtn->setArrowType(Qt::RightArrow);
-        nextBtn->setToolTip(tr("Next match"));
+        nextBtn->setToolTip(QCoreApplication::translate("QtNodes::BasicGraphicsScene", "下一个匹配"));
         nextBtn->setAutoRaise(true);
         nextBtn->setEnabled(false);
 
-        auto *countLabel = new QLabel(tr("0/0"), bar);
+        auto *countLabel = new QLabel(QCoreApplication::translate("QtNodes::BasicGraphicsScene", "0/0"), bar);
         countLabel->setObjectName(QStringLiteral("searchNodeCount"));
         countLabel->setMinimumWidth(56);
         countLabel->setAlignment(Qt::AlignVCenter | Qt::AlignLeft);
@@ -609,7 +610,7 @@ void BasicGraphicsScene::showSearchNodeBar()
         auto *closeBtn = new QToolButton(bar);
         closeBtn->setObjectName(QStringLiteral("searchNodeClose"));
         closeBtn->setText(QStringLiteral("×"));
-        closeBtn->setToolTip(tr("Close (Esc)"));
+        closeBtn->setToolTip(QCoreApplication::translate("QtNodes::BasicGraphicsScene", "关闭 (Esc)"));
         closeBtn->setAutoRaise(true);
         closeBtn->setFixedWidth(22);
 
@@ -701,11 +702,11 @@ void BasicGraphicsScene::showSearchNodeBar()
             prevBtn->setEnabled(hasMatches);
             nextBtn->setEnabled(hasMatches);
             if (!hasMatches || session->matchIndex < 0) {
-                countLabel->setText(QObject::tr("0/%1").arg(session->matches.size()));
+                countLabel->setText(QCoreApplication::translate("QtNodes::BasicGraphicsScene", "0/%1").arg(session->matches.size()));
                 return;
             }
             countLabel->setText(
-                QObject::tr("%1/%2").arg(session->matchIndex + 1).arg(session->matches.size()));
+                QCoreApplication::translate("QtNodes::BasicGraphicsScene", "%1/%2").arg(session->matchIndex + 1).arg(session->matches.size()));
         };
 
         auto focusMatchAt = [this, bar, searchEdit, session, updateStatus](int index) {

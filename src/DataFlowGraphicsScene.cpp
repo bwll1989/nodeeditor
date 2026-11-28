@@ -8,6 +8,7 @@
 #include "NodeGraphicsObject.hpp"
 #include "UndoCommands.hpp"
 
+#include <QCoreApplication>
 #include <QtWidgets/QFileDialog>
 #include <QtWidgets/QGraphicsSceneMoveEvent>
 #include <QtWidgets/QHeaderView>
@@ -149,9 +150,9 @@ QMenu *DataFlowGraphicsScene::createSceneMenu(QPointF const scenePos)
 bool DataFlowGraphicsScene::save() const
 {
     QString fileName = QFileDialog::getSaveFileName(nullptr,
-                                                    tr("Open Flow Scene"),
+                                                    QCoreApplication::translate("QtNodes::DataFlowGraphicsScene", "打开 Flow 场景"),
                                                     QDir::homePath(),
-                                                    tr("Flow Scene Files (*.flow)"));
+                                                    QCoreApplication::translate("QtNodes::DataFlowGraphicsScene", "Flow 场景文件 (*.flow)"));
 
     if (!fileName.isEmpty()) {
         if (!fileName.endsWith("flow", Qt::CaseInsensitive))
@@ -169,9 +170,9 @@ bool DataFlowGraphicsScene::save() const
 bool DataFlowGraphicsScene::load()
 {
     QString fileName = QFileDialog::getOpenFileName(nullptr,
-                                                    tr("Open Flow Scene"),
+                                                    QCoreApplication::translate("QtNodes::DataFlowGraphicsScene", "打开 Flow 场景"),
                                                     QDir::homePath(),
-                                                    tr("Flow Scene Files (*.flow)"));
+                                                    QCoreApplication::translate("QtNodes::DataFlowGraphicsScene", "Flow 场景文件 (*.flow)"));
 
     if (!QFileInfo::exists(fileName))
         return false;
